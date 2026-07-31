@@ -447,6 +447,64 @@ Then use <https://localhost:8081>. Do not commit development certificates or
 private keys. If the web client is also served over HTTPS, update
 `LoadIx__WebOrigin` to the exact trusted origin.
 
+## Demo VPS deployment with Docker
+
+For a temporary demonstration server, use the public overlay. It places Caddy
+in front of the web container, obtains a certificate for the configured domain,
+and keeps SQL Server, Redis, RabbitMQ, MinIO, and Mailpit off the public network.
+This overlay retains the Development environment and synthetic seed accounts;
+do not use it for customer or production data.
+
+On an Ubuntu VPS with Docker Compose v2:
+
+```sh
+git clone <repository-url> LoadIx-Prod
+cd LoadIx-Prod
+cp .env.example .env
+sed -i 's/^DEMO_DOMAIN=.*/DEMO_DOMAIN=crimsonskyit.co.za/' .env
+```
+
+Replace every local password in `.env`, especially `SQL_PASSWORD`,
+`RABBITMQ_PASSWORD`, `MINIO_PASSWORD`, `JWT_SIGNING_KEY`,
+`DEMO_ADMIN_PASSWORD`, and `DEMO_DRIVER_PASSWORD`. Point the domain's DNS A
+record at the VPS before starting Caddy. Allow inbound TCP 80 and 443 (and SSH
+from your administration address) in the VPS firewall.
+
+Start the demo stack:
+
+```sh
+docker compose -f compose.yaml -f compose.demo.yaml up --build --detach --wait
+```
+
+Apply the schema and deterministic demo seed with the one-shot Docker migration
+container. It must not be used for a production deployment:
+
+```sh
+docker compose -f compose.yaml -f compose.demo.yaml --profile tools run --rm migrate
+```
+
+If you prefer to run migrations from the host, the existing helper requires the
+.NET 10 SDK. If you changed `SQL_PASSWORD`, export the same connection string
+before running it because `.env` is read by Compose, not automatically by the
+.NET tooling:
+
+```sh
+export SQL_PASSWORD='the same value used in .env'
+export ConnectionStrings__Database="Server=127.0.0.1,1433;Database=LoadIx;User Id=sa;Password=$SQL_PASSWORD;Encrypt=False;TrustServerCertificate=True"
+./scripts/migrate.sh
+```
+
+Open `https://crimsonskyit.co.za`. Check the stack with:
+
+```sh
+docker compose -f compose.yaml -f compose.demo.yaml ps
+docker compose -f compose.yaml -f compose.demo.yaml logs --tail=100 api web caddy
+```
+
+The MinIO and Mailpit consoles are intentionally private in this overlay. Use
+an SSH tunnel when needed, for example `ssh -L 9001:127.0.0.1:9001 user@server`,
+or inspect them only from the VPS. Keep regular backups of the named volumes.
+
 ## Repository layout
 
 ```text

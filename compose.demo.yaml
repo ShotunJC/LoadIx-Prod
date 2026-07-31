@@ -1,0 +1,84 @@
+name: loadix-demo
+
+# Public demo overlay. The base compose file remains the local-development
+# setup; this file keeps databases and dependency consoles off the public NIC
+# and terminates HTTPS at Caddy.
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      LoadIx__WebOrigin: https://${DEMO_DOMAIN:-crimsonskyit.co.za}
+    ports: !reset []
+
+  web:
+    ports: !reset []
+
+  sqlserver:
+    ports: !override
+      - "127.0.0.1:${SQL_PORT:-1433}:1433"
+
+  redis:
+    ports: !reset []
+
+  rabbitmq:
+    ports: !override
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+
+  minio:
+    ports: !override
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+
+  mailpit:
+    ports: !override
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    environment:
+      DEMO_DOMAIN: ${DEMO_DOMAIN:-crimsonskyit.co.za}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile.demo:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - frontend
+    restart: unless-stopped
+
+  migrate:
+    profiles: ["tools"]
+    image: mcr.microsoft.com/dotnet/sdk:10.0.103
+    working_dir: /workspace
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: >-
+        Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
+        User Id=sa;Password=${SQL_PASSWORD:-LoadIx_Local_Only_123!};
+        Encrypt=False;TrustServerCertificate=True
+    volumes:
+      - ./:/workspace
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - backend
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        dotnet tool restore &&
+        dotnet ef database update
+        --project src/LoadIx.Infrastructure
+        --startup-project src/LoadIx.Api &&
+        dotnet run --project src/LoadIx.Api --no-launch-profile --
+        --environment Development --seed-development
+
+volumes:
+  caddy-data:
+  caddy-config:
