@@ -74,9 +74,11 @@ services:
       - >-
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj &&
         dotnet tool restore &&
+        dotnet build src/LoadIx.Api/LoadIx.Api.csproj --no-restore &&
         dotnet ef database update
         --project src/LoadIx.Infrastructure
-        --startup-project src/LoadIx.Api &&
+        --startup-project src/LoadIx.Api
+        --verbose &&
         dotnet run --project src/LoadIx.Api --no-launch-profile --
         --environment Development --seed-development
 
