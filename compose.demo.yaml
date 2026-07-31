@@ -72,6 +72,7 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
+        dotnet restore src/LoadIx.Api/LoadIx.Api.csproj &&
         dotnet tool restore &&
         dotnet ef database update
         --project src/LoadIx.Infrastructure
