@@ -1,0 +1,192 @@
+name: loadix
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: >-
+        Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
+        User Id=sa;Password=${SQL_PASSWORD:-LoadIx_Local_Only_123!};
+        Encrypt=False;TrustServerCertificate=True
+      Dependencies__RedisHost: redis
+      Dependencies__RedisPort: 6379
+      Dependencies__RabbitMqHost: rabbitmq
+      Dependencies__RabbitMqPort: 5672
+      Dependencies__MinioHost: minio
+      Dependencies__MinioPort: 9000
+      Dependencies__MailpitHost: mailpit
+      Dependencies__MailpitPort: 1025
+      LoadIx__ServiceName: LoadIx.Api
+      LoadIx__Version: 0.1.0
+      LoadIx__WebOrigin: http://localhost:${WEB_PORT:-5173}
+      Authentication__SigningKey: ${JWT_SIGNING_KEY:-LoadIx-development-only-signing-key-change-before-production-2026}
+      AccountEmail__Host: mailpit
+      AccountEmail__Port: 1025
+      AccountEmail__FromAddress: accounts@loadix.example.invalid
+      DevelopmentSeed__AdminPassword: ${DEMO_ADMIN_PASSWORD:-LoadIx Demo Admin 2026!}
+      DevelopmentSeed__DriverPassword: ${DEMO_DRIVER_PASSWORD:-LoadIx Demo Driver 2026!}
+      Documents__Endpoint: minio:9000
+      Documents__AccessKey: ${MINIO_USER:-loadix}
+      Documents__SecretKey: ${MINIO_PASSWORD:-LoadIx_Local_Only_123!}
+      Documents__Bucket: ${MINIO_DOCUMENT_BUCKET:-loadix-documents}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - api-data-protection:/home/app/.aspnet/DataProtection-Keys
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    ports:
+      - "${WEB_PORT:-5173}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - frontend
+    restart: unless-stopped
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${SQL_PASSWORD:-LoadIx_Local_Only_123!}
+    ports:
+      - "${SQL_PORT:-1433}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" -b -o /dev/null",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.2.3-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4.2.4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-loadix}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-LoadIx_Local_Only_123!}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-loadix}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-LoadIx_Local_Only_123!}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:9000/minio/health/live",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27.7
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    volumes:
+      - mailpit-data:/data
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  api-data-protection:
+  sqlserver-data:
+  redis-data:
+  rabbitmq-data:
+  minio-data:
+  mailpit-data:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge

@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LoadIx.Api\LoadIx.Api.csproj" />
+    <ProjectReference Include="..\..\src\LoadIx.Contracts\LoadIx.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\LoadIx.Domain\LoadIx.Domain.csproj" />
+    <ProjectReference Include="..\..\src\LoadIx.Infrastructure\LoadIx.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

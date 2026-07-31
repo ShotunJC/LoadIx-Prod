@@ -1,0 +1,10 @@
+.git
+.github
+.env
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/playwright-report
+**/test-results
+TestResults

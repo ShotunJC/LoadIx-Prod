@@ -1,0 +1,29 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+TestResults/
+coverage/
+
+# Node
+**/node_modules/
+apps/loadix-web/dist/
+apps/loadix-web/playwright-report/
+apps/loadix-web/test-results/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
+*.pfx
+*.p12
+*.key
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

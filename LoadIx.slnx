@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LoadIx.Api/LoadIx.Api.csproj" />
+    <Project Path="src/LoadIx.Application/LoadIx.Application.csproj" />
+    <Project Path="src/LoadIx.Contracts/LoadIx.Contracts.csproj" />
+    <Project Path="src/LoadIx.Domain/LoadIx.Domain.csproj" />
+    <Project Path="src/LoadIx.Infrastructure/LoadIx.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LoadIx.ArchitectureTests/LoadIx.ArchitectureTests.csproj" />
+    <Project Path="tests/LoadIx.IntegrationTests/LoadIx.IntegrationTests.csproj" />
+    <Project Path="tests/LoadIx.UnitTests/LoadIx.UnitTests.csproj" />
+  </Folder>
+</Solution>
