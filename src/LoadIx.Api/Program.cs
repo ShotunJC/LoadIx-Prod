@@ -73,7 +73,9 @@ builder.Services
             !string.IsNullOrWhiteSpace(options.Host)
             && options.Port is > 0 and <= 65535
             && Uri.CheckHostName(options.FromAddress.Split('@').Last())
-                != UriHostNameType.Unknown,
+                != UriHostNameType.Unknown
+            && string.IsNullOrWhiteSpace(options.Username)
+                == string.IsNullOrWhiteSpace(options.Password),
         "Account email configuration is invalid.")
     .ValidateOnStart();
 builder.Services

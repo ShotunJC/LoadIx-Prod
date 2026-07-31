@@ -14,6 +14,12 @@ public sealed class AccountEmailOptions
     public int Port { get; set; }
 
     public string FromAddress { get; set; } = string.Empty;
+
+    public string Username { get; set; } = string.Empty;
+
+    public string Password { get; set; } = string.Empty;
+
+    public bool EnableSsl { get; set; }
 }
 
 public sealed class SmtpAccountEmailSender(
@@ -63,8 +69,10 @@ public sealed class SmtpAccountEmailSender(
         {
             DeliveryMethod = SmtpDeliveryMethod.Network,
             UseDefaultCredentials = false,
-            Credentials = CredentialCache.DefaultNetworkCredentials,
-            EnableSsl = false,
+            Credentials = string.IsNullOrWhiteSpace(_options.Username)
+                ? CredentialCache.DefaultNetworkCredentials
+                : new NetworkCredential(_options.Username, _options.Password),
+            EnableSsl = _options.EnableSsl,
         };
 
         await client.SendMailAsync(message, cancellationToken);

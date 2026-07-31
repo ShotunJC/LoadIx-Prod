@@ -8,6 +8,12 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       LoadIx__WebOrigin: https://${DEMO_DOMAIN:-crimsonskyit.co.za}
+      AccountEmail__Host: ${SMTP_HOST:-mail.crimsonskyit.co.za}
+      AccountEmail__Port: ${SMTP_PORT:-587}
+      AccountEmail__FromAddress: ${SMTP_FROM_ADDRESS:-accounts@crimsonskyit.co.za}
+      AccountEmail__Username: ${SMTP_USERNAME:-accounts@crimsonskyit.co.za}
+      AccountEmail__Password: ${SMTP_PASSWORD:-}
+      AccountEmail__EnableSsl: ${SMTP_ENABLE_SSL:-true}
     ports: !reset []
 
   web:

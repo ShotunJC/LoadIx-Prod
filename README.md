@@ -466,9 +466,11 @@ sed -i 's/^DEMO_DOMAIN=.*/DEMO_DOMAIN=crimsonskyit.co.za/' .env
 
 Replace every local password in `.env`, especially `SQL_PASSWORD`,
 `RABBITMQ_PASSWORD`, `MINIO_PASSWORD`, `JWT_SIGNING_KEY`,
-`DEMO_ADMIN_PASSWORD`, and `DEMO_DRIVER_PASSWORD`. Point the domain's DNS A
-record at the VPS before starting Caddy. Allow inbound TCP 80 and 443 (and SSH
-from your administration address) in the VPS firewall.
+`DEMO_ADMIN_PASSWORD`, `DEMO_DRIVER_PASSWORD`, and `SMTP_PASSWORD`.
+The demo overlay sends account emails through authenticated SMTP at
+`mail.crimsonskyit.co.za:587` using STARTTLS. Point the domain's DNS A record at
+the VPS before starting Caddy. Allow inbound TCP 80 and 443 (and SSH from your
+administration address) in the VPS firewall.
 
 Start the demo stack:
 
