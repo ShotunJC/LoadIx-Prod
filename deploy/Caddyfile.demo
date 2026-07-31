@@ -1,4 +1,24 @@
 {$DEMO_DOMAIN} {
-    encode gzip
-    reverse_proxy web:8080
+    # Route API requests to the ASP.NET Core backend container
+    handle_path /api/* {
+        reverse_proxy api:8080 {
+            # Informs ASP.NET Core that the entry request was HTTPS
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # Route all other traffic to the frontend Vite/Web container
+    handle {
+        reverse_proxy web:8080
+    }
+
+    # Optional: Enable Gzip and Zstandard compression
+    encode gzip zstd
+
+    # Optional: Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer-when-downgrade
+    }
 }
