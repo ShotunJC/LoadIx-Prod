@@ -1,6 +1,6 @@
 {$DEMO_DOMAIN} {
-    # Route API requests to the ASP.NET Core backend container
-    handle_path /api/* {
+    # Preserve the versioned /api/v1 path expected by ASP.NET Core.
+    handle /api/* {
         reverse_proxy api:8080 {
             # Informs ASP.NET Core that the entry request was HTTPS
             header_up X-Forwarded-Proto https
