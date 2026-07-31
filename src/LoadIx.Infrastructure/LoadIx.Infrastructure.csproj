@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\LoadIx.Application\LoadIx.Application.csproj" />
     <ProjectReference Include="..\LoadIx.Domain\LoadIx.Domain.csproj" />

@@ -11,6 +11,14 @@ RUN dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
 
 FROM restore AS build
 COPY src/ src/
+# The SDK's default item globber can treat an excluded, non-existent Debug
+# output directory as a literal wildcard in clean container contexts. Create
+# the expected intermediate directories before publishing.
+RUN mkdir -p src/LoadIx.Api/bin/Debug \
+    src/LoadIx.Application/bin/Debug \
+    src/LoadIx.Contracts/bin/Debug \
+    src/LoadIx.Domain/bin/Debug \
+    src/LoadIx.Infrastructure/bin/Debug
 RUN dotnet publish src/LoadIx.Api/LoadIx.Api.csproj \
     --configuration Release \
     --no-restore \
