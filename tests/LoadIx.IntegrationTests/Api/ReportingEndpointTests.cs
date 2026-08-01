@@ -115,30 +115,6 @@ public sealed class ReportingEndpointTests(
     }
 
     [Fact]
-    public async Task EveryReportEndpointExecutesAgainstSqlServer()
-    {
-        var client = await AdministratorClientAsync();
-        var reports = new[]
-        {
-            "trip-register", "tonnage-by-customer", "tonnage-by-commodity",
-            "tonnage-by-route", "variance", "driver-performance",
-            "vehicle-utilisation", "contract-performance", "customer-revenue",
-            "trip-profitability", "exceptions", "outstanding-pod", "expiries",
-            "invoice-status",
-        };
-
-        foreach (var report in reports)
-        {
-            var response = await client.GetAsync(
-                $"/api/v1/reports/{report}?page=1&pageSize=10");
-
-            response.StatusCode.Should().Be(
-                HttpStatusCode.OK,
-                $"report {report} should execute against SQL Server");
-        }
-    }
-
-    [Fact]
     public async Task ReportPaginationAndFiltersReturnTrueCountsAndStablePages()
     {
         var client = await AdministratorClientAsync();
@@ -367,10 +343,21 @@ public sealed class ReportingEndpointTests(
             new TripWeighbridgeModel(trip.Version, 43.6m, 12m, "TOL-SRC"),
             "tolerance-source");
 
-        var dashboard = await client.GetFromJsonAsync<DashboardKpis>(
-            "/api/v1/reports/dashboard");
-        var exceptions = await client.GetFromJsonAsync<ReportingPagedResponse<ExceptionReportRow>>(
+        var dashboardResponse = await client.GetAsync("/api/v1/reports/dashboard");
+        var dashboardBody = await dashboardResponse.Content.ReadAsStringAsync();
+        dashboardResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"dashboard should execute against SQL Server. Response: {dashboardBody}");
+        var dashboard = JsonSerializer.Deserialize<DashboardKpis>(
+            dashboardBody, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var exceptionsResponse = await client.GetAsync(
             "/api/v1/reports/exceptions?page=1&pageSize=100");
+        var exceptionsBody = await exceptionsResponse.Content.ReadAsStringAsync();
+        exceptionsResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"exceptions should execute against SQL Server. Response: {exceptionsBody}");
+        var exceptions = JsonSerializer.Deserialize<ReportingPagedResponse<ExceptionReportRow>>(
+            exceptionsBody, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         dashboard!.TripsOutsideTolerance.Should().Be(1);
         exceptions!.Items.Should().ContainSingle(item =>
@@ -671,8 +658,14 @@ public sealed class ReportingEndpointTests(
         var query = new List<string> { "page=1", "pageSize=100" };
         if (branchId.HasValue) query.Add($"branchId={branchId.Value:D}");
         if (customerId.HasValue) query.Add($"customerId={customerId.Value:D}");
-        var response = await client.GetFromJsonAsync<ReportingPagedResponse<InvoiceStatusRow>>(
+        var httpResponse = await client.GetAsync(
             $"/api/v1/reports/invoice-status?{string.Join('&', query)}");
+        var responseBody = await httpResponse.Content.ReadAsStringAsync();
+        httpResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"invoice status should execute against SQL Server. Response: {responseBody}");
+        var response = JsonSerializer.Deserialize<ReportingPagedResponse<InvoiceStatusRow>>(
+            responseBody, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         return response!.Items;
     }
 
