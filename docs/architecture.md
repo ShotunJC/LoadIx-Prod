@@ -444,6 +444,7 @@ system rather than used as an unstyled admin template.
 | ADR-042 | Reporting uses a tenant-scoped bounded query service and explicit report endpoints | Accepted | Keeps business calculations out of controllers, prevents unbounded reads, and gives every dashboard/report a freshness timestamp and stable sorting |
 | ADR-043 | Report CSV exports are capped synchronously and large jobs are persisted then dispatched through durable RabbitMQ messages | Accepted | Protects API latency, survives API restarts, and lets a worker retry/report failures without coupling HTTP requests to generation |
 | ADR-044 | Reporting accepts date-only filters, resolves exclusive UTC boundaries on the server, and processes export jobs in bounded pages | Accepted | A selected calendar date belongs to the tenant timezone, including DST days; SQL count/order/page operations must not be replaced by an in-memory cap |
+| ADR-045 | Edge agents submit structured, tenant/site-bound readings through per-device credentials and replay-safe commands | Accepted | Keeps hardware protocol parsing at the edge while providing hashed secret rotation, revocation, offline replay, audit evidence, and idempotent ingestion |
 
 ### Milestone 14 reporting semantics
 
@@ -500,6 +501,26 @@ page ordering, a 100,000-row abuse limit, explicit `Queued`, `Processing`,
 `Completed`, and `Failed` states, a lease/heartbeat, bounded retry attempts, and
 persisted row-count/content-size metadata. A stale processing lease is requeued;
 an export is never reported successful as a silently truncated file.
+
+### Milestone 15 edge integration boundary
+
+The edge integration foundation is a structured ingestion boundary, not a
+hardware driver. `EdgeDevice` is bound to one tenant site and owns its
+`WeighbridgeDevice` assignments. Device requests authenticate with an
+installation-specific hashed credential and carry timestamp, nonce, and
+idempotency headers. `EdgeCommand` stores request hashes and replay outcomes;
+raw/stable readings, tickets, heartbeats, and security audit events preserve the
+evidence needed for offline operation and diagnostics. The API resolves tenant
+and site from the authenticated device record and never accepts them as device
+authority.
+
+Parser plugins implement `IWeightReadingParser` in the application contract and
+run in the edge agent boundary. The repository's only implementation is the
+generic-line simulator parser used by tests. Real serial protocols require
+verified manufacturer documentation and fixture-backed agent plugins before
+being enabled. See [ADR-045](decisions/ADR-045-edge-device-integration-foundation.md)
+for the security model and the later Raspberry Pi/industrial-PC deployment
+approach.
 
 ### Justified changes to the proposed architecture
 

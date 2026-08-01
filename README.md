@@ -171,6 +171,40 @@ administrator may explicitly supply `X-LoadIx-Support-Tenant`; the API verifies
 the target tenant, audits entry, enriches structured logs, and returns
 `X-LoadIx-Support-Context`. Tenant users receive 403 if they attempt this.
 
+## Edge-device and weighbridge integration
+
+Milestone 15 adds a tenant- and site-bound Edge Agent API. Administrators use
+the **Edge devices** screen to create a one-time registration bootstrap, monitor
+heartbeats and online/offline state, rotate or revoke a device credential, view
+diagnostics, and inspect the latest simulated reading. Device requests use an
+installation-specific secret, timestamp, nonce, and idempotency key; secrets are
+hashed in SQL and are shown only at issuance.
+
+The test simulator can be registered and exercised from the repository root:
+
+```powershell
+dotnet run --project src/LoadIx.EdgeSimulator -- `
+  --api-base-url http://localhost:8080 `
+  --device-id <device-id-from-edge-devices> `
+  --bootstrap-token <one-time-token-from-edge-devices> `
+  --count 8 `
+  --disconnect-every 3 `
+  --rotate-after 5
+```
+
+After the first run, the simulator keeps its demo credential and pending queue
+in local state files beside the configured state path. Treat those files as
+test secrets and delete them after the demonstration. The bundled parser accepts
+only the generic test format, for example
+`WEIGHT|value=12345.250|unit=kg|stable=true|vehicle=CA-123`. No compatibility
+with a real weighbridge indicator is claimed. See
+[ADR-045](docs/decisions/ADR-045-edge-device-integration-foundation.md) for the
+future Raspberry Pi or industrial-PC deployment approach and the protocol
+verification gate.
+
+No active simulated device is seeded. Bootstrap is issued through the admin UI
+so credentials do not appear in seed data or source control.
+
 ## Master data management
 
 After signing in, the sidebar provides management screens for branches,

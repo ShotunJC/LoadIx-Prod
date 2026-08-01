@@ -16,12 +16,15 @@ public sealed class SecurityAuditWriter(
         Guid? actorUserId,
         bool isSupportContext,
         string? ipAddress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid? actorDeviceId = null,
+        string? correlationId = null)
     {
         dbContext.SecurityAuditEvents.Add(new SecurityAuditEvent
         {
             TenantId = tenantId,
             ActorUserId = actorUserId,
+            ActorDeviceId = actorDeviceId,
             EventType = eventType,
             Outcome = outcome,
             TargetType = targetType,
@@ -29,6 +32,7 @@ public sealed class SecurityAuditWriter(
             IsSupportContext = isSupportContext,
             OccurredAtUtc = timeProvider.GetUtcNow(),
             IpAddress = ipAddress ?? string.Empty,
+            CorrelationId = correlationId,
         });
         await dbContext.SaveChangesAsync(cancellationToken);
     }

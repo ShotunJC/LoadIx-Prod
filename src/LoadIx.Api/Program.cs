@@ -14,6 +14,7 @@ using LoadIx.Application.Security;
 using LoadIx.Application.System;
 using LoadIx.Infrastructure;
 using LoadIx.Infrastructure.Documents;
+using LoadIx.Infrastructure.Edge;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
 using LoadIx.Infrastructure.Seed;
@@ -28,6 +29,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using SchemeOptions = Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions;
 
 const string apiVersion = "v1";
 const string webCorsPolicy = "LoadIxWeb";
@@ -101,6 +103,11 @@ builder.Services
                 "DevelopmentSignature",
                 StringComparison.OrdinalIgnoreCase),
         "A production malware scanner adapter must be configured outside Development.")
+    .ValidateOnStart();
+builder.Services
+    .AddOptions<EdgeDeviceOptions>()
+    .Bind(builder.Configuration.GetSection(EdgeDeviceOptions.SectionName))
+    .ValidateDataAnnotations()
     .ValidateOnStart();
 
 var documentOptions = builder.Configuration
@@ -206,7 +213,10 @@ builder.Services
                 }
             },
         };
-    });
+    })
+    .AddScheme<SchemeOptions, EdgeDeviceAuthenticationHandler>(
+        EdgeDeviceAuthenticationDefaults.Scheme,
+        _ => { });
 builder.Services.AddAuthorization(options =>
 {
     foreach (var permission in LoadIxPermissions.All)
@@ -223,6 +233,12 @@ builder.Services.AddAuthorization(options =>
                         LoadIxClaimTypes.PlatformAdministrator,
                         bool.TrueString)));
     }
+    options.AddPolicy(
+        EdgeDeviceAuthenticationDefaults.Policy,
+        policy => policy
+            .AddAuthenticationSchemes(EdgeDeviceAuthenticationDefaults.Scheme)
+            .RequireAuthenticatedUser()
+            .RequireClaim(LoadIxClaimTypes.EdgeDeviceId));
 });
 builder.Services.AddRateLimiter(options =>
 {
@@ -261,6 +277,24 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = builder.Environment.IsDevelopment() ? 30 : 10,
                 Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+    options.AddPolicy("edge-device", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Environment.IsDevelopment() ? 120 : 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+    options.AddPolicy("edge-bootstrap", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = builder.Environment.IsDevelopment() ? 20 : 5,
+                Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0,
             }));
 });
@@ -406,6 +440,7 @@ versionedApi.MapOperationsEndpoints();
 versionedApi.MapNotificationEndpoints();
 versionedApi.MapFinanceEndpoints();
 versionedApi.MapReportingEndpoints();
+versionedApi.MapEdgeEndpoints();
 app.MapHub<OperationsHub>("/hubs/operations");
 
 app.Run();

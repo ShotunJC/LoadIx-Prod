@@ -119,6 +119,9 @@ internal sealed class SecurityAuditEventConfiguration
         builder.Property(auditEvent => auditEvent.IpAddress)
             .HasMaxLength(64)
             .IsUnicode(false);
+        builder.Property(auditEvent => auditEvent.CorrelationId)
+            .HasMaxLength(128)
+            .IsUnicode(false);
         builder.HasIndex(auditEvent => new
         {
             auditEvent.TenantId,
@@ -127,6 +130,12 @@ internal sealed class SecurityAuditEventConfiguration
         builder.HasIndex(auditEvent => new
         {
             auditEvent.ActorUserId,
+            auditEvent.OccurredAtUtc,
+        });
+        builder.HasIndex(auditEvent => new
+        {
+            auditEvent.TenantId,
+            auditEvent.ActorDeviceId,
             auditEvent.OccurredAtUtc,
         });
     }

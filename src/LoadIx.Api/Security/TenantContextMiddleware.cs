@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using LoadIx.Application.Security;
 using LoadIx.Domain.Common;
+using LoadIx.Infrastructure.Edge;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
 using LoadIx.Infrastructure.Tenancy;
@@ -10,6 +11,7 @@ namespace LoadIx.Api.Security;
 
 public sealed class TenantContextMiddleware(
     CurrentRequestContext requestContext,
+    CurrentEdgeDeviceRequestContext edgeDeviceRequestContext,
     LoadIxDbContext dbContext,
     SecurityAuditWriter auditWriter,
     ILogger<TenantContextMiddleware> logger) : IMiddleware
@@ -24,6 +26,57 @@ public sealed class TenantContextMiddleware(
         if (context.User.Identity?.IsAuthenticated != true)
         {
             await next(context);
+            return;
+        }
+
+        if (context.User.Identity.AuthenticationType
+            == EdgeDeviceAuthenticationDefaults.Scheme)
+        {
+            var edgeDeviceId = ParseGuid(
+                context.User.FindFirst(LoadIxClaimTypes.EdgeDeviceId)?.Value);
+            var credentialId = ParseGuid(
+                context.User.FindFirst(LoadIxClaimTypes.EdgeCredentialId)?.Value);
+            var tenantId = ParseGuid(
+                context.User.FindFirst(LoadIxClaimTypes.TenantId)?.Value);
+            var nonce = context.User.FindFirst(LoadIxClaimTypes.EdgeNonce)?.Value;
+            var timestampValue = context.User.FindFirst(LoadIxClaimTypes.EdgeTimestamp)?.Value;
+            if (!edgeDeviceId.HasValue
+                || !credentialId.HasValue
+                || !tenantId.HasValue
+                || string.IsNullOrWhiteSpace(nonce)
+                || !long.TryParse(timestampValue, out var timestampSeconds))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+
+            var tenant = TenantId.From(tenantId.Value);
+            var timestamp = DateTimeOffset.FromUnixTimeSeconds(timestampSeconds);
+            var idempotencyKey = context.Request.Headers[
+                EdgeDeviceAuthenticationDefaults.IdempotencyHeader].ToString();
+            edgeDeviceRequestContext.Set(
+                tenant,
+                edgeDeviceId.Value,
+                credentialId.Value,
+                nonce,
+                idempotencyKey,
+                timestamp,
+                context.Connection.RemoteIpAddress?.ToString());
+            requestContext.Set(
+                tenant,
+                null,
+                false,
+                [LoadIxPermissions.EdgeDeviceReceive]);
+            using (logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["TenantId"] = tenant.Value,
+                ["EdgeDeviceId"] = edgeDeviceId.Value,
+                ["IsEdgeDeviceContext"] = true,
+            }))
+            {
+                await next(context);
+            }
+
             return;
         }
 

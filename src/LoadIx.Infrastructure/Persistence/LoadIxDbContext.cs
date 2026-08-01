@@ -3,6 +3,7 @@ using LoadIx.Domain.Commercial;
 using LoadIx.Domain.Common;
 using LoadIx.Domain.Customers;
 using LoadIx.Domain.Documents;
+using LoadIx.Domain.Edge;
 using LoadIx.Domain.Finance;
 using LoadIx.Domain.Fleet;
 using LoadIx.Domain.Instructions;
@@ -109,6 +110,28 @@ public sealed class LoadIxDbContext(
 
     public DbSet<Trailer> Trailers => Set<Trailer>();
 
+    public DbSet<EdgeDevice> EdgeDevices => Set<EdgeDevice>();
+
+    public DbSet<EdgeDeviceCredential> EdgeDeviceCredentials =>
+        Set<EdgeDeviceCredential>();
+
+    public DbSet<WeighbridgeDevice> WeighbridgeDevices =>
+        Set<WeighbridgeDevice>();
+
+    public DbSet<RawWeightReading> RawWeightReadings =>
+        Set<RawWeightReading>();
+
+    public DbSet<StableWeightReading> StableWeightReadings =>
+        Set<StableWeightReading>();
+
+    public DbSet<EdgeCommand> EdgeCommands => Set<EdgeCommand>();
+
+    public DbSet<EdgeTicketSubmission> EdgeTicketSubmissions =>
+        Set<EdgeTicketSubmission>();
+
+    public DbSet<DeviceHeartbeat> DeviceHeartbeats =>
+        Set<DeviceHeartbeat>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -204,6 +227,30 @@ public sealed class LoadIxDbContext(
             .HasQueryFilter(entity =>
                 requestContext.TenantId == entity.TenantId);
         builder.Entity<Trailer>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<EdgeDevice>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<EdgeDeviceCredential>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<WeighbridgeDevice>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<RawWeightReading>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<StableWeightReading>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<EdgeCommand>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<EdgeTicketSubmission>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<DeviceHeartbeat>()
             .HasQueryFilter(entity =>
                 requestContext.TenantId == entity.TenantId);
     }

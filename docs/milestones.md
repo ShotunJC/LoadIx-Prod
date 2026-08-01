@@ -27,6 +27,8 @@ flowchart TD
     M8 --> M10["M10 Customer visibility"]
     M9 --> M10
     M10 --> M11["M11 Production hardening and pilot"]
+    M6 --> M15["M15 Edge-device and weighbridge integration foundation"]
+    M15 --> M11
 ```
 
 M8 can proceed alongside late M6/M7 work once trip events are stable. Finance must
@@ -319,6 +321,43 @@ and operational drills.
 
 **Decision gates:** hosting topology, RPO/RTO, availability targets, regional data
 requirements, support model, legal/privacy sign-off.
+
+## M15 — Edge-device and Weighbridge Integration Foundation
+
+**Outcome:** A secure LoadIx Edge Agent boundary can submit structured
+weighbridge observations and remain recoverable across intermittent
+connectivity, without putting hardware-specific serial parsing in the main API.
+
+**Status:** Implemented on 2026-08-01. Domain/application/API, SQL migration,
+simulator, administration UI, parser tests, and security-focused integration
+coverage are present. SQL-backed integration execution remains dependent on the
+repository's Docker/Testcontainers environment being available.
+
+**Deliverables:**
+
+- tenant-bound `EdgeDevice`, credential, weighbridge, raw/stable reading,
+  command, heartbeat, and ticket-submission records;
+- one-time registration bootstrap, device-specific hashed credentials, rotation,
+  revocation, timestamp tolerance, nonce/idempotency replay protection, rate
+  limits, audit evidence, and RFC Problem Details;
+- authenticated endpoints for bootstrap, rotation, heartbeat, configuration,
+  weight readings, ticket submissions, and diagnostics;
+- application-level parser-plugin contract, generic line parser, and a .NET
+  simulator with local pending queue, retries, disconnect simulation, heartbeat,
+  and rotation demonstration;
+- tenant administrator UI for device inventory, online/offline state, heartbeat,
+  site assignment, credential actions, diagnostics, and live simulated readings;
+- ADR-045 documenting the Raspberry Pi/industrial-PC deployment boundary and
+  the requirement for verified manufacturer protocol documentation.
+
+**Key tests:** authentication and invalid credentials, nonce replay and
+idempotency mismatch, credential rotation/revocation, stale timestamps,
+cross-tenant device hiding, offline captured-time replay, stable-reading
+deduplication, and generic parser acceptance/rejection.
+
+**Decision gates:** verified indicator protocol fixtures, local agent secret-store
+choice, queue retention/backpressure limits, hardware electrical safety review,
+and production certificate/identity management.
 
 ## Cross-Cutting Work in Every Milestone
 

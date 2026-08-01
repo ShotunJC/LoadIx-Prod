@@ -26,6 +26,9 @@ public static class LoadIxPermissions
     public const string FinanceManage = "Finance.Manage";
     public const string ReportView = "Report.View";
     public const string AuditView = "Audit.View";
+    public const string EdgeDeviceView = "EdgeDevice.View";
+    public const string EdgeDeviceManage = "EdgeDevice.Manage";
+    public const string EdgeDeviceReceive = "EdgeDevice.Receive";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(
         [
@@ -41,11 +44,11 @@ public static class LoadIxPermissions
             ContractManage,
             TripView,
             TripManage,
-        TripDispatch,
-        TripComplete,
-        TripOverride,
-        TripDriverExecute,
-        TripLocationUpdate,
+            TripDispatch,
+            TripComplete,
+            TripOverride,
+            TripDriverExecute,
+            TripLocationUpdate,
             DocumentView,
             DocumentManage,
             DocumentDriver,
@@ -53,6 +56,9 @@ public static class LoadIxPermissions
             FinanceManage,
             ReportView,
             AuditView,
+            EdgeDeviceView,
+            EdgeDeviceManage,
+            EdgeDeviceReceive,
         ],
         StringComparer.Ordinal);
 }

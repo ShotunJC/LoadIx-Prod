@@ -65,6 +65,13 @@ jobs:
                 -f compose.demo.yaml \
                 config --quiet
 
+              echo "Running pending database migrations..."
+              docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                --profile tools \
+                run --rm migrate
+
               echo "Building updated application images..."
               docker compose \
                 -f compose.yaml \
