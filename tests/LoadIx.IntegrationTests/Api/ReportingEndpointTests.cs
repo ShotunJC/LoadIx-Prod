@@ -182,7 +182,7 @@ public sealed class ReportingEndpointTests(
             "/api/v1/reports/trip-register/export.csv?page=1&pageSize=100");
         csv.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await csv.Content.ReadAsStringAsync();
-        content.Should().StartWith("Trip Number,");
+        content.Should().StartWith("Trip Id,Trip Number,");
         content.Should().Contain("'=FORMULA-FLEET");
 
         var many = await GenerateTripsAsync(client, 101);
@@ -364,7 +364,7 @@ public sealed class ReportingEndpointTests(
         trip = await SendTripCommandAsync(client, trip.Id, "start-loading",
             new TripCommandModel(trip.Version), "tolerance-loading");
         await SendTripCommandAsync(client, trip.Id, "source-weighbridge",
-            new TripWeighbridgeModel(trip.Version, 43_600m, 12_000m, "TOL-SRC"),
+            new TripWeighbridgeModel(trip.Version, 43.6m, 12m, "TOL-SRC"),
             "tolerance-source");
 
         var dashboard = await client.GetFromJsonAsync<DashboardKpis>(
@@ -403,7 +403,7 @@ public sealed class ReportingEndpointTests(
         var outsideTrip = await StartLoadingTripAsync(
             client, outside.Id, resources, 1, "kpi-outside");
         await SendTripCommandAsync(client, outsideTrip.Id, "source-weighbridge",
-            new TripWeighbridgeModel(outsideTrip.Version, 43_600m, 12_000m, "KPI-OUTSIDE"),
+            new TripWeighbridgeModel(outsideTrip.Version, 43.6m, 12m, "KPI-OUTSIDE"),
             "kpi-outside-source");
 
         var awaiting = (await GenerateTripsAsync(client, 1))[0];
@@ -587,7 +587,7 @@ public sealed class ReportingEndpointTests(
         }
 
         trip = await SendTripCommandAsync(client, trip.Id, "source-weighbridge",
-            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+            new TripWeighbridgeModel(trip.Version, 42m, 12m,
                 $"{keyPrefix}-source"), $"{keyPrefix}-source");
         trip = await SendTripCommandAsync(client, trip.Id, "complete-collection",
             new TripCommandModel(trip.Version), $"{keyPrefix}-complete-collection");
@@ -598,7 +598,7 @@ public sealed class ReportingEndpointTests(
         trip = await SendTripCommandAsync(client, trip.Id, "start-unloading",
             new TripCommandModel(trip.Version), $"{keyPrefix}-start-unloading");
         trip = await SendTripCommandAsync(client, trip.Id, "destination-weighbridge",
-            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+            new TripWeighbridgeModel(trip.Version, 42m, 12m,
                 $"{keyPrefix}-destination"), $"{keyPrefix}-destination");
         foreach (var route in new[]
                  {
@@ -644,7 +644,7 @@ public sealed class ReportingEndpointTests(
         var trip = await StartLoadingTripAsync(
             client, tripId, resources, resourceIndex, keyPrefix);
         trip = await SendTripCommandAsync(client, trip.Id, "source-weighbridge",
-            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+            new TripWeighbridgeModel(trip.Version, 42m, 12m,
                 $"{keyPrefix}-source"), $"{keyPrefix}-source");
         trip = await SendTripCommandAsync(client, trip.Id, "complete-collection",
             new TripCommandModel(trip.Version), $"{keyPrefix}-complete-collection");
@@ -655,7 +655,7 @@ public sealed class ReportingEndpointTests(
         trip = await SendTripCommandAsync(client, trip.Id, "start-unloading",
             new TripCommandModel(trip.Version), $"{keyPrefix}-start-unloading");
         trip = await SendTripCommandAsync(client, trip.Id, "destination-weighbridge",
-            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+            new TripWeighbridgeModel(trip.Version, 42m, 12m,
                 $"{keyPrefix}-destination"), $"{keyPrefix}-destination");
         trip = await SendTripCommandAsync(client, trip.Id, "complete-delivery",
             new TripCommandModel(trip.Version), $"{keyPrefix}-complete-delivery");

@@ -315,16 +315,17 @@ public sealed class ReportingService(
         }
         if (filter.CustomerId.HasValue) batches = batches.Where(item => item.CustomerId == filter.CustomerId.Value);
 
+        var selectedBranchId = filter.BranchId.GetValueOrDefault();
         var lineTotals = from line in db.InvoiceBatchLines.AsNoTracking()
                          join trip in db.Trips.AsNoTracking()
                              on line.TripId equals trip.Id
                          where !filter.BranchId.HasValue
                              || (trip.DriverId.HasValue
                                  && db.Drivers.Any(driver => driver.Id == trip.DriverId.Value
-                                     && driver.BranchId == filter.BranchId.Value))
+                                     && driver.BranchId == selectedBranchId))
                              || (trip.VehicleId.HasValue
                                  && db.Vehicles.Any(vehicle => vehicle.Id == trip.VehicleId.Value
-                                     && vehicle.BranchId == filter.BranchId.Value))
+                                     && vehicle.BranchId == selectedBranchId))
                          group line by line.InvoiceBatchId into groupLines
                          select new
                          {
@@ -477,14 +478,20 @@ public sealed class ReportingService(
                 OutsideTolerance = trip.PlannedQuantity > 0m
                     && ((trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue)
                         || (trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue))
-                    && Math.Abs(
-                        (trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
+                    && ((trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
                             ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault()) / 1000m : trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault())
                             : trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue
                                 ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) / 1000m : trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault())
                                 : 0m)
-                        - (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity))
-                        > (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity) * contract.WeightTolerancePercent / 100m,
+                        > (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity)
+                            + (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity) * contract.WeightTolerancePercent / 100m
+                        || (trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
+                            ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault()) / 1000m : trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault())
+                            : trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue
+                                ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) / 1000m : trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault())
+                                : 0m)
+                        < (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity)
+                            - (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity) * contract.WeightTolerancePercent / 100m),
                 IsDelayed = ActiveStatuses.Contains(trip.Status) && trip.PlannedDeliveryAtUtc < now,
             };
 
