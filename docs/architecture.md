@@ -460,8 +460,10 @@ Dashboard KPI definitions are:
   destination net tonnes (falling back to source net tonnes) inside today's
   tenant-local day.
 - Trips awaiting reconciliation: current trips in `ReconciliationRequired`.
-- Trips outside tolerance: current reconciliation-required trips whose delivered
-  tonnes differ from planned tonnes by more than the contract tolerance.
+- Trips outside tolerance: non-terminal operational trips with a valid source or
+  destination net weight whose measured tonnes differ from planned tonnes by
+  more than the contract tolerance; this is not restricted to
+  `ReconciliationRequired`.
 - Delayed trips: current non-terminal trips whose planned delivery instant is
   before the current UTC instant.
 - Fleet utilisation: active tenant vehicles used by at least one selected-period
@@ -471,12 +473,14 @@ Dashboard KPI definitions are:
 - Customer concentration: the largest customer's selected-period revenue divided
   by selected-period revenue; zero revenue returns zero percent.
 - Upcoming licence expiries: active driver licences and vehicle licence/roadworthy
-  records expiring within the next 30 tenant-local calendar days.
+  records expiring from tenant-local today through today plus 30 days, inclusive;
+  already expired records are excluded.
 
 Report date fields are explicit: trip register and exceptions use planned delivery;
 tonnage, variance, driver performance, contract performance, customer revenue,
-profitability, and outstanding POD use completion; vehicle utilisation uses planned
-collection; invoice status uses invoice-batch creation; expiry uses the expiry date.
+profitability, and outstanding POD use completion and exclude incomplete trips;
+vehicle utilisation uses planned collection; invoice status uses invoice-batch
+creation; expiry uses the expiry date.
 Branch filtering follows the assigned driver or vehicle branch and customer
 filtering follows the trip/customer relationship.
 

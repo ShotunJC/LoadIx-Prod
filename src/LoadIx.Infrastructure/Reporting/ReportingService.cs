@@ -48,8 +48,10 @@ public sealed class ReportingService(
         var operational = BuildTripFacts(filter, ReportDateMode.None, null);
         var active = await operational.CountAsync(item => ActiveStatuses.Contains(item.Status), cancellationToken);
         var awaiting = await operational.CountAsync(item => item.Status == TripStatus.ReconciliationRequired, cancellationToken);
+        // Outside-tolerance is an unresolved operational exception regardless
+        // of whether reconciliation has already been submitted.
         var outsideTolerance = await operational.CountAsync(
-            item => item.Status == TripStatus.ReconciliationRequired && item.OutsideTolerance,
+            item => ActiveStatuses.Contains(item.Status) && item.OutsideTolerance,
             cancellationToken);
         var delayed = await operational.CountAsync(
             item => ActiveStatuses.Contains(item.Status) && item.PlannedDeliveryAtUtc < now,
@@ -79,12 +81,16 @@ public sealed class ReportingService(
         var fleetTotal = await activeFleet.CountAsync(cancellationToken);
         var usedVehicles = await financial.Where(item => item.VehicleId.HasValue)
             .Select(item => item.VehicleId!.Value).Distinct().CountAsync(cancellationToken);
-        var expiryDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, settings.TimeZone).DateTime.Date).AddDays(30);
+        var localToday = DateOnly.FromDateTime(
+            TimeZoneInfo.ConvertTime(now, settings.TimeZone).DateTime.Date);
+        var expiryDate = localToday.AddDays(30);
         var upcoming = await db.Drivers.AsNoTracking().CountAsync(
-                item => item.IsActive && item.LicenceExpiry <= expiryDate
+                item => item.IsActive && item.LicenceExpiry >= localToday
+                    && item.LicenceExpiry <= expiryDate
                     && (!filter.BranchId.HasValue || item.BranchId == filter.BranchId.Value), cancellationToken)
             + await activeFleet.CountAsync(
-                item => item.LicenceExpiry <= expiryDate || item.RoadworthyExpiry <= expiryDate,
+                item => (item.LicenceExpiry >= localToday && item.LicenceExpiry <= expiryDate)
+                    || (item.RoadworthyExpiry >= localToday && item.RoadworthyExpiry <= expiryDate),
                 cancellationToken);
 
         return new DashboardKpis(
@@ -243,16 +249,41 @@ public sealed class ReportingService(
         var start = filter.FromDate ?? today;
         var endExclusive = (filter.ToDate ?? today.AddDays(90)).AddDays(1);
         var drivers = db.Drivers.AsNoTracking()
-            .Where(item => item.IsActive && item.LicenceExpiry >= start && item.LicenceExpiry < endExclusive)
-            .Select(item => new ExpiryProjection { ResourceType = "Driver", Resource = item.FirstName + " " + item.LastName, ExpiryDate = item.LicenceExpiry, Status = "Licence", SortId = item.Id });
-        var vehicles = db.Vehicles.AsNoTracking().Where(item => item.IsActive)
-            .SelectMany(item => new[]
+            .Where(item => item.IsActive
+                && (!filter.BranchId.HasValue || item.BranchId == filter.BranchId.Value)
+                && item.LicenceExpiry >= start && item.LicenceExpiry < endExclusive)
+            .Select(item => new ExpiryProjection
             {
-                new ExpiryProjection { ResourceType = "Vehicle licence", Resource = item.FleetNumber, ExpiryDate = item.LicenceExpiry, Status = "Licence", SortId = item.Id },
-                new ExpiryProjection { ResourceType = "Vehicle roadworthy", Resource = item.FleetNumber, ExpiryDate = item.RoadworthyExpiry, Status = "Roadworthy", SortId = item.Id },
-            })
-            .Where(item => item.ExpiryDate >= start && item.ExpiryDate < endExclusive);
-        var query = drivers.Concat(vehicles);
+                ResourceType = "Driver",
+                Resource = item.FirstName + " " + item.LastName,
+                ExpiryDate = item.LicenceExpiry,
+                Status = "Licence",
+                SortId = item.Id,
+            });
+        var vehicleBase = db.Vehicles.AsNoTracking()
+            .Where(item => item.IsActive
+                && (!filter.BranchId.HasValue || item.BranchId == filter.BranchId.Value));
+        var vehicleLicences = vehicleBase
+            .Where(item => item.LicenceExpiry >= start && item.LicenceExpiry < endExclusive)
+            .Select(item => new ExpiryProjection
+            {
+                ResourceType = "Vehicle licence",
+                Resource = item.FleetNumber,
+                ExpiryDate = item.LicenceExpiry,
+                Status = "Licence",
+                SortId = item.Id,
+            });
+        var vehicleRoadworthies = vehicleBase
+            .Where(item => item.RoadworthyExpiry >= start && item.RoadworthyExpiry < endExclusive)
+            .Select(item => new ExpiryProjection
+            {
+                ResourceType = "Vehicle roadworthy",
+                Resource = item.FleetNumber,
+                ExpiryDate = item.RoadworthyExpiry,
+                Status = "Roadworthy",
+                SortId = item.Id,
+            });
+        var query = drivers.Concat(vehicleLicences).Concat(vehicleRoadworthies);
         var page = await PageAsync(query.OrderBy(item => item.ExpiryDate).ThenBy(item => item.SortId), filter, cancellationToken);
         return new ReportingPagedResponse<ExpiryReportRow>(
             page.Items.Select(item => new ExpiryReportRow(item.ResourceType, item.Resource, item.ExpiryDate,
@@ -399,6 +430,8 @@ public sealed class ReportingService(
                 GrossMargin = financial == null ? 0m : financial.TaxExclusiveAmount
                     - (db.CostEntries.Where(cost => cost.TripFinancialsId == financial.Id).Sum(cost => (decimal?)cost.Amount) ?? 0m),
                 OutsideTolerance = trip.PlannedQuantity > 0m
+                    && ((trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue)
+                        || (trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue))
                     && Math.Abs(
                         (trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
                             ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault()) / 1000m : trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault())
@@ -417,11 +450,20 @@ public sealed class ReportingService(
                 || (item.DriverId.HasValue && db.Drivers.Any(driver => driver.Id == item.DriverId && driver.BranchId == filter.BranchId.Value)));
         }
 
-        if (dateMode != ReportDateMode.None && range is { } dateRange)
+        if (dateMode == ReportDateMode.Completed)
+        {
+            query = query.Where(item => item.CompletedAtUtc.HasValue);
+            if (range is { } completedRange)
+            {
+                query = query.Where(item =>
+                    (!completedRange.Start.HasValue || item.CompletedAtUtc >= completedRange.Start.Value)
+                    && (!completedRange.EndExclusive.HasValue || item.CompletedAtUtc < completedRange.EndExclusive.Value));
+            }
+        }
+        else if (dateMode != ReportDateMode.None && range is { } dateRange)
         {
             query = dateMode switch
             {
-                ReportDateMode.Completed => query.Where(item => (!dateRange.Start.HasValue || item.CompletedAtUtc >= dateRange.Start.Value) && (!dateRange.EndExclusive.HasValue || item.CompletedAtUtc < dateRange.EndExclusive.Value)),
                 ReportDateMode.PlannedCollection => query.Where(item => (!dateRange.Start.HasValue || item.PlannedCollectionAtUtc >= dateRange.Start.Value) && (!dateRange.EndExclusive.HasValue || item.PlannedCollectionAtUtc < dateRange.EndExclusive.Value)),
                 _ => query.Where(item => (!dateRange.Start.HasValue || item.PlannedDeliveryAtUtc >= dateRange.Start.Value) && (!dateRange.EndExclusive.HasValue || item.PlannedDeliveryAtUtc < dateRange.EndExclusive.Value)),
             };

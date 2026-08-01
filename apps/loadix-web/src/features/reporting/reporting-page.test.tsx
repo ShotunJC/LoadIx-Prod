@@ -118,12 +118,20 @@ describe('ReportingPage', () => {
     expect(screen.getByText('Upcoming licence expiries')).toBeInTheDocument()
 
     const user = userEvent.setup()
+    await user.type(screen.getByLabelText('Search branches'), 'North')
+    await waitFor(() => {
+      expect(
+        requestCalls().some(([input]) =>
+          requestUrl(input).includes('search=North'),
+        ),
+      ).toBe(true)
+    })
     await user.selectOptions(
-      screen.getByLabelText('Branch'),
+      screen.getByRole('combobox', { name: 'Branch' }),
       '12000000-0000-0000-0000-000000000001',
     )
     await user.selectOptions(
-      screen.getByLabelText('Customer'),
+      screen.getByRole('combobox', { name: 'Customer' }),
       '12000000-0000-0000-0000-000000000002',
     )
     await user.clear(screen.getByLabelText('Date from'))

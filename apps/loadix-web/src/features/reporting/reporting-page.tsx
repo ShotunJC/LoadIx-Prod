@@ -79,6 +79,8 @@ export function ReportingPage() {
   const [report, setReport] = useState('trip-register')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [branchSearch, setBranchSearch] = useState('')
+  const [customerSearch, setCustomerSearch] = useState('')
   const [branchId, setBranchId] = useState('')
   const [customerId, setCustomerId] = useState('')
   const [page, setPage] = useState(1)
@@ -108,24 +110,24 @@ export function ReportingPage() {
   }, [from, to, branchId, customerId])
 
   const branches = useQuery({
-    queryKey: ['report-lookups', 'branches'],
+    queryKey: ['report-lookups', 'branches', branchSearch],
     queryFn: () =>
       listMasterData(auth.request, 'branches', {
         page: 1,
-        pageSize: 100,
-        search: '',
+        pageSize: 50,
+        search: branchSearch,
         status: 'active',
         sort: 'name',
         direction: 'asc',
       }),
   })
   const customers = useQuery({
-    queryKey: ['report-lookups', 'customers'],
+    queryKey: ['report-lookups', 'customers', customerSearch],
     queryFn: () =>
       listMasterData(auth.request, 'customers', {
         page: 1,
-        pageSize: 100,
-        search: '',
+        pageSize: 50,
+        search: customerSearch,
         status: 'active',
         sort: 'tradingName',
         direction: 'asc',
@@ -239,6 +241,8 @@ export function ReportingPage() {
   function resetFilters() {
     setFrom('')
     setTo('')
+    setBranchSearch('')
+    setCustomerSearch('')
     setBranchId('')
     setCustomerId('')
     setPage(1)
@@ -347,6 +351,16 @@ export function ReportingPage() {
           </label>
           <label className="text-sm font-medium">
             Branch
+            <input
+              aria-label="Search branches"
+              className="mt-1 block rounded border px-3 py-2"
+              placeholder="Search branches"
+              type="search"
+              value={branchSearch}
+              onChange={(event) => {
+                setBranchSearch(event.target.value)
+              }}
+            />
             <select
               aria-label="Branch"
               className="mt-1 block rounded border px-3 py-2"
@@ -366,6 +380,16 @@ export function ReportingPage() {
           </label>
           <label className="text-sm font-medium">
             Customer
+            <input
+              aria-label="Search customers"
+              className="mt-1 block rounded border px-3 py-2"
+              placeholder="Search customers"
+              type="search"
+              value={customerSearch}
+              onChange={(event) => {
+                setCustomerSearch(event.target.value)
+              }}
+            />
             <select
               aria-label="Customer"
               className="mt-1 block rounded border px-3 py-2"
