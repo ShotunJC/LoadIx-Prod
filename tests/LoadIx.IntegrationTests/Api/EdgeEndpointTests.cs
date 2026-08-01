@@ -121,13 +121,15 @@ public sealed class EdgeEndpointTests(
 
         var heartbeatKey = $"heartbeat-key-{testRunId}";
         var heartbeatNonce = $"heartbeat-nonce-{testRunId}";
+        var heartbeatTimestamp = DateTimeOffset.UtcNow;
 
         var first = await SendHeartbeatAsync(
             device.DeviceId,
             credential.Secret,
             heartbeatKey,
             heartbeatNonce,
-            "Running");
+            "Running",
+            heartbeatTimestamp);
 
         var firstResponseBody = await first.Content.ReadAsStringAsync();
 
@@ -147,7 +149,8 @@ public sealed class EdgeEndpointTests(
             credential.Secret,
             heartbeatKey,
             heartbeatNonce,
-            "Running");
+            "Running",
+            heartbeatTimestamp);
 
         var replayResponseBody = await replay.Content.ReadAsStringAsync();
 
@@ -167,7 +170,8 @@ public sealed class EdgeEndpointTests(
             credential.Secret,
             heartbeatKey,
             heartbeatNonce,
-            "Changed");
+            "Changed",
+            heartbeatTimestamp);
 
         var changedReplayResponseBody =
             await changedReplay.Content.ReadAsStringAsync();
@@ -181,7 +185,8 @@ public sealed class EdgeEndpointTests(
             credential.Secret,
             heartbeatKey,
             $"heartbeat-changed-nonce-{testRunId}",
-            "Changed");
+            "Changed",
+            heartbeatTimestamp);
 
         var changedIdempotencyResponseBody =
             await changedIdempotency.Content.ReadAsStringAsync();
@@ -471,7 +476,8 @@ public sealed class EdgeEndpointTests(
         string secret,
         string idempotencyKey,
         string nonce,
-        string status)
+        string status,
+        DateTimeOffset deviceTimestampUtc)
     {
         var request = DeviceRequest(
             HttpMethod.Post,
@@ -482,7 +488,7 @@ public sealed class EdgeEndpointTests(
             nonce,
             new
             {
-                deviceTimestampUtc = DateTimeOffset.UtcNow,
+                deviceTimestampUtc,
                 status,
             });
         return await _factory.CreateClient().SendAsync(request);
