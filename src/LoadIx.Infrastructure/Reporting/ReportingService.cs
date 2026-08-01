@@ -218,9 +218,10 @@ public sealed class ReportingService(
 
     public async Task<ReportingPagedResponse<ExceptionReportRow>> GetExceptionsAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
         var query = BuildTripFacts(filter, ReportDateMode.PlannedDelivery, await GetRangeAsync(filter, cancellationToken))
             .Where(item => item.OutsideTolerance || item.Status == TripStatus.ReconciliationRequired
-                || (ActiveStatuses.Contains(item.Status) && item.PlannedDeliveryAtUtc < timeProvider.GetUtcNow()))
+                || (ActiveStatuses.Contains(item.Status) && item.PlannedDeliveryAtUtc < now))
             .Select(item => new ExceptionReportRow(item.TripId, item.TripNumber, item.CustomerName,
                 item.Status.ToString(), item.OutsideTolerance ? "Outside tolerance"
                     : item.Status == TripStatus.ReconciliationRequired ? "Awaiting reconciliation" : "Delayed",
@@ -316,35 +317,27 @@ public sealed class ReportingService(
         if (filter.CustomerId.HasValue) batches = batches.Where(item => item.CustomerId == filter.CustomerId.Value);
 
         var selectedBranchId = filter.BranchId.GetValueOrDefault();
-        var lineTotals = from line in db.InvoiceBatchLines.AsNoTracking()
-                         join trip in db.Trips.AsNoTracking()
-                             on line.TripId equals trip.Id
-                         where !filter.BranchId.HasValue
-                             || (trip.DriverId.HasValue
-                                 && db.Drivers.Any(driver => driver.Id == trip.DriverId.Value
-                                     && driver.BranchId == selectedBranchId))
-                             || (trip.VehicleId.HasValue
-                                 && db.Vehicles.Any(vehicle => vehicle.Id == trip.VehicleId.Value
-                                     && vehicle.BranchId == selectedBranchId))
-                         group line by line.InvoiceBatchId into groupLines
-                         select new
-                         {
-                             InvoiceBatchId = groupLines.Key,
-                             Total = groupLines.Sum(line => line.Total),
-                         };
-
-        // The grouping above produces one row per batch before status
-        // aggregation, so a batch with lines from multiple branches is counted
-        // once and contributes only the selected branch's line totals.
+        // Group lines by batch before aggregating by status. This keeps a mixed
+        // branch batch to one row and sums only lines whose trips belong to the
+        // selected branch.
         var scopedBatches = from batch in batches
-                            join lineTotal in lineTotals
-                                on batch.Id equals lineTotal.InvoiceBatchId
-                            select new InvoiceStatusBatchProjection
+                            join line in db.InvoiceBatchLines.AsNoTracking()
+                                on batch.Id equals line.InvoiceBatchId
+                            join trip in db.Trips.AsNoTracking()
+                                on line.TripId equals trip.Id
+                            where !filter.BranchId.HasValue
+                                || (trip.DriverId.HasValue
+                                    && db.Drivers.Any(driver => driver.Id == trip.DriverId.Value
+                                        && driver.BranchId == selectedBranchId))
+                                || (trip.VehicleId.HasValue
+                                    && db.Vehicles.Any(vehicle => vehicle.Id == trip.VehicleId.Value
+                                        && vehicle.BranchId == selectedBranchId))
+                            group line by new { batch.Id, batch.Status, batch.CreatedAtUtc } into groupLines
+                            select new
                             {
-                                BatchId = batch.Id,
-                                Status = batch.Status,
-                                CreatedAtUtc = batch.CreatedAtUtc,
-                                Total = lineTotal.Total,
+                                groupLines.Key.Status,
+                                groupLines.Key.CreatedAtUtc,
+                                Total = groupLines.Sum(line => line.Total),
                             };
 
         var grouped = scopedBatches.GroupBy(item => item.Status)
@@ -625,7 +618,6 @@ public sealed class ReportingService(
     private sealed class VehicleUtilisationProjection { public string Vehicle { get; set; } = string.Empty; public int AssignedTrips { get; set; } public int CompletedTrips { get; set; } public decimal UtilisationPercent { get; set; } public DateOnly? LicenceExpiry { get; set; } public DateOnly? RoadworthyExpiry { get; set; } }
     private sealed class ContractPerformanceProjection { public string Contract { get; set; } = string.Empty; public int CompletedTrips { get; set; } public decimal DeliveredTonnes { get; set; } public decimal Revenue { get; set; } public decimal GrossMargin { get; set; } public decimal ExceptionPercent { get; set; } }
     private sealed class ExpiryProjection { public string ResourceType { get; set; } = string.Empty; public string Resource { get; set; } = string.Empty; public DateOnly ExpiryDate { get; set; } public string Status { get; set; } = string.Empty; public Guid SortId { get; set; } }
-    private sealed class InvoiceStatusBatchProjection { public Guid BatchId { get; set; } public InvoiceBatchStatus Status { get; set; } public DateTimeOffset CreatedAtUtc { get; set; } public decimal Total { get; set; } }
 }
 
 public sealed class ReportExportTooLargeException(int maximumRows, int totalRows) : Exception
