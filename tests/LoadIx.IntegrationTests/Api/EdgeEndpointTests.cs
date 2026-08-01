@@ -59,85 +59,153 @@ public sealed class EdgeEndpointTests(
     [Fact]
     public async Task DeviceAuthenticationReplayProtectionAndOfflineReplayAreEnforced()
     {
+        var testRunId = Guid.NewGuid().ToString("N");
+
         var admin = await AdministratorClientAsync();
         var device = await CreateDeviceAsync(admin);
         var anonymous = _factory.CreateClient();
+
         var bootstrap = new HttpRequestMessage(
             HttpMethod.Post,
             "/api/v1/edge/bootstrap");
-        AddEnvelopeHeaders(bootstrap, "bootstrap-key-001", "bootstrap-nonce-001");
+
+        AddEnvelopeHeaders(
+            bootstrap,
+            $"bootstrap-key-{testRunId}",
+            $"bootstrap-nonce-{testRunId}");
+
         bootstrap.Content = JsonContent.Create(new
         {
             deviceId = device.DeviceId,
             bootstrapToken = device.BootstrapToken,
             agentVersion = "integration-agent/1",
         });
+
         var bootstrapResponse = await anonymous.SendAsync(bootstrap);
-        bootstrapResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var credential = (await bootstrapResponse.Content
-            .ReadFromJsonAsync<EdgeCredentialIssued>())!;
+
+        var bootstrapResponseBody =
+            await bootstrapResponse.Content.ReadAsStringAsync();
+
+        bootstrapResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"the bootstrap response was: {bootstrapResponseBody}");
+
+        var credential = JsonSerializer.Deserialize<EdgeCredentialIssued>(
+            bootstrapResponseBody,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+            });
+
+        credential.Should().NotBeNull();
+        credential!.Secret.Should().NotBeNullOrWhiteSpace();
 
         var invalidSecret = DeviceRequest(
             HttpMethod.Post,
             "/api/v1/edge/heartbeat",
             device.DeviceId,
             "not-the-secret",
-            "invalid-key-001",
-            "invalid-nonce-001",
+            $"invalid-key-{testRunId}",
+            $"invalid-nonce-{testRunId}",
             new
             {
                 deviceTimestampUtc = DateTimeOffset.UtcNow,
                 status = "Running",
             });
-        (await anonymous.SendAsync(invalidSecret)).StatusCode
-            .Should().Be(HttpStatusCode.Unauthorized);
 
-        var nonce = "heartbeat-nonce-0001";
-        var key = "heartbeat-key-0001";
+        var invalidSecretResponse = await anonymous.SendAsync(invalidSecret);
+
+        invalidSecretResponse.StatusCode.Should().Be(
+            HttpStatusCode.Unauthorized);
+
+        var heartbeatKey = $"heartbeat-key-{testRunId}";
+        var heartbeatNonce = $"heartbeat-nonce-{testRunId}";
+
         var first = await SendHeartbeatAsync(
             device.DeviceId,
             credential.Secret,
-            key,
-            nonce,
+            heartbeatKey,
+            heartbeatNonce,
             "Running");
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        var firstPayload = await first.Content.ReadFromJsonAsync<EdgeHeartbeatAck>();
+
+        var firstResponseBody = await first.Content.ReadAsStringAsync();
+
+        first.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"the first heartbeat response was: {firstResponseBody}");
+
+        var firstPayload = JsonSerializer.Deserialize<EdgeHeartbeatAck>(
+            firstResponseBody,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+            });
+
+        firstPayload.Should().NotBeNull();
         firstPayload!.IsReplay.Should().BeFalse();
 
         var replay = await SendHeartbeatAsync(
             device.DeviceId,
             credential.Secret,
-            key,
-            nonce,
+            heartbeatKey,
+            heartbeatNonce,
             "Running");
-        replay.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await replay.Content.ReadFromJsonAsync<EdgeHeartbeatAck>())!
-            .IsReplay.Should().BeTrue();
+
+        var replayResponseBody = await replay.Content.ReadAsStringAsync();
+
+        replay.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"the heartbeat replay response was: {replayResponseBody}");
+
+        var replayPayload = JsonSerializer.Deserialize<EdgeHeartbeatAck>(
+            replayResponseBody,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+            });
+
+        replayPayload.Should().NotBeNull();
+        replayPayload!.IsReplay.Should().BeTrue();
 
         var changedReplay = await SendHeartbeatAsync(
             device.DeviceId,
             credential.Secret,
-            key,
-            nonce,
+            heartbeatKey,
+            heartbeatNonce,
             "Changed");
-        changedReplay.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var changedReplayResponseBody =
+            await changedReplay.Content.ReadAsStringAsync();
+
+        changedReplay.StatusCode.Should().Be(
+            HttpStatusCode.Conflict,
+            $"the changed replay response was: {changedReplayResponseBody}");
 
         var changedIdempotency = await SendHeartbeatAsync(
             device.DeviceId,
             credential.Secret,
-            key,
-            "heartbeat-nonce-0002",
+            heartbeatKey,
+            $"heartbeat-changed-nonce-{testRunId}",
             "Changed");
-        changedIdempotency.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var changedIdempotencyResponseBody =
+            await changedIdempotency.Content.ReadAsStringAsync();
+
+        changedIdempotency.StatusCode.Should().Be(
+            HttpStatusCode.Conflict,
+            $"the changed idempotency response was: " +
+            $"{changedIdempotencyResponseBody}");
 
         var oldCapturedAt = DateTimeOffset.UtcNow.AddDays(-2);
+        var readingKey = $"reading-key-{testRunId}";
+
         var reading = DeviceRequest(
             HttpMethod.Post,
             "/api/v1/edge/readings",
             device.DeviceId,
             credential.Secret,
-            "reading-key-0001",
-            "reading-nonce-0001",
+            readingKey,
+            $"reading-nonce-first-{testRunId}",
             new
             {
                 weighbridgeDeviceId = device.WeighbridgeDeviceId,
@@ -146,54 +214,102 @@ public sealed class EdgeEndpointTests(
                 isStable = true,
                 capturedAtUtc = oldCapturedAt,
                 vehicleRegistration = "SIM-001",
-                serialMessageMetadata = "WEIGHT|value=12345.250|unit=kg|stable=true",
+                serialMessageMetadata =
+                    "WEIGHT|value=12345.250|unit=kg|stable=true",
                 parserVersion = "generic-line-v1",
                 correlationId = (string?)null,
             });
-        (await anonymous.SendAsync(reading)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var readingResponse = await anonymous.SendAsync(reading);
+        var readingResponseBody =
+            await readingResponse.Content.ReadAsStringAsync();
+
+        readingResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"the first reading response was: {readingResponseBody}");
+
+        var firstReadingReceipt =
+            JsonSerializer.Deserialize<EdgeReadingReceipt>(
+                readingResponseBody,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                });
+
+        firstReadingReceipt.Should().NotBeNull();
+        firstReadingReceipt!.IsReplay.Should().BeFalse();
 
         var offlineReplay = DeviceRequest(
             HttpMethod.Post,
             "/api/v1/edge/readings",
             device.DeviceId,
             credential.Secret,
-            "reading-key-0001",
-            "reading-nonce-0002",
-        new
-        {
-            weighbridgeDeviceId = device.WeighbridgeDeviceId,
-            displayedValue = 12345.250m,
-            unit = "kg",
-            isStable = true,
-            capturedAtUtc = oldCapturedAt,
-            vehicleRegistration = "SIM-001",
-            serialMessageMetadata = "WEIGHT|value=12345.250|unit=kg|stable=true",
-            parserVersion = "generic-line-v1",
-            correlationId = (string?)null,
-        });
+            readingKey,
+            $"reading-nonce-replay-{testRunId}",
+            new
+            {
+                weighbridgeDeviceId = device.WeighbridgeDeviceId,
+                displayedValue = 12345.250m,
+                unit = "kg",
+                isStable = true,
+                capturedAtUtc = oldCapturedAt,
+                vehicleRegistration = "SIM-001",
+                serialMessageMetadata =
+                    "WEIGHT|value=12345.250|unit=kg|stable=true",
+                parserVersion = "generic-line-v1",
+                correlationId = (string?)null,
+            });
 
-        var offlineReplayResponse = await anonymous.SendAsync(offlineReplay);
+        var offlineReplayResponse =
+            await anonymous.SendAsync(offlineReplay);
 
-        offlineReplayResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var offlineReplayResponseBody =
+            await offlineReplayResponse.Content.ReadAsStringAsync();
 
-        var offlineReplayReceipt = await offlineReplayResponse.Content
-            .ReadFromJsonAsync<EdgeReadingReceipt>();
+        offlineReplayResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK,
+            $"the offline replay response was: " +
+            $"{offlineReplayResponseBody}");
+
+        var offlineReplayReceipt =
+            JsonSerializer.Deserialize<EdgeReadingReceipt>(
+                offlineReplayResponseBody,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                });
 
         offlineReplayReceipt.Should().NotBeNull();
         offlineReplayReceipt!.IsReplay.Should().BeTrue();
 
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
-        (await db.RawWeightReadings.IgnoreQueryFilters().CountAsync(item =>
-            item.EdgeDeviceId == device.DeviceId)).Should().Be(1);
-        (await db.StableWeightReadings.IgnoreQueryFilters().CountAsync(item =>
-            item.EdgeDeviceId == device.DeviceId)).Should().Be(1);
-        var storedCredential = await db.EdgeDeviceCredentials.IgnoreQueryFilters()
-            .SingleAsync(item => item.EdgeDeviceId == device.DeviceId
+        await using var scope =
+            _factory.Services.CreateAsyncScope();
+
+        var db = scope.ServiceProvider
+            .GetRequiredService<LoadIxDbContext>();
+
+        var rawReadingCount = await db.RawWeightReadings
+            .IgnoreQueryFilters()
+            .CountAsync(item =>
+                item.EdgeDeviceId == device.DeviceId);
+
+        rawReadingCount.Should().Be(1);
+
+        var stableReadingCount = await db.StableWeightReadings
+            .IgnoreQueryFilters()
+            .CountAsync(item =>
+                item.EdgeDeviceId == device.DeviceId);
+
+        stableReadingCount.Should().Be(1);
+
+        var storedCredential = await db.EdgeDeviceCredentials
+            .IgnoreQueryFilters()
+            .SingleAsync(item =>
+                item.EdgeDeviceId == device.DeviceId
                 && item.Type == EdgeDeviceCredentialType.Device);
+
         storedCredential.SecretHash.Should().NotBe(credential.Secret);
     }
-
     [Fact]
     public async Task CredentialRotationInvalidatesTheOldSecretAndRevocationStopsTheDevice()
     {
