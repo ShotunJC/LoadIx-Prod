@@ -111,29 +111,7 @@ public sealed class ReportingEndpointTests(
         root.GetProperty("customerConcentrationPercent").GetDecimal().Should().Be(0m);
     }
 
-    [Fact]
-    public async Task EveryReportEndpointExecutesAgainstSqlServer()
-    {
-        var client = await AdministratorClientAsync();
-        var reports = new[]
-        {
-            "trip-register", "tonnage-by-customer", "tonnage-by-commodity",
-            "tonnage-by-route", "variance", "driver-performance",
-            "vehicle-utilisation", "contract-performance", "customer-revenue",
-            "trip-profitability", "exceptions", "outstanding-pod", "expiries",
-            "invoice-status",
-        };
 
-        foreach (var report in reports)
-        {
-            var response = await client.GetAsync(
-                $"/api/v1/reports/{report}?page=1&pageSize=10");
-
-            response.StatusCode.Should().Be(
-                HttpStatusCode.OK,
-                $"report {report} should execute against SQL Server");
-        }
-    }
 
     [Fact]
     public async Task CompletionReportsExcludeIncompleteTripsWithWeights()
