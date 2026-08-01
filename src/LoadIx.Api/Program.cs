@@ -406,8 +406,8 @@ app.UseSerilogRequestLogging();
 app.UseCors(webCorsPolicy);
 app.UseRateLimiter();
 app.UseAuthentication();
-app.UseMiddleware<TenantContextMiddleware>();
 app.UseAuthorization();
+app.UseMiddleware<TenantContextMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
