@@ -150,6 +150,7 @@ internal sealed class InvoiceBatchConfiguration :
         builder.HasIndex(entity => new { entity.TenantId, entity.BatchNumber })
             .IsUnique();
         builder.HasIndex(entity => new { entity.TenantId, entity.Status, entity.CreatedAtUtc });
+        builder.HasIndex(entity => new { entity.TenantId, entity.CustomerId, entity.CreatedAtUtc, entity.Id });
         builder.HasMany(entity => entity.Lines).WithOne()
             .HasForeignKey(entity => entity.InvoiceBatchId)
             .OnDelete(DeleteBehavior.Cascade);

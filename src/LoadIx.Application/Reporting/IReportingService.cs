@@ -66,4 +66,10 @@ public interface IReportingService
         string report,
         ReportingFilter filter,
         CancellationToken cancellationToken);
+
+    Task<ReportCsvBatch> ExportCsvBatchAsync(
+        string report,
+        ReportingFilter filter,
+        bool includeHeader,
+        CancellationToken cancellationToken);
 }

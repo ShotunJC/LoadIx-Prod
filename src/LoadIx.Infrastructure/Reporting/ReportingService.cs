@@ -1,4 +1,5 @@
-using System.Globalization;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using LoadIx.Application.Abstractions;
 using LoadIx.Application.Reporting;
@@ -11,342 +12,529 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LoadIx.Infrastructure.Reporting;
 
+/// <summary>
+/// SQL-backed reporting queries. Date filters are date-only values in the
+/// tenant's timezone; every range uses [start, exclusiveEnd).
+/// </summary>
 public sealed class ReportingService(
     LoadIxDbContext db,
     TimeProvider timeProvider,
     ICurrentRequestContext requestContext) : IReportingService
 {
-    private const int MaximumRows = 5_000;
+    private const int MaximumPageSize = 100;
+    private const int SynchronousExportMaximum = 100;
+    private const int ExportBatchSize = 100;
+
+    private static readonly TripStatus[] ActiveStatuses =
+    [
+        TripStatus.Planned, TripStatus.Assigned, TripStatus.Dispatched,
+        TripStatus.AtCollection, TripStatus.Loading, TripStatus.CollectionComplete,
+        TripStatus.InTransit, TripStatus.AtDelivery, TripStatus.Unloading,
+        TripStatus.DeliveryComplete, TripStatus.ReconciliationRequired,
+    ];
 
     public async Task<DashboardKpis> GetDashboardKpisAsync(
         ReportingFilter filter,
         CancellationToken cancellationToken)
     {
+        var settings = await GetTenantSettingsAsync(cancellationToken);
         var now = timeProvider.GetUtcNow().ToUniversalTime();
-        var timeZone = await GetTenantTimeZoneAsync(cancellationToken);
-        var localNow = TimeZoneInfo.ConvertTime(now, timeZone);
-        var localStart = new DateTimeOffset(localNow.Date, localNow.Offset);
-        var todayStart = localStart.ToUniversalTime();
-        var todayEnd = todayStart.AddDays(1);
-        var facts = await LoadTripFactsAsync(
-            filter with { FromUtc = filter.FromUtc ?? todayStart, ToUtc = filter.ToUtc ?? todayEnd },
+        var today = LocalDateRange(DateOnly.FromDateTime(
+            TimeZoneInfo.ConvertTime(now, settings.TimeZone).DateTime.Date), settings.TimeZone);
+        var selected = UtcDateRange(filter, settings.TimeZone);
+
+        // Operational snapshot KPIs deliberately ignore the selected date range:
+        // current status, tolerance exceptions and overdue work remain visible.
+        var operational = BuildTripFacts(filter, ReportDateMode.None, null);
+        var active = await operational.CountAsync(item => ActiveStatuses.Contains(item.Status), cancellationToken);
+        var awaiting = await operational.CountAsync(item => item.Status == TripStatus.ReconciliationRequired, cancellationToken);
+        var outsideTolerance = await operational.CountAsync(
+            item => item.Status == TripStatus.ReconciliationRequired && item.OutsideTolerance,
             cancellationToken);
-        var activeStatuses = new[]
-        {
-            TripStatus.Planned, TripStatus.Assigned, TripStatus.Dispatched,
-            TripStatus.AtCollection, TripStatus.Loading, TripStatus.CollectionComplete,
-            TripStatus.InTransit, TripStatus.AtDelivery, TripStatus.Unloading,
-            TripStatus.DeliveryComplete, TripStatus.ReconciliationRequired,
-        };
-        var today = facts.Where(item => item.CompletedAtUtc.HasValue
-            && item.CompletedAtUtc.Value >= todayStart
-            && item.CompletedAtUtc.Value < todayEnd).ToArray();
-        var active = facts.Count(item => activeStatuses.Contains(item.Status));
-        var revenue = today.Sum(item => item.Financial?.TaxExclusiveAmount ?? 0m);
-        var costs = today.Sum(item => item.Financial?.TotalCost ?? 0m);
-        var delivered = today.Sum(item => item.DeliveredTonnes ?? 0m);
-        var fleet = await db.Vehicles.AsNoTracking()
-            .Where(vehicle => vehicle.IsActive)
-            .Select(vehicle => new { vehicle.Id, vehicle.IsAvailable })
-            .Take(MaximumRows)
-            .ToListAsync(cancellationToken);
-        var expiryDate = DateOnly.FromDateTime(localNow.DateTime.Date).AddDays(30);
+        var delayed = await operational.CountAsync(
+            item => ActiveStatuses.Contains(item.Status) && item.PlannedDeliveryAtUtc < now,
+            cancellationToken);
+
+        // Today means the tenant-local calendar day, not a UTC calendar day.
+        var completedToday = BuildTripFacts(filter, ReportDateMode.Completed, today);
+        var completedTripsToday = await completedToday.CountAsync(cancellationToken);
+        var tonnesDeliveredToday = await completedToday.SumAsync(item => item.DeliveredTonnes ?? 0m, cancellationToken);
+
+        // Revenue, gross-margin amount, and concentration use completed/posted
+        // financial facts within the selected period. Gross margin is an amount,
+        // not a percentage. Concentration is largest customer revenue / revenue.
+        var financial = BuildTripFacts(filter, ReportDateMode.Completed, selected);
+        var revenue = await financial.SumAsync(item => item.Revenue, cancellationToken);
+        var grossMargin = await financial.SumAsync(item => item.GrossMargin, cancellationToken);
+        var largestCustomer = await financial
+            .GroupBy(item => item.CustomerId)
+            .Select(group => group.Sum(item => item.Revenue))
+            .OrderByDescending(value => value)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // Fleet utilisation is the percentage of active tenant vehicles used by
+        // at least one selected-period trip, rather than completed/assigned trips.
+        var activeFleet = db.Vehicles.AsNoTracking().Where(item => item.IsActive);
+        if (filter.BranchId.HasValue) activeFleet = activeFleet.Where(item => item.BranchId == filter.BranchId.Value);
+        var fleetTotal = await activeFleet.CountAsync(cancellationToken);
+        var usedVehicles = await financial.Where(item => item.VehicleId.HasValue)
+            .Select(item => item.VehicleId!.Value).Distinct().CountAsync(cancellationToken);
+        var expiryDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, settings.TimeZone).DateTime.Date).AddDays(30);
         var upcoming = await db.Drivers.AsNoTracking().CountAsync(
-                driver => driver.LicenceExpiry <= expiryDate && driver.IsActive,
-                cancellationToken)
-            + await db.Vehicles.AsNoTracking().CountAsync(
-                vehicle => (vehicle.LicenceExpiry <= expiryDate
-                    || vehicle.RoadworthyExpiry <= expiryDate) && vehicle.IsActive,
+                item => item.IsActive && item.LicenceExpiry <= expiryDate
+                    && (!filter.BranchId.HasValue || item.BranchId == filter.BranchId.Value), cancellationToken)
+            + await activeFleet.CountAsync(
+                item => item.LicenceExpiry <= expiryDate || item.RoadworthyExpiry <= expiryDate,
                 cancellationToken);
-        var largestCustomer = today.GroupBy(item => item.Customer)
-            .Select(group => group.Sum(item => item.Financial?.TaxExclusiveAmount ?? 0m))
-            .DefaultIfEmpty()
-            .Max();
+
         return new DashboardKpis(
             active,
-            today.Length,
-            decimal.Round(delivered, 3),
-            facts.Count(item => item.Status == TripStatus.ReconciliationRequired),
-            facts.Count(item => item.Status == TripStatus.ReconciliationRequired && item.IsOutsideTolerance),
-            facts.Count(item => item.IsDelayed),
-            fleet.Count == 0 ? 0m : decimal.Round(fleet.Count(item => !item.IsAvailable) * 100m / fleet.Count, 2),
+            completedTripsToday,
+            decimal.Round(tonnesDeliveredToday, 3),
+            awaiting,
+            outsideTolerance,
+            delayed,
+            fleetTotal == 0 ? 0m : decimal.Round(usedVehicles * 100m / fleetTotal, 2),
             decimal.Round(revenue, 2),
-            decimal.Round(revenue - costs, 2),
-            revenue == 0 ? 0m : decimal.Round(largestCustomer * 100m / revenue, 2),
+            decimal.Round(grossMargin, 2),
+            revenue == 0m ? 0m : decimal.Round(largestCustomer * 100m / revenue, 2),
             upcoming,
             now,
-            timeZone.Id);
+            settings.TimeZone.Id,
+            settings.CurrencyCode);
     }
 
-    public async Task<ReportingPagedResponse<TripRegisterRow>> GetTripRegisterAsync(
-        ReportingFilter filter, CancellationToken cancellationToken)
+    public async Task<ReportingPagedResponse<TripRegisterRow>> GetTripRegisterAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        return Page(facts.OrderByDescending(item => item.PlannedDeliveryAtUtc)
-            .ThenBy(item => item.TripNumber)
-            .Select(item => new TripRegisterRow(
-                item.TripId, item.TripNumber, item.Customer, item.Commodity,
-                item.Route, item.Status.ToString(), item.PlannedQuantity,
-                item.DeliveredTonnes, item.Driver, item.Vehicle,
-                item.PlannedDeliveryAtUtc, item.CompletedAtUtc, item.IsDelayed)), filter);
+        var query = BuildTripFacts(filter, ReportDateMode.PlannedDelivery, await GetRangeAsync(filter, cancellationToken));
+        return await PageAsync(query.OrderByDescending(item => item.PlannedDeliveryAtUtc).ThenBy(item => item.TripId)
+            .Select(item => new TripRegisterRow(item.TripId, item.TripNumber, item.CustomerName, item.Commodity,
+                item.Route, item.Status.ToString(), item.PlannedQuantityTonnes, item.DeliveredTonnes, item.Driver,
+                item.Vehicle, item.PlannedDeliveryAtUtc, item.CompletedAtUtc, item.IsDelayed)), filter, cancellationToken);
     }
 
     public Task<ReportingPagedResponse<TonnageReportRow>> GetTonnageByCustomerAsync(ReportingFilter filter, CancellationToken cancellationToken) =>
-        AggregateAsync(filter, item => item.Customer, cancellationToken);
+        AggregateAsync(filter, ReportDateMode.Completed, item => item.CustomerName, cancellationToken);
 
     public Task<ReportingPagedResponse<TonnageReportRow>> GetTonnageByCommodityAsync(ReportingFilter filter, CancellationToken cancellationToken) =>
-        AggregateAsync(filter, item => item.Commodity, cancellationToken);
+        AggregateAsync(filter, ReportDateMode.Completed, item => item.Commodity, cancellationToken);
 
     public Task<ReportingPagedResponse<TonnageReportRow>> GetTonnageByRouteAsync(ReportingFilter filter, CancellationToken cancellationToken) =>
-        AggregateAsync(filter, item => item.Route, cancellationToken);
+        AggregateAsync(filter, ReportDateMode.Completed, item => item.Route, cancellationToken);
 
     public async Task<ReportingPagedResponse<VarianceReportRow>> GetVarianceAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        return Page(facts.Where(item => item.SourceNetTonnes.HasValue || item.DestinationNetTonnes.HasValue)
-            .OrderBy(item => item.TripNumber)
-            .Select(item =>
+        var query = BuildTripFacts(filter, ReportDateMode.Completed, await GetRangeAsync(filter, cancellationToken))
+            .Where(item => item.SourceNetTonnes.HasValue || item.DestinationNetTonnes.HasValue)
+            .Select(item => new VarianceProjection
             {
-                var variance = item.SourceNetTonnes.HasValue && item.DestinationNetTonnes.HasValue
-                    ? item.DestinationNetTonnes.Value - item.SourceNetTonnes.Value : (decimal?)null;
-                var percent = variance.HasValue && item.SourceNetTonnes.GetValueOrDefault() != 0
-                    ? variance.Value / item.SourceNetTonnes!.Value * 100m : (decimal?)null;
-                return new VarianceReportRow(item.TripNumber, item.Customer,
-                    item.SourceNetTonnes, item.DestinationNetTonnes, variance, percent,
-                    item.IsOutsideTolerance);
-            }), filter);
+                TripNumber = item.TripNumber,
+                Customer = item.CustomerName,
+                Source = item.SourceNetTonnes,
+                Destination = item.DestinationNetTonnes,
+                Variance = item.SourceNetTonnes.HasValue && item.DestinationNetTonnes.HasValue
+                    ? item.DestinationNetTonnes.Value - item.SourceNetTonnes.Value : null,
+                VariancePercent = item.SourceNetTonnes.HasValue && item.DestinationNetTonnes.HasValue && item.SourceNetTonnes.Value != 0m
+                    ? (item.DestinationNetTonnes.Value - item.SourceNetTonnes.Value) / item.SourceNetTonnes.Value * 100m : null,
+                OutsideTolerance = item.OutsideTolerance,
+                SortId = item.TripId,
+            });
+        return await PageAsync(query.OrderBy(item => item.TripNumber).ThenBy(item => item.SortId)
+            .Select(item => new VarianceReportRow(item.TripNumber, item.Customer, item.Source, item.Destination,
+                item.Variance, item.VariancePercent, item.OutsideTolerance)), filter, cancellationToken);
     }
 
     public async Task<ReportingPagedResponse<DriverPerformanceRow>> GetDriverPerformanceAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        var rows = facts.Where(item => item.Driver is not null)
+        var query = BuildTripFacts(filter, ReportDateMode.Completed, await GetRangeAsync(filter, cancellationToken))
+            .Where(item => item.Driver != null)
             .GroupBy(item => item.Driver!)
-            .Select(group => new DriverPerformanceRow(
-                group.Key,
-                group.Count(item => item.Status == TripStatus.Completed),
-                group.Sum(item => item.DeliveredTonnes ?? 0m),
-                group.Count(item => item.IsOutsideTolerance),
-                OnTimePercent(group)))
-            .OrderByDescending(item => item.CompletedTrips).ThenBy(item => item.Driver);
-        return Page(rows, filter);
+            .Select(group => new DriverPerformanceProjection
+            {
+                Driver = group.Key,
+                CompletedTrips = group.Count(item => item.Status == TripStatus.Completed),
+                DeliveredTonnes = group.Sum(item => item.DeliveredTonnes ?? 0m),
+                Exceptions = group.Count(item => item.OutsideTolerance),
+                OnTimePercent = group.Count(item => item.Status == TripStatus.Completed) == 0 ? 0m
+                    : group.Count(item => item.Status == TripStatus.Completed && item.CompletedAtUtc <= item.PlannedDeliveryAtUtc) * 100m
+                        / group.Count(item => item.Status == TripStatus.Completed),
+            });
+        return await PageAsync(query.OrderByDescending(item => item.CompletedTrips).ThenBy(item => item.Driver)
+            .Select(item => new DriverPerformanceRow(item.Driver, item.CompletedTrips, item.DeliveredTonnes,
+                item.Exceptions, decimal.Round(item.OnTimePercent, 2))), filter, cancellationToken);
     }
 
     public async Task<ReportingPagedResponse<VehicleUtilisationRow>> GetVehicleUtilisationAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        var ids = facts.Where(item => item.VehicleId.HasValue).Select(item => item.VehicleId!.Value).Distinct().ToArray();
-        var vehicles = await db.Vehicles.AsNoTracking().Where(item => ids.Contains(item.Id)).Take(MaximumRows)
-            .Select(item => new { item.Id, item.FleetNumber, item.LicenceExpiry, item.RoadworthyExpiry }).ToListAsync(cancellationToken);
-        var rows = vehicles.Select(vehicle =>
-        {
-            var assigned = facts.Count(item => item.VehicleId == vehicle.Id);
-            return new VehicleUtilisationRow(vehicle.FleetNumber,
-                assigned, facts.Count(item => item.VehicleId == vehicle.Id && item.Status == TripStatus.Completed),
-                assigned == 0 ? 0m : decimal.Round(facts.Count(item => item.VehicleId == vehicle.Id && item.Status == TripStatus.Completed) * 100m / assigned, 2),
-                vehicle.LicenceExpiry, vehicle.RoadworthyExpiry);
-        }).OrderByDescending(item => item.UtilisationPercent);
-        return Page(rows, filter);
+        var query = BuildTripFacts(filter, ReportDateMode.PlannedCollection, await GetRangeAsync(filter, cancellationToken))
+            .Where(item => item.VehicleId.HasValue)
+            .GroupBy(item => new { item.VehicleId, item.Vehicle, item.LicenceExpiry, item.RoadworthyExpiry })
+            .Select(group => new VehicleUtilisationProjection
+            {
+                Vehicle = group.Key.Vehicle!,
+                AssignedTrips = group.Count(),
+                CompletedTrips = group.Count(item => item.Status == TripStatus.Completed),
+                UtilisationPercent = group.Count() == 0 ? 0m : group.Count(item => item.Status == TripStatus.Completed) * 100m / group.Count(),
+                LicenceExpiry = group.Key.LicenceExpiry,
+                RoadworthyExpiry = group.Key.RoadworthyExpiry,
+            });
+        return await PageAsync(query.OrderByDescending(item => item.UtilisationPercent).ThenBy(item => item.Vehicle)
+            .Select(item => new VehicleUtilisationRow(item.Vehicle, item.AssignedTrips, item.CompletedTrips,
+                decimal.Round(item.UtilisationPercent, 2), item.LicenceExpiry, item.RoadworthyExpiry)), filter, cancellationToken);
     }
 
     public async Task<ReportingPagedResponse<ContractPerformanceRow>> GetContractPerformanceAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        var rows = facts.GroupBy(item => item.Contract)
-            .Select(group => new ContractPerformanceRow(group.Key,
-                group.Count(item => item.Status == TripStatus.Completed),
-                group.Sum(item => item.DeliveredTonnes ?? 0m),
-                group.Sum(item => item.Financial?.TaxExclusiveAmount ?? 0m),
-                group.Sum(item => item.Financial?.GrossMargin ?? 0m),
-                decimal.Round(group.Count(item => item.IsOutsideTolerance) * 100m / group.Count(), 2)))
-            .OrderByDescending(item => item.Revenue).ThenBy(item => item.Contract);
-        return Page(rows, filter);
+        var query = BuildTripFacts(filter, ReportDateMode.Completed, await GetRangeAsync(filter, cancellationToken))
+            .GroupBy(item => item.Contract)
+            .Select(group => new ContractPerformanceProjection
+            {
+                Contract = group.Key,
+                CompletedTrips = group.Count(item => item.Status == TripStatus.Completed),
+                DeliveredTonnes = group.Sum(item => item.DeliveredTonnes ?? 0m),
+                Revenue = group.Sum(item => item.Revenue),
+                GrossMargin = group.Sum(item => item.GrossMargin),
+                ExceptionPercent = group.Count() == 0 ? 0m : group.Count(item => item.OutsideTolerance) * 100m / group.Count(),
+            });
+        return await PageAsync(query.OrderByDescending(item => item.Revenue).ThenBy(item => item.Contract)
+            .Select(item => new ContractPerformanceRow(item.Contract, item.CompletedTrips, item.DeliveredTonnes,
+                item.Revenue, item.GrossMargin, decimal.Round(item.ExceptionPercent, 2))), filter, cancellationToken);
     }
 
     public Task<ReportingPagedResponse<TonnageReportRow>> GetCustomerRevenueAsync(ReportingFilter filter, CancellationToken cancellationToken) =>
-        AggregateAsync(filter, item => item.Customer, cancellationToken, includePlanned: false);
+        AggregateAsync(filter, ReportDateMode.Completed, item => item.CustomerName, cancellationToken, financialOnly: true);
 
-    public async Task<ReportingPagedResponse<TonnageReportRow>> GetTripProfitabilityAsync(ReportingFilter filter, CancellationToken cancellationToken)
-    {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        var rows = facts.Where(item => item.Financial is not null)
-            .Select(item => new TonnageReportRow(item.TripNumber, item.DeliveredTonnes ?? 0m, 1,
-                item.Financial!.TaxExclusiveAmount, item.Financial.GrossMargin))
-            .OrderByDescending(item => item.GrossMargin).ThenBy(item => item.Group);
-        return Page(rows, filter);
-    }
+    public async Task<ReportingPagedResponse<TonnageReportRow>> GetTripProfitabilityAsync(ReportingFilter filter, CancellationToken cancellationToken) =>
+        await PageAsync(BuildTripFacts(filter, ReportDateMode.Completed, await GetRangeAsync(filter, cancellationToken))
+            .Where(item => item.HasFinancials)
+            .OrderByDescending(item => item.GrossMargin).ThenBy(item => item.TripId)
+            .Select(item => new TonnageReportRow(item.TripNumber, item.DeliveredTonnes ?? 0m, 1, item.Revenue, item.GrossMargin)), filter, cancellationToken);
 
     public async Task<ReportingPagedResponse<ExceptionReportRow>> GetExceptionsAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        var rows = facts.Where(item => item.IsOutsideTolerance || item.Status == TripStatus.ReconciliationRequired || item.IsDelayed)
-            .Select(item => new ExceptionReportRow(item.TripId, item.TripNumber, item.Customer,
-                item.Status.ToString(), item.IsOutsideTolerance ? "Outside tolerance" : item.Status == TripStatus.ReconciliationRequired ? "Awaiting reconciliation" : "Delayed",
+        var query = BuildTripFacts(filter, ReportDateMode.PlannedDelivery, await GetRangeAsync(filter, cancellationToken))
+            .Where(item => item.OutsideTolerance || item.Status == TripStatus.ReconciliationRequired
+                || (ActiveStatuses.Contains(item.Status) && item.PlannedDeliveryAtUtc < timeProvider.GetUtcNow()))
+            .Select(item => new ExceptionReportRow(item.TripId, item.TripNumber, item.CustomerName,
+                item.Status.ToString(), item.OutsideTolerance ? "Outside tolerance"
+                    : item.Status == TripStatus.ReconciliationRequired ? "Awaiting reconciliation" : "Delayed",
                 item.CompletedAtUtc ?? item.PlannedDeliveryAtUtc));
-        return Page(rows.OrderByDescending(item => item.OccurredAtUtc).ThenBy(item => item.TripNumber), filter);
+        return await PageAsync(query.OrderByDescending(item => item.OccurredAtUtc).ThenBy(item => item.TripId), filter, cancellationToken);
     }
 
     public async Task<ReportingPagedResponse<PodOutstandingRow>> GetOutstandingPodAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        var completed = facts.Where(item => item.Status == TripStatus.Completed && item.CompletedAtUtc.HasValue).ToArray();
-        var ids = completed.Select(item => item.TripId).ToArray();
-        var documents = await db.Documents.AsNoTracking().Where(item => ids.Contains(item.OwnerId) && item.OwnerType == DocumentOwnerType.Trip && item.Status == DocumentStatus.Available)
-            .GroupBy(item => item.OwnerId).Select(group => new { Id = group.Key, Count = group.Count() }).ToListAsync(cancellationToken);
-        var rows = completed.Where(item => !documents.Any(document => document.Id == item.TripId && document.Count > 0))
-            .Select(item => new PodOutstandingRow(item.TripId, item.TripNumber, item.Customer, item.Status.ToString(), item.CompletedAtUtc!.Value, 0));
-        return Page(rows.OrderBy(item => item.CompletedAtUtc), filter);
+        var range = await GetRangeAsync(filter, cancellationToken);
+        var query = BuildTripFacts(filter, ReportDateMode.Completed, range)
+            .Where(item => item.Status == TripStatus.Completed && item.CompletedAtUtc.HasValue
+                && !db.Documents.Any(document => document.OwnerType == DocumentOwnerType.Trip
+                    && document.OwnerId == item.TripId
+                    && document.DocumentType == DocumentType.ProofOfDelivery
+                    && document.Status == DocumentStatus.Available))
+            .Select(item => new PodOutstandingRow(item.TripId, item.TripNumber, item.CustomerName,
+                item.Status.ToString(), item.CompletedAtUtc!.Value, 0));
+        return await PageAsync(query.OrderBy(item => item.CompletedAtUtc).ThenBy(item => item.TripId), filter, cancellationToken);
     }
 
     public async Task<ReportingPagedResponse<ExpiryReportRow>> GetExpiriesAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var now = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
-        var end = filter.ToUtc.HasValue ? DateOnly.FromDateTime(filter.ToUtc.Value.UtcDateTime) : now.AddDays(90);
-        var drivers = await db.Drivers.AsNoTracking().Where(item => item.IsActive && item.LicenceExpiry <= end).Take(MaximumRows)
-            .Select(item => new ExpiryReportRow("Driver", item.FirstName + " " + item.LastName, item.LicenceExpiry, 0, "Licence")).ToListAsync(cancellationToken);
-        var vehicles = await db.Vehicles.AsNoTracking().Where(item => item.IsActive && (item.LicenceExpiry <= end || item.RoadworthyExpiry <= end)).Take(MaximumRows)
-            .SelectMany(item => new[] { new ExpiryReportRow("Vehicle licence", item.FleetNumber, item.LicenceExpiry, 0, "Licence"), new ExpiryReportRow("Vehicle roadworthy", item.FleetNumber, item.RoadworthyExpiry, 0, "Roadworthy") })
-            .Where(item => item.ExpiryDate <= end).ToListAsync(cancellationToken);
-        var rows = drivers.Concat(vehicles).Select(item => item with { DaysRemaining = item.ExpiryDate.DayNumber - now.DayNumber })
-            .OrderBy(item => item.ExpiryDate);
-        return Page(rows, filter);
+        var settings = await GetTenantSettingsAsync(cancellationToken);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), settings.TimeZone).DateTime.Date);
+        var start = filter.FromDate ?? today;
+        var endExclusive = (filter.ToDate ?? today.AddDays(90)).AddDays(1);
+        var drivers = db.Drivers.AsNoTracking()
+            .Where(item => item.IsActive && item.LicenceExpiry >= start && item.LicenceExpiry < endExclusive)
+            .Select(item => new ExpiryProjection { ResourceType = "Driver", Resource = item.FirstName + " " + item.LastName, ExpiryDate = item.LicenceExpiry, Status = "Licence", SortId = item.Id });
+        var vehicles = db.Vehicles.AsNoTracking().Where(item => item.IsActive)
+            .SelectMany(item => new[]
+            {
+                new ExpiryProjection { ResourceType = "Vehicle licence", Resource = item.FleetNumber, ExpiryDate = item.LicenceExpiry, Status = "Licence", SortId = item.Id },
+                new ExpiryProjection { ResourceType = "Vehicle roadworthy", Resource = item.FleetNumber, ExpiryDate = item.RoadworthyExpiry, Status = "Roadworthy", SortId = item.Id },
+            })
+            .Where(item => item.ExpiryDate >= start && item.ExpiryDate < endExclusive);
+        var query = drivers.Concat(vehicles);
+        var page = await PageAsync(query.OrderBy(item => item.ExpiryDate).ThenBy(item => item.SortId), filter, cancellationToken);
+        return new ReportingPagedResponse<ExpiryReportRow>(
+            page.Items.Select(item => new ExpiryReportRow(item.ResourceType, item.Resource, item.ExpiryDate,
+                item.ExpiryDate.DayNumber - today.DayNumber, item.Status)).ToArray(),
+            page.Page, page.PageSize, page.TotalCount, page.TotalPages, page.GeneratedAtUtc, page.TimeZone);
     }
 
     public async Task<ReportingPagedResponse<InvoiceStatusRow>> GetInvoiceStatusAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
         var query = db.InvoiceBatches.AsNoTracking();
-        if (filter.FromUtc.HasValue) query = query.Where(item => item.CreatedAtUtc >= filter.FromUtc.Value);
-        if (filter.ToUtc.HasValue) query = query.Where(item => item.CreatedAtUtc < filter.ToUtc.Value);
-        var rows = await query.GroupBy(item => item.Status).Select(group => new InvoiceStatusRow(group.Key.ToString(), group.Count(), group.Sum(item => item.Total), group.Max(item => (DateTimeOffset?)item.CreatedAtUtc))).OrderBy(item => item.Status).Take(100).ToListAsync(cancellationToken);
-        return Page(rows, filter);
+        var range = await GetRangeAsync(filter, cancellationToken);
+        if (range is { } dateRange)
+        {
+            if (dateRange.Start.HasValue) query = query.Where(item => item.CreatedAtUtc >= dateRange.Start.Value);
+            if (dateRange.EndExclusive.HasValue) query = query.Where(item => item.CreatedAtUtc < dateRange.EndExclusive.Value);
+        }
+        if (filter.CustomerId.HasValue) query = query.Where(item => item.CustomerId == filter.CustomerId.Value);
+        var grouped = query.GroupBy(item => item.Status)
+            .Select(group => new InvoiceStatusRow(group.Key.ToString(), group.Count(), group.Sum(item => item.Total),
+                group.Max(item => (DateTimeOffset?)item.CreatedAtUtc)));
+        return await PageAsync(grouped.OrderBy(item => item.Status), filter, cancellationToken);
     }
 
     public async Task<byte[]> ExportCsvAsync(string report, ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var bounded = filter with { Page = 1, PageSize = MaximumRows };
-        var rows = report.ToLowerInvariant() switch
+        var batch = await ExportCsvBatchAsync(report, filter with { Page = 1, PageSize = SynchronousExportMaximum + 1 }, true, cancellationToken);
+        if (batch.TotalCount > SynchronousExportMaximum)
         {
-            "trip-register" => await ExportRowsAsync(GetTripRegisterAsync(bounded, cancellationToken)),
-            "tonnage-by-customer" => await ExportRowsAsync(GetTonnageByCustomerAsync(bounded, cancellationToken)),
-            "tonnage-by-commodity" => await ExportRowsAsync(GetTonnageByCommodityAsync(bounded, cancellationToken)),
-            "tonnage-by-route" => await ExportRowsAsync(GetTonnageByRouteAsync(bounded, cancellationToken)),
-            "variance" => await ExportRowsAsync(GetVarianceAsync(bounded, cancellationToken)),
-            "driver-performance" => await ExportRowsAsync(GetDriverPerformanceAsync(bounded, cancellationToken)),
-            "vehicle-utilisation" => await ExportRowsAsync(GetVehicleUtilisationAsync(bounded, cancellationToken)),
-            "contract-performance" => await ExportRowsAsync(GetContractPerformanceAsync(bounded, cancellationToken)),
-            "customer-revenue" => await ExportRowsAsync(GetCustomerRevenueAsync(bounded, cancellationToken)),
-            "trip-profitability" => await ExportRowsAsync(GetTripProfitabilityAsync(bounded, cancellationToken)),
-            "exceptions" => await ExportRowsAsync(GetExceptionsAsync(bounded, cancellationToken)),
-            "outstanding-pod" => await ExportRowsAsync(GetOutstandingPodAsync(bounded, cancellationToken)),
-            "expiries" => await ExportRowsAsync(GetExpiriesAsync(bounded, cancellationToken)),
-            "invoice-status" => await ExportRowsAsync(GetInvoiceStatusAsync(bounded, cancellationToken)),
+            throw new ReportExportTooLargeException(SynchronousExportMaximum, batch.TotalCount);
+        }
+
+        return batch.Content;
+    }
+
+    public async Task<ReportCsvBatch> ExportCsvBatchAsync(string report, ReportingFilter filter, bool includeHeader, CancellationToken cancellationToken)
+    {
+        var response = await GetReportPageAsync(report, filter, cancellationToken);
+        var builder = new StringBuilder();
+        var itemType = response.ItemType;
+        var properties = itemType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+        if (includeHeader) builder.AppendLine(string.Join(',', properties.Select(item => ReportCsvFormatter.Escape(ReportCsvFormatter.HumanizeHeader(item.Name)))));
+        foreach (var item in response.Items)
+        {
+            builder.AppendLine(string.Join(',', properties.Select(property => ReportCsvFormatter.Escape(ReportCsvFormatter.FormatCell(property.GetValue(item))))));
+        }
+
+        return new ReportCsvBatch(Encoding.UTF8.GetBytes(builder.ToString()), response.TotalCount, response.Items.Count);
+    }
+
+    private async Task<ReportCsvPage> GetReportPageAsync(string report, ReportingFilter filter, CancellationToken cancellationToken) =>
+        report.ToLowerInvariant() switch
+        {
+            "trip-register" => await ToCsvPage(GetTripRegisterAsync(filter, cancellationToken)),
+            "tonnage-by-customer" => await ToCsvPage(GetTonnageByCustomerAsync(filter, cancellationToken)),
+            "tonnage-by-commodity" => await ToCsvPage(GetTonnageByCommodityAsync(filter, cancellationToken)),
+            "tonnage-by-route" => await ToCsvPage(GetTonnageByRouteAsync(filter, cancellationToken)),
+            "variance" => await ToCsvPage(GetVarianceAsync(filter, cancellationToken)),
+            "driver-performance" => await ToCsvPage(GetDriverPerformanceAsync(filter, cancellationToken)),
+            "vehicle-utilisation" => await ToCsvPage(GetVehicleUtilisationAsync(filter, cancellationToken)),
+            "contract-performance" => await ToCsvPage(GetContractPerformanceAsync(filter, cancellationToken)),
+            "customer-revenue" => await ToCsvPage(GetCustomerRevenueAsync(filter, cancellationToken)),
+            "trip-profitability" => await ToCsvPage(GetTripProfitabilityAsync(filter, cancellationToken)),
+            "exceptions" => await ToCsvPage(GetExceptionsAsync(filter, cancellationToken)),
+            "outstanding-pod" => await ToCsvPage(GetOutstandingPodAsync(filter, cancellationToken)),
+            "expiries" => await ToCsvPage(GetExpiriesAsync(filter, cancellationToken)),
+            "invoice-status" => await ToCsvPage(GetInvoiceStatusAsync(filter, cancellationToken)),
             _ => throw new ArgumentException("Unsupported report export.", nameof(report)),
         };
-        var builder = new StringBuilder();
-        foreach (var row in rows) builder.AppendLine(string.Join(',', row.Select(EscapeCsv)));
-        return Encoding.UTF8.GetBytes(builder.ToString());
+
+    private static async Task<ReportCsvPage> ToCsvPage<T>(Task<ReportingPagedResponse<T>> task)
+    {
+        var response = await task;
+        return new ReportCsvPage(response.Items.Cast<object>().ToArray(), response.TotalCount, typeof(T));
     }
 
-    private static async Task<IEnumerable<string[]>> ExportRowsAsync<T>(Task<ReportingPagedResponse<T>> responseTask)
+    private async Task<ReportingPagedResponse<TonnageReportRow>> AggregateAsync(
+        ReportingFilter filter,
+        ReportDateMode mode,
+        Expression<Func<ReportFact, string>> key,
+        CancellationToken cancellationToken,
+        bool financialOnly = false)
     {
-        var response = await responseTask;
-        var properties = typeof(T).GetProperties();
-        return response.Items.Select(item => properties.Select(property =>
+        var query = BuildTripFacts(filter, mode, await GetRangeAsync(filter, cancellationToken));
+        if (financialOnly) query = query.Where(item => item.HasFinancials);
+        var grouped = query.GroupBy(key).Select(group => new TonnageProjection
         {
-            var value = property.GetValue(item);
-            return value switch
+            Group = group.Key,
+            Tonnes = group.Sum(item => item.DeliveredTonnes ?? 0m),
+            TripCount = group.Count(),
+            Revenue = group.Sum(item => item.Revenue),
+            GrossMargin = group.Sum(item => item.GrossMargin),
+        });
+        return await PageAsync(grouped.OrderByDescending(item => item.Tonnes).ThenBy(item => item.Group)
+            .Select(item => new TonnageReportRow(item.Group, item.Tonnes, item.TripCount, item.Revenue, item.GrossMargin)), filter, cancellationToken);
+    }
+
+    private IQueryable<ReportFact> BuildTripFacts(ReportingFilter filter, ReportDateMode dateMode, UtcRange? range)
+    {
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        var query =
+            from trip in db.Trips.AsNoTracking()
+            join customer in db.Customers.AsNoTracking() on trip.CustomerId equals customer.Id
+            join commodity in db.Commodities.AsNoTracking() on trip.CommodityId equals commodity.Id
+            join contract in db.TransportContracts.AsNoTracking() on trip.TransportContractId equals contract.Id
+            join driver in db.Drivers.AsNoTracking() on trip.DriverId equals (Guid?)driver.Id into driverJoin
+            from driver in driverJoin.DefaultIfEmpty()
+            join vehicle in db.Vehicles.AsNoTracking() on trip.VehicleId equals (Guid?)vehicle.Id into vehicleJoin
+            from vehicle in vehicleJoin.DefaultIfEmpty()
+            join financial in db.TripFinancials.AsNoTracking() on trip.Id equals financial.TripId into financialJoin
+            from financial in financialJoin.DefaultIfEmpty()
+            select new ReportFact
             {
-                null => string.Empty,
-                DateTimeOffset dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
-                DateOnly date => date.ToString("O", CultureInfo.InvariantCulture),
-                IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture) ?? string.Empty,
-                _ => value.ToString() ?? string.Empty,
+                TripId = trip.Id,
+                TripNumber = trip.TripNumber,
+                CustomerId = trip.CustomerId,
+                CustomerName = customer.TradingName,
+                Commodity = commodity.Name,
+                Route = trip.RouteReference,
+                Contract = trip.ContractNumber,
+                Status = trip.Status,
+                PlannedQuantityTonnes = trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity,
+                SourceNetTonnes = trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue
+                    ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) / 1000m : trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) : null,
+                DestinationNetTonnes = trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
+                    ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault()) / 1000m : trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault()) : null,
+                Driver = driver == null ? null : driver.FirstName + " " + driver.LastName,
+                DriverId = trip.DriverId,
+                Vehicle = vehicle == null ? null : vehicle.FleetNumber,
+                VehicleId = trip.VehicleId,
+                LicenceExpiry = vehicle == null ? null : (DateOnly?)vehicle.LicenceExpiry,
+                RoadworthyExpiry = vehicle == null ? null : (DateOnly?)vehicle.RoadworthyExpiry,
+                PlannedCollectionAtUtc = trip.PlannedCollectionAtUtc,
+                PlannedDeliveryAtUtc = trip.PlannedDeliveryAtUtc,
+                CompletedAtUtc = trip.CompletedAtUtc,
+                Revenue = financial == null ? 0m : financial.TaxExclusiveAmount,
+                TotalCost = financial == null ? 0m : db.CostEntries.Where(cost => cost.TripFinancialsId == financial.Id).Sum(cost => (decimal?)cost.Amount) ?? 0m,
+                HasFinancials = financial != null,
+                TolerancePercent = contract.WeightTolerancePercent,
+                DeliveredTonnes = trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
+                    ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault()) / 1000m : trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault())
+                    : trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue
+                        ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) / 1000m : trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault())
+                        : null,
+                GrossMargin = financial == null ? 0m : financial.TaxExclusiveAmount
+                    - (db.CostEntries.Where(cost => cost.TripFinancialsId == financial.Id).Sum(cost => (decimal?)cost.Amount) ?? 0m),
+                OutsideTolerance = trip.PlannedQuantity > 0m
+                    && Math.Abs(
+                        (trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
+                            ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault()) / 1000m : trip.DestinationGrossWeight.GetValueOrDefault() - trip.DestinationTareWeight.GetValueOrDefault())
+                            : trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue
+                                ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) / 1000m : trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault())
+                                : 0m)
+                        - (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity))
+                        > (trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity) * contract.WeightTolerancePercent / 100m,
+                IsDelayed = ActiveStatuses.Contains(trip.Status) && trip.PlannedDeliveryAtUtc < now,
             };
-        }).ToArray());
-    }
 
-    private async Task<ReportingPagedResponse<TonnageReportRow>> AggregateAsync(ReportingFilter filter, Func<TripFact, string> key, CancellationToken cancellationToken, bool includePlanned = true)
-    {
-        var facts = await LoadTripFactsAsync(filter, cancellationToken);
-        var rows = facts.Where(item => includePlanned || item.Financial is not null).GroupBy(key)
-            .Select(group => new TonnageReportRow(group.Key, group.Sum(item => item.DeliveredTonnes ?? 0m), group.Count(), group.Sum(item => item.Financial?.TaxExclusiveAmount ?? 0m), group.Sum(item => item.Financial?.GrossMargin ?? 0m)))
-            .OrderByDescending(item => item.Tonnes).ThenBy(item => item.Group);
-        return Page(rows, filter);
-    }
-
-    private async Task<List<TripFact>> LoadTripFactsAsync(ReportingFilter filter, CancellationToken cancellationToken)
-    {
-        var pageSize = Math.Clamp(filter.PageSize, 1, 100);
-        var query = db.Trips.AsNoTracking();
-        if (filter.FromUtc.HasValue) query = query.Where(item => item.PlannedDeliveryAtUtc >= filter.FromUtc.Value || item.CompletedAtUtc >= filter.FromUtc.Value);
-        if (filter.ToUtc.HasValue) query = query.Where(item => item.PlannedDeliveryAtUtc < filter.ToUtc.Value || item.CompletedAtUtc < filter.ToUtc.Value);
         if (filter.CustomerId.HasValue) query = query.Where(item => item.CustomerId == filter.CustomerId.Value);
-        if (filter.BranchId.HasValue) query = query.Where(item => (item.DriverId.HasValue && db.Drivers.Any(driver => driver.Id == item.DriverId && driver.BranchId == filter.BranchId.Value)) || (item.VehicleId.HasValue && db.Vehicles.Any(vehicle => vehicle.Id == item.VehicleId && vehicle.BranchId == filter.BranchId.Value)));
-        var trips = await query.OrderByDescending(item => item.PlannedDeliveryAtUtc).ThenBy(item => item.Id).Take(MaximumRows).ToListAsync(cancellationToken);
-        var customerIds = trips.Select(item => item.CustomerId).Distinct().ToArray();
-        var commodityIds = trips.Select(item => item.CommodityId).Distinct().ToArray();
-        var driverIds = trips.Where(item => item.DriverId.HasValue).Select(item => item.DriverId!.Value).Distinct().ToArray();
-        var vehicleIds = trips.Where(item => item.VehicleId.HasValue).Select(item => item.VehicleId!.Value).Distinct().ToArray();
-        var customers = await db.Customers.AsNoTracking().Where(item => customerIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.TradingName, cancellationToken);
-        var commodities = await db.Commodities.AsNoTracking().Where(item => commodityIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
-        var drivers = await db.Drivers.AsNoTracking().Where(item => driverIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
-        var vehicles = await db.Vehicles.AsNoTracking().Where(item => vehicleIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.FleetNumber, cancellationToken);
-        var tripIds = trips.Select(item => item.Id).ToArray();
-        var financialRows = await db.TripFinancials.AsNoTracking()
-            .Where(item => tripIds.Contains(item.TripId))
-            .Select(item => new { item.Id, item.TripId, item.TaxExclusiveAmount })
-            .ToListAsync(cancellationToken);
-        var costTotals = await db.CostEntries.AsNoTracking()
-            .Where(item => tripIds.Contains(item.TripFinancialsId))
-            .GroupBy(item => item.TripFinancialsId)
-            .Select(group => new { TripFinancialsId = group.Key, Total = group.Sum(item => item.Amount) })
-            .ToDictionaryAsync(item => item.TripFinancialsId, item => item.Total, cancellationToken);
-        var financials = financialRows.ToDictionary(
-            item => item.TripId,
-            item => new FinancialFact(item.TripId, item.TaxExclusiveAmount,
-                costTotals.GetValueOrDefault(item.Id),
-                decimal.Round(item.TaxExclusiveAmount - costTotals.GetValueOrDefault(item.Id), 4, MidpointRounding.AwayFromZero)));
-        var result = new List<TripFact>(trips.Count);
-        foreach (var trip in trips)
+        if (filter.BranchId.HasValue)
         {
-            var sourceNet = trip.SourceNetWeight;
-            var destinationNet = trip.DestinationNetWeight;
-            var delivered = destinationNet ?? sourceNet;
-            var plannedTonnes = trip.QuantityUnit == WeightUnit.Kilograms ? trip.PlannedQuantity / 1000m : trip.PlannedQuantity;
-            var deliveredTonnes = delivered.HasValue && trip.QuantityUnit == WeightUnit.Kilograms ? delivered / 1000m : delivered;
-            var outside = deliveredTonnes.HasValue && plannedTonnes > 0 && Math.Abs(deliveredTonnes.Value - plannedTonnes) / plannedTonnes > 0.05m;
-            var sourceTonnes = sourceNet.HasValue && trip.QuantityUnit == WeightUnit.Kilograms ? sourceNet / 1000m : sourceNet;
-            var destinationTonnes = destinationNet.HasValue && trip.QuantityUnit == WeightUnit.Kilograms ? destinationNet / 1000m : destinationNet;
-            result.Add(new TripFact(trip.Id, trip.TripNumber, customers.GetValueOrDefault(trip.CustomerId, "Unknown"), commodities.GetValueOrDefault(trip.CommodityId, "Unknown"), trip.RouteReference, trip.ContractNumber, trip.Status, plannedTonnes, deliveredTonnes, sourceTonnes, destinationTonnes, trip.DriverId.HasValue ? drivers.GetValueOrDefault(trip.DriverId.Value) : null, trip.VehicleId.HasValue ? vehicles.GetValueOrDefault(trip.VehicleId.Value) : null, trip.VehicleId, trip.PlannedDeliveryAtUtc, trip.CompletedAtUtc, trip.PlannedDeliveryAtUtc < timeProvider.GetUtcNow() && trip.Status is not (TripStatus.Completed or TripStatus.Cancelled or TripStatus.Rejected), outside, financials.GetValueOrDefault(trip.Id)));
+            query = query.Where(item => (item.VehicleId.HasValue && db.Vehicles.Any(vehicle => vehicle.Id == item.VehicleId && vehicle.BranchId == filter.BranchId.Value))
+                || (item.DriverId.HasValue && db.Drivers.Any(driver => driver.Id == item.DriverId && driver.BranchId == filter.BranchId.Value)));
         }
-        return result;
+
+        if (dateMode != ReportDateMode.None && range is { } dateRange)
+        {
+            query = dateMode switch
+            {
+                ReportDateMode.Completed => query.Where(item => (!dateRange.Start.HasValue || item.CompletedAtUtc >= dateRange.Start.Value) && (!dateRange.EndExclusive.HasValue || item.CompletedAtUtc < dateRange.EndExclusive.Value)),
+                ReportDateMode.PlannedCollection => query.Where(item => (!dateRange.Start.HasValue || item.PlannedCollectionAtUtc >= dateRange.Start.Value) && (!dateRange.EndExclusive.HasValue || item.PlannedCollectionAtUtc < dateRange.EndExclusive.Value)),
+                _ => query.Where(item => (!dateRange.Start.HasValue || item.PlannedDeliveryAtUtc >= dateRange.Start.Value) && (!dateRange.EndExclusive.HasValue || item.PlannedDeliveryAtUtc < dateRange.EndExclusive.Value)),
+            };
+        }
+
+        return query;
     }
 
-    private async Task<TimeZoneInfo> GetTenantTimeZoneAsync(CancellationToken cancellationToken)
+    private async Task<ReportingPagedResponse<T>> PageAsync<T>(IQueryable<T> query, ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var value = requestContext.TenantId is { } tenantId
-            ? await db.Tenants.AsNoTracking().Where(item => item.Id.Value == tenantId.Value)
-                .Select(item => item.TimeZone).SingleOrDefaultAsync(cancellationToken) ?? "UTC"
-            : "UTC";
-        try { return TimeZoneInfo.FindSystemTimeZoneById(value); } catch (TimeZoneNotFoundException) { return TimeZoneInfo.Utc; }
-    }
-
-    private static decimal OnTimePercent(IEnumerable<TripFact> items)
-    {
-        var completed = items.Where(item => item.Status == TripStatus.Completed).ToArray();
-        return completed.Length == 0 ? 0m : decimal.Round(completed.Count(item => item.CompletedAtUtc <= item.PlannedDeliveryAtUtc) * 100m / completed.Length, 2);
-    }
-
-    private ReportingPagedResponse<T> Page<T>(IEnumerable<T> source, ReportingFilter filter)
-    {
-        var items = source.ToList();
-        var pageSize = Math.Clamp(filter.PageSize, 1, 100);
         var page = Math.Max(filter.Page, 1);
-        return new ReportingPagedResponse<T>(items.Skip((page - 1) * pageSize).Take(pageSize).ToArray(), page, pageSize, items.Count, items.Count == 0 ? 0 : (int)Math.Ceiling(items.Count / (double)pageSize), timeProvider.GetUtcNow());
+        var pageSize = Math.Clamp(filter.PageSize, 1, MaximumPageSize + 1);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        var settings = await GetTenantSettingsAsync(cancellationToken);
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new ReportingPagedResponse<T>(items, page, pageSize, totalCount, totalPages,
+            timeProvider.GetUtcNow().ToUniversalTime(), settings.TimeZone.Id);
     }
 
-    private static string EscapeCsv(string value) => value.Contains(',', StringComparison.Ordinal) || value.Contains('"', StringComparison.Ordinal) || value.Contains('\n') ? $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"" : value;
+    private async Task<UtcRange?> GetRangeAsync(ReportingFilter filter, CancellationToken cancellationToken)
+    {
+        if (!filter.FromDate.HasValue && !filter.ToDate.HasValue) return null;
+        var settings = await GetTenantSettingsAsync(cancellationToken);
+        return UtcDateRange(filter, settings.TimeZone);
+    }
 
-    private sealed record FinancialFact(Guid TripId, decimal TaxExclusiveAmount, decimal TotalCost, decimal GrossMargin);
-    private sealed record TripFact(Guid TripId, string TripNumber, string Customer, string Commodity, string Route, string Contract, TripStatus Status, decimal PlannedQuantity, decimal? DeliveredTonnes, decimal? SourceNetTonnes, decimal? DestinationNetTonnes, string? Driver, string? Vehicle, Guid? VehicleId, DateTimeOffset PlannedDeliveryAtUtc, DateTimeOffset? CompletedAtUtc, bool IsDelayed, bool IsOutsideTolerance, FinancialFact? Financial);
+    private static UtcRange? UtcDateRange(ReportingFilter filter, TimeZoneInfo timeZone)
+    {
+        if (!filter.FromDate.HasValue && !filter.ToDate.HasValue) return null;
+        if (filter.FromDate.HasValue && filter.ToDate.HasValue
+            && filter.ToDate.Value < filter.FromDate.Value)
+        {
+            throw new ArgumentException("The report end date must be on or after the start date.", nameof(filter));
+        }
+
+        var start = filter.FromDate.HasValue
+            ? ReportingDateRange.Resolve(filter.FromDate.Value, filter.FromDate.Value, timeZone).StartUtc
+            : (DateTimeOffset?)null;
+        var end = filter.ToDate.HasValue
+            ? ReportingDateRange.Resolve(filter.ToDate.Value, filter.ToDate.Value, timeZone).ExclusiveEndUtc
+            : (DateTimeOffset?)null;
+        return new UtcRange(start, end);
+    }
+
+    private static UtcRange LocalDateRange(DateOnly date, TimeZoneInfo timeZone)
+    {
+        var range = ReportingDateRange.Resolve(date, date, timeZone);
+        return new UtcRange(range.StartUtc, range.ExclusiveEndUtc);
+    }
+
+    private async Task<TenantSettings> GetTenantSettingsAsync(CancellationToken cancellationToken)
+    {
+        var settings = requestContext.TenantId is { } tenantId
+            ? await db.Tenants.AsNoTracking().Where(item => item.Id == tenantId)
+                .Select(item => new { item.TimeZone, item.DefaultCurrency }).SingleOrDefaultAsync(cancellationToken)
+            : null;
+        if (settings is null) return new TenantSettings(TimeZoneInfo.Utc, "ZAR");
+        try
+        {
+            return new TenantSettings(TimeZoneInfo.FindSystemTimeZoneById(settings.TimeZone), settings.DefaultCurrency);
+        }
+        catch (TimeZoneNotFoundException) { return new TenantSettings(TimeZoneInfo.Utc, settings.DefaultCurrency); }
+        catch (InvalidTimeZoneException) { return new TenantSettings(TimeZoneInfo.Utc, settings.DefaultCurrency); }
+    }
+
+    private enum ReportDateMode { None, PlannedDelivery, PlannedCollection, Completed }
+
+    private sealed record TenantSettings(TimeZoneInfo TimeZone, string CurrencyCode);
+    private sealed record UtcRange(DateTimeOffset? Start, DateTimeOffset? EndExclusive);
+    private sealed record ReportCsvPage(IReadOnlyList<object> Items, int TotalCount, Type ItemType);
+    private sealed class ReportFact
+    {
+        public Guid TripId { get; set; }
+        public string TripNumber { get; set; } = string.Empty;
+        public Guid CustomerId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string Commodity { get; set; } = string.Empty;
+        public string Route { get; set; } = string.Empty;
+        public string Contract { get; set; } = string.Empty;
+        public TripStatus Status { get; set; }
+        public decimal PlannedQuantityTonnes { get; set; }
+        public decimal? SourceNetTonnes { get; set; }
+        public decimal? DestinationNetTonnes { get; set; }
+        public decimal? DeliveredTonnes { get; set; }
+        public string? Driver { get; set; }
+        public Guid? DriverId { get; set; }
+        public string? Vehicle { get; set; }
+        public Guid? VehicleId { get; set; }
+        public DateOnly? LicenceExpiry { get; set; }
+        public DateOnly? RoadworthyExpiry { get; set; }
+        public DateTimeOffset PlannedCollectionAtUtc { get; set; }
+        public DateTimeOffset PlannedDeliveryAtUtc { get; set; }
+        public DateTimeOffset? CompletedAtUtc { get; set; }
+        public decimal Revenue { get; set; }
+        public decimal TotalCost { get; set; }
+        public bool HasFinancials { get; set; }
+        public decimal TolerancePercent { get; set; }
+        public decimal GrossMargin { get; set; }
+        public bool OutsideTolerance { get; set; }
+        public bool IsDelayed { get; set; }
+    }
+
+    private sealed class TonnageProjection { public string Group { get; set; } = string.Empty; public decimal Tonnes { get; set; } public int TripCount { get; set; } public decimal Revenue { get; set; } public decimal GrossMargin { get; set; } }
+    private sealed class VarianceProjection { public string TripNumber { get; set; } = string.Empty; public string Customer { get; set; } = string.Empty; public decimal? Source { get; set; } public decimal? Destination { get; set; } public decimal? Variance { get; set; } public decimal? VariancePercent { get; set; } public bool OutsideTolerance { get; set; } public Guid SortId { get; set; } }
+    private sealed class DriverPerformanceProjection { public string Driver { get; set; } = string.Empty; public int CompletedTrips { get; set; } public decimal DeliveredTonnes { get; set; } public int Exceptions { get; set; } public decimal OnTimePercent { get; set; } }
+    private sealed class VehicleUtilisationProjection { public string Vehicle { get; set; } = string.Empty; public int AssignedTrips { get; set; } public int CompletedTrips { get; set; } public decimal UtilisationPercent { get; set; } public DateOnly? LicenceExpiry { get; set; } public DateOnly? RoadworthyExpiry { get; set; } }
+    private sealed class ContractPerformanceProjection { public string Contract { get; set; } = string.Empty; public int CompletedTrips { get; set; } public decimal DeliveredTonnes { get; set; } public decimal Revenue { get; set; } public decimal GrossMargin { get; set; } public decimal ExceptionPercent { get; set; } }
+    private sealed class ExpiryProjection { public string ResourceType { get; set; } = string.Empty; public string Resource { get; set; } = string.Empty; public DateOnly ExpiryDate { get; set; } public string Status { get; set; } = string.Empty; public Guid SortId { get; set; } }
+}
+
+public sealed class ReportExportTooLargeException(int maximumRows, int totalRows) : Exception
+{
+    public int MaximumRows { get; } = maximumRows;
+    public int TotalRows { get; } = totalRows;
 }

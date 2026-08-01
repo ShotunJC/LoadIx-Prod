@@ -52,7 +52,7 @@ public sealed class RabbitMqReportExportPublisher(
         };
         _connection = await factory.CreateConnectionAsync(cancellationToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
-        await _channel.QueueDeclareAsync(_options.ReportExportQueueName, durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken);
+        await DeclareQueueAsync(_channel, _options.ReportExportQueueName, cancellationToken);
         return _channel;
     }
 
@@ -61,6 +61,9 @@ public sealed class RabbitMqReportExportPublisher(
         if (_channel is not null) await _channel.DisposeAsync();
         if (_connection is not null) await _connection.DisposeAsync();
     }
+
+    internal static Task DeclareQueueAsync(IChannel channel, string queueName, CancellationToken cancellationToken) =>
+        channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken);
 
     private sealed record ExportMessage(Guid JobId, Guid TenantId);
 }
@@ -71,6 +74,7 @@ public sealed class ReportExportService(
     IReportExportPublisher publisher,
     ILogger<ReportExportService> logger) : IReportExportService
 {
+    private const int MaximumAttempts = 3;
     private static readonly Action<ILogger, Guid, Exception?> PublishFailed =
         LoggerMessage.Define<Guid>(LogLevel.Warning, new EventId(1501, "ReportExportPublishFailed"), "Report export job {JobId} could not be published");
 
@@ -87,13 +91,14 @@ public sealed class ReportExportService(
             TenantId = tenantId,
             UserId = userId,
             Report = report,
-            FromUtc = filter.FromUtc,
-            ToUtc = filter.ToUtc,
+            FromDate = filter.FromDate,
+            ToDate = filter.ToDate,
             BranchId = filter.BranchId,
             CustomerId = filter.CustomerId,
             Page = 1,
-            PageSize = 5_000,
-            CreatedAtUtc = timeProvider.GetUtcNow(),
+            PageSize = 100,
+            CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
+            Status = ReportExportJobStatus.Queued,
         };
         db.ReportExportJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
@@ -105,13 +110,30 @@ public sealed class ReportExportService(
         db.ReportExportJobs.AsNoTracking().SingleOrDefault(item => item.Id == jobId && item.TenantId == tenantId)?.ToResponse();
 
     public byte[]? GetContent(Guid jobId, TenantId tenantId) =>
-        db.ReportExportJobs.AsNoTracking().Where(item => item.Id == jobId && item.TenantId == tenantId && item.Status == "Completed").Select(item => item.Content).SingleOrDefault();
+        db.ReportExportJobs.AsNoTracking()
+            .Where(item => item.Id == jobId && item.TenantId == tenantId && item.Status == ReportExportJobStatus.Completed)
+            .Select(item => item.Content).SingleOrDefault();
 
     internal async Task PublishPendingAsync(CancellationToken cancellationToken)
     {
-        var jobs = await db.ReportExportJobs
-            .IgnoreQueryFilters()
-            .Where(item => item.Status == "Queued" && (item.LastPublishedAtUtc == null || item.LastPublishedAtUtc < timeProvider.GetUtcNow().AddSeconds(-30)))
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        await db.ReportExportJobs.IgnoreQueryFilters()
+            .Where(item => item.TenantId.Value != Guid.Empty && item.Status == ReportExportJobStatus.Processing
+                && item.LeaseExpiresAtUtc < now && item.Attempts >= MaximumAttempts)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.Status, ReportExportJobStatus.Failed)
+                .SetProperty(item => item.Error, "Processing lease expired after the maximum retry count."), cancellationToken);
+        await db.ReportExportJobs.IgnoreQueryFilters()
+            .Where(item => item.TenantId.Value != Guid.Empty && item.Status == ReportExportJobStatus.Processing
+                && item.LeaseExpiresAtUtc < now && item.Attempts < MaximumAttempts)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.Status, ReportExportJobStatus.Queued)
+                .SetProperty(item => item.Error, "Processing lease expired; the export was requeued."), cancellationToken);
+
+        var jobs = await db.ReportExportJobs.IgnoreQueryFilters()
+            .Where(item => item.TenantId.Value != Guid.Empty && item.Status == ReportExportJobStatus.Queued
+                && (item.LastPublishedAtUtc == null || item.LastPublishedAtUtc < now.AddSeconds(-30))
+                && item.Attempts < MaximumAttempts)
             .OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id).Take(50).ToListAsync(cancellationToken);
         foreach (var job in jobs) await TryPublishAsync(job, cancellationToken);
     }
@@ -121,7 +143,7 @@ public sealed class ReportExportService(
         try
         {
             await publisher.PublishAsync(job.Id, job.TenantId, cancellationToken);
-            job.LastPublishedAtUtc = timeProvider.GetUtcNow();
+            job.LastPublishedAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -137,20 +159,20 @@ public sealed class ReportExportWorker(
     TimeProvider timeProvider,
     ILogger<ReportExportWorker> logger) : BackgroundService
 {
-    private readonly RabbitMqOptions _options = options.Value;
+    private const int MaximumAttempts = 3;
+    private const int MaximumBackgroundRows = 100_000;
+    private const int BatchSize = 100;
     private static readonly Action<ILogger, ulong, Exception?> ProcessingFailed =
         LoggerMessage.Define<ulong>(LogLevel.Error, new EventId(1502, "ReportExportProcessingFailed"), "Report export delivery {DeliveryTag} failed");
     private static readonly Action<ILogger, Exception?> ConnectionFailed =
         LoggerMessage.Define(LogLevel.Warning, new EventId(1503, "ReportExportConnectionFailed"), "Report export worker connection failed; retrying");
+    private readonly RabbitMqOptions _options = options.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            try
-            {
-                await ConsumeAsync(stoppingToken);
-            }
+            try { await ConsumeAsync(stoppingToken); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
@@ -172,7 +194,7 @@ public sealed class ReportExportWorker(
         };
         await using var connection = await factory.CreateConnectionAsync(cancellationToken);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
-        await channel.QueueDeclareAsync(_options.ReportExportQueueName, durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken);
+        await RabbitMqReportExportPublisher.DeclareQueueAsync(channel, _options.ReportExportQueueName, cancellationToken);
         await channel.BasicQosAsync(0, 1, false, cancellationToken);
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, args) =>
@@ -198,27 +220,92 @@ public sealed class ReportExportWorker(
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<CurrentRequestContext>();
-        context.Set(TenantId.From(message.TenantId), null);
+        var tenantId = TenantId.From(message.TenantId);
+        context.Set(tenantId, null);
         var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
         var service = scope.ServiceProvider.GetRequiredService<IReportingService>();
-        var claimed = await db.ReportExportJobs.Where(item => item.Id == message.JobId && item.Status == "Queued")
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.Status, "Processing").SetProperty(item => item.Attempts, item => item.Attempts + 1), cancellationToken);
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        var claimed = await db.ReportExportJobs.Where(item => item.Id == message.JobId
+                && item.TenantId == tenantId && item.Status == ReportExportJobStatus.Queued
+                && item.Attempts < MaximumAttempts)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.Status, ReportExportJobStatus.Processing)
+                .SetProperty(item => item.StartedAtUtc, now)
+                .SetProperty(item => item.LastHeartbeatAtUtc, now)
+                .SetProperty(item => item.LeaseExpiresAtUtc, now.AddMinutes(2))
+                .SetProperty(item => item.Attempts, item => item.Attempts + 1), cancellationToken);
         if (claimed == 0) return;
+
+        var temporaryPath = Path.Combine(
+            Path.GetTempPath(),
+            $"loadix-report-export-{message.JobId:N}-{Guid.NewGuid():N}.csv");
         try
         {
-            var job = await db.ReportExportJobs.SingleAsync(item => item.Id == message.JobId, cancellationToken);
-            job.Content = await service.ExportCsvAsync(job.Report, job.ToFilter(), cancellationToken);
-            job.Status = "Completed";
-            job.CompletedAtUtc = timeProvider.GetUtcNow();
+            var job = await db.ReportExportJobs.SingleAsync(item => item.Id == message.JobId && item.TenantId == tenantId, cancellationToken);
+            var page = 1;
+            var totalRows = 0;
+            await using (var content = new FileStream(
+                             temporaryPath,
+                             FileMode.CreateNew,
+                             FileAccess.Write,
+                             FileShare.None,
+                             64 * 1024,
+                             FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                while (true)
+                {
+                    var batch = await service.ExportCsvBatchAsync(job.Report, job.ToFilter() with { Page = page, PageSize = BatchSize }, page == 1, cancellationToken);
+                    if (page == 1 && batch.TotalCount > MaximumBackgroundRows)
+                    {
+                        throw new ReportExportTooLargeException(MaximumBackgroundRows, batch.TotalCount);
+                    }
+                    await content.WriteAsync(batch.Content, cancellationToken);
+                    totalRows += batch.RowCount;
+                    await db.ReportExportJobs.Where(item => item.Id == job.Id && item.TenantId == tenantId && item.Status == ReportExportJobStatus.Processing)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(item => item.LastHeartbeatAtUtc, timeProvider.GetUtcNow().ToUniversalTime())
+                            .SetProperty(item => item.LeaseExpiresAtUtc, timeProvider.GetUtcNow().ToUniversalTime().AddMinutes(2)), cancellationToken);
+                    if (batch.RowCount == 0 || totalRows >= batch.TotalCount) break;
+                    page++;
+                }
+            }
+
+            // The current job contract stores completed content in varbinary(max).
+            // Generate into a sequential temporary file first so the worker does
+            // not retain the complete export in a growing managed buffer.
+            job.Content = await File.ReadAllBytesAsync(temporaryPath, cancellationToken);
+            job.RowCount = totalRows;
+            job.ContentLengthBytes = job.Content.LongLength;
+            job.Status = ReportExportJobStatus.Completed;
+            job.CompletedAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
+            job.LastHeartbeatAtUtc = job.CompletedAtUtc;
+            job.LeaseExpiresAtUtc = null;
             await db.SaveChangesAsync(cancellationToken);
         }
-        catch
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            var job = await db.ReportExportJobs.IgnoreQueryFilters().SingleAsync(item => item.Id == message.JobId, cancellationToken);
-            job.Status = "Failed";
-            job.Error = "Export generation failed.";
+            var job = await db.ReportExportJobs.IgnoreQueryFilters()
+                .SingleAsync(item => item.Id == message.JobId && item.TenantId == tenantId, cancellationToken);
+            job.Status = job.Attempts >= MaximumAttempts ? ReportExportJobStatus.Failed : ReportExportJobStatus.Queued;
+            job.Error = job.Attempts >= MaximumAttempts
+                ? "Export generation failed after the maximum retry count."
+                : "Export generation failed and will be retried.";
+            job.LastHeartbeatAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
+            job.LeaseExpiresAtUtc = null;
             await db.SaveChangesAsync(cancellationToken);
             throw;
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+            }
+            catch (IOException)
+            {
+                // A failed cleanup is harmless; the OS temporary-file policy
+                // remains responsible for eventual removal.
+            }
         }
     }
 
@@ -231,6 +318,7 @@ public sealed class ReportExportRepublisher(
 {
     private static readonly Action<ILogger, Exception?> RepublishFailed =
         LoggerMessage.Define(LogLevel.Warning, new EventId(1504, "ReportExportRepublishFailed"), "Report export republish cycle failed");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));

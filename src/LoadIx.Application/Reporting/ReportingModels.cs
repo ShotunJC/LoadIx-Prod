@@ -1,8 +1,8 @@
 namespace LoadIx.Application.Reporting;
 
 public sealed record ReportingFilter(
-    DateTimeOffset? FromUtc = null,
-    DateTimeOffset? ToUtc = null,
+    DateOnly? FromDate = null,
+    DateOnly? ToDate = null,
     Guid? BranchId = null,
     Guid? CustomerId = null,
     int Page = 1,
@@ -14,7 +14,8 @@ public sealed record ReportingPagedResponse<T>(
     int PageSize,
     int TotalCount,
     int TotalPages,
-    DateTimeOffset GeneratedAtUtc);
+    DateTimeOffset GeneratedAtUtc,
+    string TimeZone);
 
 public sealed record DashboardKpis(
     int ActiveTrips,
@@ -29,7 +30,8 @@ public sealed record DashboardKpis(
     decimal CustomerConcentrationPercent,
     int UpcomingLicenceExpiries,
     DateTimeOffset GeneratedAtUtc,
-    string TimeZone);
+    string TimeZone,
+    string CurrencyCode);
 
 public sealed record TripRegisterRow(
     Guid TripId,
@@ -119,7 +121,13 @@ public sealed record ReportExportJobResponse(
     string Report,
     string Status,
     DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
+    DateTimeOffset? LastHeartbeatAtUtc,
+    int Attempts,
+    int? RowCount,
+    long? ContentLengthBytes,
     string? DownloadUrl,
     string? Error);
 
+public sealed record ReportCsvBatch(byte[] Content, int TotalCount, int RowCount);

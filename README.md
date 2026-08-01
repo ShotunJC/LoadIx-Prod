@@ -506,13 +506,14 @@ docker compose -f compose.yaml -f compose.demo.yaml logs --tail=100 api web cadd
 Users with `Report.View` can open **Reports** in the dashboard or call the
 tenant-scoped API at `/api/v1/reports/dashboard` and
 `/api/v1/reports/{report}`. Supported report names are documented in the
-reporting endpoint OpenAPI description. Small CSV exports use
-`/export.csv`; large exports should be queued with `POST /export-jobs`, then
-polled and downloaded from the returned job URL. Jobs are persisted in SQL
-Server and delivered through the durable RabbitMQ `loadix.report-exports`
-queue; a republisher retries jobs that were interrupted during startup. Every
-response includes a freshness timestamp and uses the tenant's configured time
-zone.
+reporting endpoint OpenAPI description. Use date-only `from` and `to` query
+values; the API resolves them in the tenant timezone with an exclusive upper
+boundary. Small CSV exports use `/export.csv` and are limited to 100 matching
+rows; larger exports should be queued with `POST /export-jobs`, then polled and
+downloaded from the returned job URL. Jobs are persisted in SQL Server and
+delivered through the durable RabbitMQ `loadix.report-exports` queue; a
+republisher retries queued or lease-expired work. Every response includes a
+freshness timestamp and effective tenant timezone.
 
 The MinIO and Mailpit consoles are intentionally private in this overlay. Use
 an SSH tunnel when needed, for example `ssh -L 9001:127.0.0.1:9001 user@server`,

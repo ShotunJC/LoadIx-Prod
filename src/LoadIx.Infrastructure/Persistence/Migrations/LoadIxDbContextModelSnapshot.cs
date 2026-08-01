@@ -718,6 +718,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Status", "CreatedAtUtc");
 
+                    b.HasIndex("TenantId", "CustomerId", "CreatedAtUtc", "Id");
+
                     b.ToTable("InvoiceBatches", "finance");
                 });
 
@@ -1920,8 +1922,6 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "CommodityId");
 
-                    b.HasIndex("TenantId", "CustomerId");
-
                     b.HasIndex("TenantId", "LoadInstructionId");
 
                     b.HasIndex("TenantId", "TripNumber")
@@ -1930,6 +1930,10 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "PlannedDeliveryAtUtc", "Id");
 
                     b.HasIndex("TenantId", "CompletedAtUtc", "Status", "Id");
+
+                    b.HasIndex("TenantId", "CustomerId", "CompletedAtUtc", "Id");
+
+                    b.HasIndex("TenantId", "CustomerId", "PlannedDeliveryAtUtc", "Id");
 
                     b.HasIndex("TenantId", "DriverId", "PlannedCollectionAtUtc", "PlannedDeliveryAtUtc");
 
@@ -2713,6 +2717,9 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.Property<byte[]>("Content")
                         .HasColumnType("varbinary(max)");
 
+                    b.Property<long?>("ContentLengthBytes")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasPrecision(7)
                         .HasColumnType("datetimeoffset(7)");
@@ -2724,10 +2731,21 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<DateOnly?>("FromDate")
+                        .HasColumnType("date");
+
                     b.Property<DateTimeOffset?>("FromUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("LastHeartbeatAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
                     b.Property<DateTimeOffset?>("LastPublishedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
                         .HasPrecision(7)
                         .HasColumnType("datetimeoffset(7)");
 
@@ -2743,11 +2761,18 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(80)");
 
+                    b.Property<int?>("RowCount")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -2757,6 +2782,9 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly?>("ToDate")
+                        .HasColumnType("date");
 
                     b.Property<DateTimeOffset?>("ToUtc")
                         .HasColumnType("datetimeoffset");
@@ -2769,7 +2797,7 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "Id")
                         .IsUnique();
 
-                    b.HasIndex("Status", "LastPublishedAtUtc", "CreatedAtUtc");
+                    b.HasIndex("TenantId", "Status", "LastPublishedAtUtc", "CreatedAtUtc");
 
                     b.ToTable("ReportExportJobs", "reporting");
                 });
