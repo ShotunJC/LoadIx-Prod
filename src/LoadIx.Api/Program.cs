@@ -9,6 +9,7 @@ using LoadIx.Api.Health;
 using LoadIx.Api.Operations;
 using LoadIx.Api.Security;
 using LoadIx.Application;
+using LoadIx.Application.Reporting;
 using LoadIx.Application.Security;
 using LoadIx.Application.System;
 using LoadIx.Infrastructure;
@@ -52,6 +53,11 @@ builder.Services
 builder.Services
     .AddOptions<DependencyOptions>()
     .Bind(builder.Configuration.GetSection(DependencyOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services
+    .AddOptions<RabbitMqOptions>()
+    .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
@@ -399,6 +405,7 @@ versionedApi.MapDocumentEndpoints();
 versionedApi.MapOperationsEndpoints();
 versionedApi.MapNotificationEndpoints();
 versionedApi.MapFinanceEndpoints();
+versionedApi.MapReportingEndpoints();
 app.MapHub<OperationsHub>("/hubs/operations");
 
 app.Run();

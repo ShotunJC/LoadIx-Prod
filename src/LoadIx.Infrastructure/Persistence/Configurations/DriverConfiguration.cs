@@ -52,6 +52,12 @@ internal sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
             entity.BranchId,
             entity.IsActive,
         });
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
+            entity.IsActive,
+            entity.LicenceExpiry,
+        });
         builder.HasOne<Tenant>()
             .WithMany()
             .HasForeignKey(entity => entity.TenantId)

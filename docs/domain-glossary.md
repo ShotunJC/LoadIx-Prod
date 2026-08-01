@@ -423,6 +423,16 @@ An explicit, permission-gated coordinate capture for a trip assigned to the
 authenticated driver. It records capture and receipt time plus optional accuracy;
 it is not covert or background tracking.
 
+**Operational report**
+A tenant-scoped, bounded query over operational and financial records. Reports
+are read-only decision support and carry a generated-at timestamp and the
+tenant's reporting time zone.
+
+**Invoice-ready revenue**
+The tax-exclusive amount calculated from a trip's immutable rate snapshot and
+reconciled billable tonnes. It is preparation data, not a posted accounting
+invoice.
+
 ## Units and Language Rules
 
 - Always qualify ambiguous quantities with a unit.

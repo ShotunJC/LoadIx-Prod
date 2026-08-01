@@ -15,6 +15,10 @@ services:
       Dependencies__RedisPort: 6379
       Dependencies__RabbitMqHost: rabbitmq
       Dependencies__RabbitMqPort: 5672
+      Dependencies__RabbitMqUsername: ${RABBITMQ_USER:-loadix}
+      Dependencies__RabbitMqPassword: ${RABBITMQ_PASSWORD:-LoadIx_Local_Only_123!}
+      Dependencies__RabbitMqVirtualHost: /
+      Dependencies__ReportExportQueueName: loadix.report-exports
       Dependencies__MinioHost: minio
       Dependencies__MinioPort: 9000
       Dependencies__MailpitHost: mailpit

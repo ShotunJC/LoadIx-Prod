@@ -441,6 +441,8 @@ system rather than used as an unstyled admin template.
 | ADR-039 | Driver-only trip access is enforced from the linked driver profile in the application service | Accepted | A driver role never grants tenant-wide trip access; operations authority remains an explicit separate permission |
 | ADR-040 | Financial preparation records snapshot revenue and require explicit tax review | Accepted | Prevents contract or tax-configuration edits from retroactively changing completed trip charges and keeps VAT treatment reviewable |
 | ADR-041 | Invoice batches are preparation/export artifacts, not accounting ledger entries | Accepted | Enables finance review, duplicate prevention, CSV/PDF handoff, and approval history without prematurely integrating an accounting platform |
+| ADR-042 | Reporting uses a tenant-scoped bounded query service and explicit report endpoints | Accepted | Keeps business calculations out of controllers, prevents unbounded reads, and gives every dashboard/report a freshness timestamp and stable sorting |
+| ADR-043 | Report CSV exports are capped synchronously and large jobs are persisted then dispatched through durable RabbitMQ messages | Accepted | Protects API latency, survives API restarts, and lets a worker retry/report failures without coupling HTTP requests to generation |
 
 ### Justified changes to the proposed architecture
 

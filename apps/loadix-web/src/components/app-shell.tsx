@@ -16,6 +16,7 @@ import {
   FileText,
   Smartphone,
   Bell,
+  BarChart3,
 } from 'lucide-react'
 import { useAuth } from '@/auth/auth-context'
 import { ConnectionStatus } from '@/components/connection-status'
@@ -32,6 +33,12 @@ const navigationItems = [
     to: '/finance',
     icon: Receipt,
     permission: 'Finance.View',
+  },
+  {
+    label: 'Reports',
+    to: '/reports',
+    icon: BarChart3,
+    permission: 'Report.View',
   },
   {
     label: 'Trips',

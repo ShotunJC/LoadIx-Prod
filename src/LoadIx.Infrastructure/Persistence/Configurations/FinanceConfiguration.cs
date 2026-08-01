@@ -70,6 +70,13 @@ internal sealed class TripFinancialsConfiguration :
         builder.HasIndex(entity => new
         {
             entity.TenantId,
+            entity.CalculatedAtUtc,
+            entity.ApprovalStatus,
+            entity.TripId,
+        });
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
             entity.CustomerId,
             entity.TransportContractId,
             entity.ApprovalStatus,

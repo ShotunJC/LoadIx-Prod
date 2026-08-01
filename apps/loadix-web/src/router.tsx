@@ -23,6 +23,7 @@ import { InstructionsLazyPage } from '@/pages/instructions-lazy-page'
 import { TripsLazyPage } from '@/pages/trips-lazy-page'
 import { DriverPage } from '@/features/driver/driver-page'
 import { FinancePage } from '@/features/finance/finance-page'
+import { ReportingPage } from '@/features/reporting/reporting-page'
 
 const rootRoute = createRootRoute({
   component: Outlet,
@@ -93,6 +94,12 @@ const financeRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/finance',
   component: FinancePage,
+})
+
+const reportsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/reports',
+  component: ReportingPage,
 })
 
 const tripsRoute = createRoute({
@@ -178,6 +185,7 @@ const routeTree = rootRoute.addChildren([
     operationsRoute,
     notificationsRoute,
     financeRoute,
+    reportsRoute,
     tripsRoute,
     driverRoute,
     instructionsRoute,

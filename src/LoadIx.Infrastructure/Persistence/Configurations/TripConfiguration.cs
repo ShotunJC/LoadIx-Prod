@@ -97,6 +97,19 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
         builder.HasIndex(entity => new
         {
             entity.TenantId,
+            entity.PlannedDeliveryAtUtc,
+            entity.Id,
+        });
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
+            entity.CompletedAtUtc,
+            entity.Status,
+            entity.Id,
+        });
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
             entity.DriverId,
             entity.PlannedCollectionAtUtc,
             entity.PlannedDeliveryAtUtc,

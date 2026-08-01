@@ -14,6 +14,7 @@ using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Instructions;
 using LoadIx.Infrastructure.Notifications;
 using LoadIx.Infrastructure.Operations;
+using LoadIx.Infrastructure.Reporting;
 using LoadIx.Infrastructure.Trips;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -96,6 +97,8 @@ public sealed class LoadIxDbContext(
     public DbSet<InvoiceBatchLine> InvoiceBatchLines => Set<InvoiceBatchLine>();
 
     public DbSet<FinancialApproval> FinancialApprovals => Set<FinancialApproval>();
+
+    public DbSet<ReportExportJob> ReportExportJobs => Set<ReportExportJob>();
 
     public DbSet<DocumentUploadOperation> DocumentUploadOperations =>
         Set<DocumentUploadOperation>();
@@ -180,6 +183,8 @@ public sealed class LoadIxDbContext(
         builder.Entity<InvoiceBatchLine>()
             .HasQueryFilter(entity => requestContext.TenantId == entity.TenantId);
         builder.Entity<FinancialApproval>()
+            .HasQueryFilter(entity => requestContext.TenantId == entity.TenantId);
+        builder.Entity<ReportExportJob>()
             .HasQueryFilter(entity => requestContext.TenantId == entity.TenantId);
         builder.Entity<DocumentUploadOperation>()
             .HasQueryFilter(entity =>

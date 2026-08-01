@@ -43,6 +43,13 @@ internal sealed class VehicleConfiguration : IEntityTypeConfiguration<Vehicle>
             entity.IsActive,
             entity.IsAvailable,
         });
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
+            entity.IsActive,
+            entity.LicenceExpiry,
+            entity.RoadworthyExpiry,
+        });
         builder.HasOne<Tenant>()
             .WithMany()
             .HasForeignKey(entity => entity.TenantId)
