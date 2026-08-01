@@ -1,4 +1,8 @@
 import { ArrowRight, CircleAlert, Clock3, Truck } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/auth/auth-context'
+import { getDashboard } from '@/features/reporting/reporting-api'
 
 const summaryCards = [
   {
@@ -22,6 +26,34 @@ const summaryCards = [
 ] as const
 
 export function DashboardPage() {
+  const auth = useAuth()
+  const dashboard = useQuery({
+    queryKey: ['reports', 'dashboard', 'home'],
+    queryFn: () => getDashboard(auth.request),
+  })
+  const metrics = dashboard.data
+    ? [
+        {
+          label: 'Active trips',
+          value: String(dashboard.data.activeTrips),
+          detail: 'Current operational workload',
+          icon: Truck,
+        },
+        {
+          label: 'Delayed trips',
+          value: String(dashboard.data.delayedTrips),
+          detail: 'Requires controller attention',
+          icon: CircleAlert,
+        },
+        {
+          label: 'Awaiting reconciliation',
+          value: String(dashboard.data.awaitingReconciliation),
+          detail: 'Pending weight and document review',
+          icon: Clock3,
+        },
+      ]
+    : summaryCards
+
   return (
     <div className="mx-auto max-w-7xl">
       <div className="flex flex-col justify-between gap-3 border-b border-slate-300 pb-5 sm:flex-row sm:items-end">
@@ -46,7 +78,7 @@ export function DashboardPage() {
         aria-label="Operational summary"
         className="mt-6 grid gap-4 md:grid-cols-3"
       >
-        {summaryCards.map((card) => (
+        {metrics.map((card) => (
           <article
             className="rounded-xl border bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
             key={card.label}
@@ -70,6 +102,15 @@ export function DashboardPage() {
           </article>
         ))}
       </section>
+
+      <div className="mt-5 flex justify-end">
+        <Link
+          className="text-brand-700 text-sm font-semibold hover:underline"
+          to="/reports"
+        >
+          Open all reports <ArrowRight className="ml-1 inline" size={16} />
+        </Link>
+      </div>
 
       <section className="mt-6 overflow-hidden rounded-xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="flex items-center justify-between border-b px-5 py-4">

@@ -1,0 +1,129 @@
+name: Deploy LoadIx Demo
+
+on:
+  push:
+    branches:
+      - master
+
+  workflow_dispatch:
+
+concurrency:
+  group: loadix-demo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/loadix-deploy-key
+          chmod 600 ~/.ssh/loadix-deploy-key
+
+          ssh-keyscan \
+            -p "${VPS_PORT:-22}" \
+            -H "$VPS_HOST" \
+            >> ~/.ssh/known_hosts
+
+      - name: Deploy LoadIx demo
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh \
+            -i ~/.ssh/loadix-deploy-key \
+            -p "${VPS_PORT:-22}" \
+            "$VPS_USER@$VPS_HOST" << 'EOF'
+              set -Eeuo pipefail
+
+              cd /root/LoadIx
+
+              echo "Fetching latest master branch..."
+              git fetch origin master
+              git checkout master
+              git reset --hard origin/master
+
+              echo "Validating Docker Compose configuration..."
+              docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                config --quiet
+
+              echo "Building updated application images..."
+              docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                build --pull api web
+
+              echo "Starting infrastructure and application..."
+              docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                up -d --remove-orphans
+
+              echo "Waiting for containers..."
+              sleep 10
+
+              echo "Container status:"
+              docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                ps
+
+              echo "Checking API health from inside the container..."
+              for attempt in $(seq 1 30); do
+                if docker compose \
+                  -f compose.yaml \
+                  -f compose.demo.yaml \
+                  exec -T api \
+                  curl --fail --silent \
+                  http://localhost:8080/health/ready \
+                  > /dev/null; then
+
+                  echo "LoadIx API is healthy."
+                  break
+                fi
+
+                if [ "$attempt" -eq 30 ]; then
+                  echo "API failed its health check."
+
+                  docker compose \
+                    -f compose.yaml \
+                    -f compose.demo.yaml \
+                    logs --tail=200 api
+
+                  exit 1
+                fi
+
+                echo "Health check attempt $attempt of 30..."
+                sleep 5
+              done
+
+              echo "Checking Caddy..."
+              docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                exec -T caddy \
+                caddy validate \
+                --config /etc/caddy/Caddyfile
+
+              docker image prune -f
+
+              echo "LoadIx demo deployment completed successfully."
+          EOF

@@ -718,6 +718,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Status", "CreatedAtUtc");
 
+                    b.HasIndex("TenantId", "CustomerId", "CreatedAtUtc", "Id");
+
                     b.ToTable("InvoiceBatches", "finance");
                 });
 
@@ -991,6 +993,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("[InvoiceBatchId] IS NOT NULL");
 
+                    b.HasIndex("TenantId", "CalculatedAtUtc", "ApprovalStatus", "TripId");
+
                     b.HasIndex("TenantId", "CustomerId", "TransportContractId", "ApprovalStatus", "InvoiceBatchId");
 
                     b.ToTable("TripFinancials", "finance");
@@ -1091,6 +1095,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .HasFilter("[UserId] IS NOT NULL");
 
                     b.HasIndex("TenantId", "BranchId", "IsActive");
+
+                    b.HasIndex("TenantId", "IsActive", "LicenceExpiry");
 
                     b.ToTable("Drivers", "fleet");
                 });
@@ -1248,6 +1254,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("TenantId", "BranchId", "IsActive", "IsAvailable");
+
+                    b.HasIndex("TenantId", "IsActive", "LicenceExpiry", "RoadworthyExpiry");
 
                     b.ToTable("Vehicles", "fleet");
                 });
@@ -1914,12 +1922,18 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "CommodityId");
 
-                    b.HasIndex("TenantId", "CustomerId");
-
                     b.HasIndex("TenantId", "LoadInstructionId");
 
                     b.HasIndex("TenantId", "TripNumber")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "PlannedDeliveryAtUtc", "Id");
+
+                    b.HasIndex("TenantId", "CompletedAtUtc", "Status", "Id");
+
+                    b.HasIndex("TenantId", "CustomerId", "CompletedAtUtc", "Id");
+
+                    b.HasIndex("TenantId", "CustomerId", "PlannedDeliveryAtUtc", "Id");
 
                     b.HasIndex("TenantId", "DriverId", "PlannedCollectionAtUtc", "PlannedDeliveryAtUtc");
 
@@ -2682,6 +2696,110 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "TripId", "OccurredAtUtc");
 
                     b.ToTable("OperationalOutboxMessages", "operations");
+                });
+
+            modelBuilder.Entity("LoadIx.Infrastructure.Reporting.ReportExportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<byte[]>("Content")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<long?>("ContentLengthBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateOnly?>("FromDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("FromUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastHeartbeatAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("LastPublishedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PageSize")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Report")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int?>("RowCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly?>("ToDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("ToUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Id")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Status", "LastPublishedAtUtc", "CreatedAtUtc");
+
+                    b.ToTable("ReportExportJobs", "reporting");
                 });
 
             modelBuilder.Entity("LoadIx.Infrastructure.Trips.TripCommandOperation", b =>

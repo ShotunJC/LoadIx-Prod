@@ -5,6 +5,7 @@ using LoadIx.Application.Finance;
 using LoadIx.Application.Instructions;
 using LoadIx.Application.MasterData;
 using LoadIx.Application.Notifications;
+using LoadIx.Application.Reporting;
 using LoadIx.Application.Security;
 using LoadIx.Application.Trips;
 using LoadIx.Infrastructure.Contracts;
@@ -15,6 +16,7 @@ using LoadIx.Infrastructure.Instructions;
 using LoadIx.Infrastructure.MasterData;
 using LoadIx.Infrastructure.Notifications;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Reporting;
 using LoadIx.Infrastructure.Seed;
 using LoadIx.Infrastructure.Tenancy;
 using LoadIx.Infrastructure.Trips;
@@ -67,6 +69,13 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ISmsNotificationSender, LocalSmsNotificationSender>();
         services.AddScoped<IFinanceService, FinanceService>();
+        services.AddScoped<IReportingService, ReportingService>();
+        services.AddScoped<ReportExportService>();
+        services.AddScoped<IReportExportService>(serviceProvider =>
+            serviceProvider.GetRequiredService<ReportExportService>());
+        services.AddSingleton<IReportExportPublisher, RabbitMqReportExportPublisher>();
+        services.AddHostedService<ReportExportWorker>();
+        services.AddHostedService<ReportExportRepublisher>();
         services.AddSingleton<IMinioClient>(serviceProvider =>
         {
             var options = serviceProvider

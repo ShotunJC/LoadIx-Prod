@@ -441,6 +441,65 @@ system rather than used as an unstyled admin template.
 | ADR-039 | Driver-only trip access is enforced from the linked driver profile in the application service | Accepted | A driver role never grants tenant-wide trip access; operations authority remains an explicit separate permission |
 | ADR-040 | Financial preparation records snapshot revenue and require explicit tax review | Accepted | Prevents contract or tax-configuration edits from retroactively changing completed trip charges and keeps VAT treatment reviewable |
 | ADR-041 | Invoice batches are preparation/export artifacts, not accounting ledger entries | Accepted | Enables finance review, duplicate prevention, CSV/PDF handoff, and approval history without prematurely integrating an accounting platform |
+| ADR-042 | Reporting uses a tenant-scoped bounded query service and explicit report endpoints | Accepted | Keeps business calculations out of controllers, prevents unbounded reads, and gives every dashboard/report a freshness timestamp and stable sorting |
+| ADR-043 | Report CSV exports are capped synchronously and large jobs are persisted then dispatched through durable RabbitMQ messages | Accepted | Protects API latency, survives API restarts, and lets a worker retry/report failures without coupling HTTP requests to generation |
+| ADR-044 | Reporting accepts date-only filters, resolves exclusive UTC boundaries on the server, and processes export jobs in bounded pages | Accepted | A selected calendar date belongs to the tenant timezone, including DST days; SQL count/order/page operations must not be replaced by an in-memory cap |
+
+### Milestone 14 reporting semantics
+
+The reporting API accepts `from` and `to` date-only values. The server resolves
+the start of `from` and the day after `to` in the tenant's configured timezone
+and queries `[startUtc, exclusiveEndUtc)`. Responses include `timeZone` and
+`generatedAtUtc`; no browser-generated UTC timestamp is authoritative.
+
+Dashboard KPI definitions are:
+
+- Active trips: trips in a non-terminal operational status, independent of the
+  selected period.
+- Trips completed today and tonnes delivered today: completed trips and their
+  destination net tonnes (falling back to source net tonnes) inside today's
+  tenant-local day.
+- Trips awaiting reconciliation: current trips in `ReconciliationRequired`.
+- Trips outside tolerance: non-terminal operational trips with a valid source or
+  destination net weight whose measured tonnes differ from planned tonnes by
+  more than the contract tolerance; this is not restricted to
+  `ReconciliationRequired`.
+- Delayed trips: current non-terminal trips whose planned delivery instant is
+  before the current UTC instant.
+- Fleet utilisation: active tenant vehicles used by at least one selected-period
+  trip divided by active tenant vehicles.
+- Revenue and estimated gross margin: tax-exclusive financial amount and amount
+  after recorded cost entries for completed trips in the selected period.
+- Customer concentration: the largest customer's selected-period revenue divided
+  by selected-period revenue; zero revenue returns zero percent.
+- Upcoming licence expiries: active driver licences and vehicle licence/roadworthy
+  records expiring from tenant-local today through today plus 30 days, inclusive;
+  already expired records are excluded.
+
+Report date fields are explicit: trip register and exceptions use planned delivery;
+tonnage, variance, driver performance, contract performance, customer revenue,
+profitability, and outstanding POD use completion and exclude incomplete trips;
+vehicle utilisation uses planned collection; invoice status uses invoice-batch
+creation; expiry uses the expiry date.
+Branch filtering follows the assigned driver or vehicle branch and customer
+filtering follows the trip/customer relationship.
+
+Expiry report date semantics are inclusive at the date level: with no dates the
+report covers tenant-local today through today plus 90 days; with both dates it
+covers `from` through `to`; with only `from` it has no upper date boundary; and
+with only `to` it has no lower date boundary. Query predicates use an exclusive
+upper bound internally.
+
+Reporting query indexes include tenant-scoped trip keys for customer plus
+completed/planned-delivery ordering, invoice-batch customer plus creation-time
+ordering, and export-job tenant/status/lease scheduling.
+
+Synchronous CSV exports are limited to 100 matching rows and return a validation
+problem when the true SQL count is larger. Background exports use deterministic
+page ordering, a 100,000-row abuse limit, explicit `Queued`, `Processing`,
+`Completed`, and `Failed` states, a lease/heartbeat, bounded retry attempts, and
+persisted row-count/content-size metadata. A stale processing lease is requeued;
+an export is never reported successful as a silently truncated file.
 
 ### Justified changes to the proposed architecture
 
