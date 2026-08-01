@@ -94,12 +94,14 @@ public sealed class EdgeEndpointTests(
 
         var nonce = "heartbeat-nonce-0001";
         var key = "heartbeat-key-0001";
+        var heartbeatTimestamp = DateTimeOffset.UtcNow;
         var first = await SendHeartbeatAsync(
             device.DeviceId,
             credential.Secret,
             key,
             nonce,
-            "Running");
+            "Running",
+            heartbeatTimestamp);
         first.StatusCode.Should().Be(HttpStatusCode.OK);
         var firstPayload = await first.Content.ReadFromJsonAsync<EdgeHeartbeatAck>();
         firstPayload!.IsReplay.Should().BeFalse();
@@ -109,7 +111,8 @@ public sealed class EdgeEndpointTests(
             credential.Secret,
             key,
             nonce,
-            "Running");
+            "Running",
+            heartbeatTimestamp);
         replay.StatusCode.Should().Be(HttpStatusCode.OK);
         (await replay.Content.ReadFromJsonAsync<EdgeHeartbeatAck>())!
             .IsReplay.Should().BeTrue();
@@ -119,7 +122,8 @@ public sealed class EdgeEndpointTests(
             credential.Secret,
             key,
             nonce,
-            "Changed");
+            "Changed",
+            heartbeatTimestamp);
         changedReplay.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var changedIdempotency = await SendHeartbeatAsync(
@@ -127,7 +131,8 @@ public sealed class EdgeEndpointTests(
             credential.Secret,
             key,
             "heartbeat-nonce-0002",
-            "Changed");
+            "Changed",
+            heartbeatTimestamp);
         changedIdempotency.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var oldCapturedAt = DateTimeOffset.UtcNow.AddDays(-2);
@@ -359,7 +364,8 @@ public sealed class EdgeEndpointTests(
         string secret,
         string idempotencyKey,
         string nonce,
-        string status)
+        string status,
+        DateTimeOffset deviceTimestampUtc)
     {
         var request = DeviceRequest(
             HttpMethod.Post,
@@ -370,7 +376,7 @@ public sealed class EdgeEndpointTests(
             nonce,
             new
             {
-                deviceTimestampUtc = DateTimeOffset.UtcNow,
+                deviceTimestampUtc,
                 status,
             });
         return await _factory.CreateClient().SendAsync(request);
