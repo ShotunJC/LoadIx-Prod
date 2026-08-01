@@ -90,12 +90,13 @@ public sealed class EdgeEndpointTests(
             HttpStatusCode.OK,
             $"the bootstrap response was: {bootstrapResponseBody}");
 
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+        };
         var credential = JsonSerializer.Deserialize<EdgeCredentialIssued>(
             bootstrapResponseBody,
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-            });
+            options);
 
         credential.Should().NotBeNull();
         credential!.Secret.Should().NotBeNullOrWhiteSpace();
@@ -159,10 +160,7 @@ public sealed class EdgeEndpointTests(
 
         var replayPayload = JsonSerializer.Deserialize<EdgeHeartbeatAck>(
             replayResponseBody,
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-            });
+            options);
 
         replayPayload.Should().NotBeNull();
         replayPayload!.IsReplay.Should().BeTrue();
@@ -231,10 +229,7 @@ public sealed class EdgeEndpointTests(
         var firstReadingReceipt =
             JsonSerializer.Deserialize<EdgeReadingReceipt>(
                 readingResponseBody,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                });
+                options);
 
         firstReadingReceipt.Should().NotBeNull();
         firstReadingReceipt!.IsReplay.Should().BeFalse();
@@ -274,10 +269,7 @@ public sealed class EdgeEndpointTests(
         var offlineReplayReceipt =
             JsonSerializer.Deserialize<EdgeReadingReceipt>(
                 offlineReplayResponseBody,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                });
+                options);
 
         offlineReplayReceipt.Should().NotBeNull();
         offlineReplayReceipt!.IsReplay.Should().BeTrue();
