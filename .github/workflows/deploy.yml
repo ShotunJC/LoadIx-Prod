@@ -56,8 +56,16 @@ jobs:
 
               echo "Fetching latest master branch..."
               git fetch origin master
+              if [ "$(git config --bool core.sparseCheckout || echo false)" = "true" ]; then
+                echo "Disabling sparse checkout so Docker receives the complete source tree..."
+                git sparse-checkout disable
+              fi
               git checkout master
               git reset --hard origin/master
+
+              echo "Checking out required API source files..."
+              test -s src/LoadIx.Infrastructure/DependencyInjection.cs
+              test -s src/LoadIx.Infrastructure/Edge/EdgeDeviceService.cs
 
               echo "Validating Docker Compose configuration..."
               docker compose \
@@ -83,7 +91,7 @@ jobs:
               docker compose \
                 -f compose.yaml \
                 -f compose.demo.yaml \
-                build --pull api web
+                build --pull --no-cache api web
 
               echo "Starting infrastructure and application..."
               docker compose \
