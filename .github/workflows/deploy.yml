@@ -72,6 +72,13 @@ jobs:
                 --profile tools \
                 run --rm migrate
 
+              echo "Refreshing deterministic demo roles and data..."
+              docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                --profile tools \
+                run --rm seed-demo
+
               echo "Building updated application images..."
               docker compose \
                 -f compose.yaml \
