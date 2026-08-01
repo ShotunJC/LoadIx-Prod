@@ -626,7 +626,8 @@ public sealed class EdgeDeviceService(
                 && item.Type == EdgeDeviceCredentialType.Device
                 && item.Status == EdgeDeviceCredentialStatus.Active
                 && item.RevokedAtUtc == null
-                && item.IsUsableAt(now))
+                && (!item.ExpiresAtUtc.HasValue
+                    || item.ExpiresAtUtc > now))
             .OrderByDescending(item => item.CreatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
         if (active is null)
@@ -1481,7 +1482,8 @@ public sealed class EdgeDeviceService(
                 && item.Id == edgeRequestContext.CredentialId
                 && item.Status == EdgeDeviceCredentialStatus.Active
                 && item.RevokedAtUtc == null
-                && item.IsUsableAt(now))
+                && (!item.ExpiresAtUtc.HasValue
+                    || item.ExpiresAtUtc > now))
             .OrderByDescending(item => item.CreatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
         if (active is null)
