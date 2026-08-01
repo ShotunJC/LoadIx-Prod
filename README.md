@@ -171,6 +171,66 @@ administrator may explicitly supply `X-LoadIx-Support-Tenant`; the API verifies
 the target tenant, audits entry, enriches structured logs, and returns
 `X-LoadIx-Support-Context`. Tenant users receive 403 if they attempt this.
 
+## Edge-device and weighbridge integration
+
+Milestone 15 adds a tenant- and site-bound Edge Agent API. Administrators use
+the **Edge devices** screen to create a one-time registration bootstrap, monitor
+heartbeats and online/offline state, rotate or revoke a device credential, view
+diagnostics, and inspect the latest simulated reading. Device requests use an
+installation-specific secret, timestamp, nonce, and idempotency key; secrets are
+hashed in SQL and are shown only at issuance.
+
+Bootstrap is recoverable: the agent generates the initial device secret locally
+and submits it with the one-time bootstrap token. The API stores only the hash.
+The agent persists the secret and the bootstrap nonce/idempotency key before the
+request, so a lost response can be retried safely. An exact replay returns an
+acknowledgement without re-displaying the secret; changing the payload for the
+same nonce or idempotency key returns `409 Conflict`.
+
+Rotation is also client-generated and two-phase. The replacement secret is
+submitted with the current credential, while the old credential remains valid
+for the configured overlap window. The agent switches to the replacement only
+after it authenticates and confirms `POST /api/v1/edge/credential/rotation-confirm`.
+If confirmation does not arrive, the replacement expires and the old credential
+remains the recovery path. Request-time cleanup and a scheduled worker revoke
+stale pending replacements. The admin rotation action follows the same
+lifecycle: the operator hands the displayed replacement secret to the agent,
+which performs the confirmation.
+
+Authenticated rate limits use `tenantId:deviceId` partitions. Bootstrap and
+other unauthenticated edge traffic remains IP limited. Every nonce and
+idempotency key is validated and replay-safe commands are persisted in one SQL
+transaction with their resulting reading, ticket, heartbeat, or credential
+change. Edge tables use restrictive composite tenant/device/site foreign keys;
+historical rows are not cascade-deleted.
+
+The test simulator can be registered and exercised from the repository root:
+
+```powershell
+dotnet run --project src/LoadIx.EdgeSimulator -- `
+  --api-base-url http://localhost:8080 `
+  --device-id <device-id-from-edge-devices> `
+  --bootstrap-token <one-time-token-from-edge-devices> `
+  --count 8 `
+  --disconnect-every 3 `
+  --rotate-after 5
+```
+
+After the first run, the simulator keeps its demo credential, rotation recovery
+state, and pending queue in local state files beside the configured state path.
+Writes use temporary files and replace the state atomically. Treat those files as
+test secrets and delete them after the demonstration; the patterns are ignored
+by Git and must never be placed in a source-controlled directory. The bundled parser accepts
+only the generic test format, for example
+`WEIGHT|value=12345.250|unit=kg|stable=true|vehicle=CA-123`. No compatibility
+with a real weighbridge indicator is claimed. See
+[ADR-045](docs/decisions/ADR-045-edge-device-integration-foundation.md) for the
+future Raspberry Pi or industrial-PC deployment approach and the protocol
+verification gate.
+
+No active simulated device is seeded. Bootstrap is issued through the admin UI
+so credentials do not appear in seed data or source control.
+
 ## Master data management
 
 After signing in, the sidebar provides management screens for branches,

@@ -63,31 +63,91 @@ services:
     profiles: ["tools"]
     image: mcr.microsoft.com/dotnet/sdk:10.0.103
     working_dir: /workspace
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__Database: >-
         Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
         User Id=sa;Password=${SQL_PASSWORD:-LoadIx_Local_Only_123!};
         Encrypt=False;TrustServerCertificate=True
+
     volumes:
       - ./:/workspace
+
     depends_on:
       sqlserver:
         condition: service_healthy
+
     networks:
       - backend
-    entrypoint: ["/bin/sh", "-c"]
+
+    entrypoint:
+      - /bin/sh
+      - -c
+
     command:
-      - >-
-        dotnet restore src/LoadIx.Api/LoadIx.Api.csproj &&
-        dotnet tool restore &&
-        dotnet build src/LoadIx.Api/LoadIx.Api.csproj --no-restore &&
-        dotnet ef database update
-        --project src/LoadIx.Infrastructure
-        --startup-project src/LoadIx.Api
-        --verbose &&
-        dotnet run --project src/LoadIx.Api --no-launch-profile --
-        --environment Development --seed-development
+      - |
+        set -e
+
+        echo "Restoring project dependencies..."
+        dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
+
+        echo "Restoring EF Core tools..."
+        dotnet tool restore
+
+        echo "Building LoadIx..."
+        dotnet build src/LoadIx.Api/LoadIx.Api.csproj \
+          --configuration Release \
+          --no-restore
+
+        echo "Applying pending database migrations..."
+        dotnet ef database update \
+          --project src/LoadIx.Infrastructure \
+          --startup-project src/LoadIx.Api \
+          --configuration Release \
+          --no-build
+
+        echo "Database migrations completed."
+  seed-demo:
+    profiles: ["tools"]
+    image: mcr.microsoft.com/dotnet/sdk:10.0.103
+    working_dir: /workspace
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+      ConnectionStrings__Database: >-
+        Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
+        User Id=sa;Password=${SQL_PASSWORD:-LoadIx_Local_Only_123!};
+        Encrypt=False;TrustServerCertificate=True
+
+    volumes:
+      - ./:/workspace
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    networks:
+      - backend
+
+    entrypoint:
+      - /bin/sh
+      - -c
+
+    command:
+      - |
+        set -e
+
+        dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
+
+        dotnet run \
+          --project src/LoadIx.Api \
+          --no-launch-profile \
+          -- \
+          --environment Development \
+          --seed-development
 
 volumes:
   caddy-data:

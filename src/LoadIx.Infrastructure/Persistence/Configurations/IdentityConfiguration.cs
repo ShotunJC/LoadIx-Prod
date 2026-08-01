@@ -116,7 +116,22 @@ internal sealed class SecurityAuditEventConfiguration
             .IsUnicode(false)
             .IsRequired();
         builder.Property(auditEvent => auditEvent.TargetId).HasMaxLength(160);
+        builder.Property(auditEvent => auditEvent.ActorCredentialId);
         builder.Property(auditEvent => auditEvent.IpAddress)
+            .HasMaxLength(64)
+            .IsUnicode(false);
+        builder.Property(auditEvent => auditEvent.CorrelationId)
+            .HasMaxLength(128)
+            .IsUnicode(false);
+        builder.Property(auditEvent => auditEvent.FailureCode)
+            .HasMaxLength(160)
+            .IsUnicode(false);
+        builder.Property(auditEvent => auditEvent.TraceId)
+            .HasMaxLength(200);
+        builder.Property(auditEvent => auditEvent.NonceHash)
+            .HasMaxLength(64)
+            .IsUnicode(false);
+        builder.Property(auditEvent => auditEvent.IdempotencyKeyHash)
             .HasMaxLength(64)
             .IsUnicode(false);
         builder.HasIndex(auditEvent => new
@@ -127,6 +142,12 @@ internal sealed class SecurityAuditEventConfiguration
         builder.HasIndex(auditEvent => new
         {
             auditEvent.ActorUserId,
+            auditEvent.OccurredAtUtc,
+        });
+        builder.HasIndex(auditEvent => new
+        {
+            auditEvent.TenantId,
+            auditEvent.ActorDeviceId,
             auditEvent.OccurredAtUtc,
         });
     }

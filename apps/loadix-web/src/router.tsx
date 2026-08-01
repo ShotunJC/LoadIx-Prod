@@ -24,6 +24,7 @@ import { TripsLazyPage } from '@/pages/trips-lazy-page'
 import { DriverPage } from '@/features/driver/driver-page'
 import { FinancePage } from '@/features/finance/finance-page'
 import { ReportingPage } from '@/features/reporting/reporting-page'
+import { EdgeDevicesPage } from '@/features/edge/edge-devices-page'
 
 const rootRoute = createRootRoute({
   component: Outlet,
@@ -174,6 +175,12 @@ const usersRoute = createRoute({
   component: UserManagementPage,
 })
 
+const edgeDevicesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/edge-devices',
+  component: EdgeDevicesPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   forgotPasswordRoute,
@@ -198,6 +205,7 @@ const routeTree = rootRoute.addChildren([
     driversRoute,
     trailersRoute,
     usersRoute,
+    edgeDevicesRoute,
   ]),
 ])
 

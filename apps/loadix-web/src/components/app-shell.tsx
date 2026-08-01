@@ -17,6 +17,7 @@ import {
   Smartphone,
   Bell,
   BarChart3,
+  Cpu,
 } from 'lucide-react'
 import { useAuth } from '@/auth/auth-context'
 import { ConnectionStatus } from '@/components/connection-status'
@@ -92,6 +93,12 @@ const navigationItems = [
   { label: 'Drivers', to: '/drivers', icon: Contact, permission: 'Fleet.View' },
   { label: 'Trailers', to: '/trailers', icon: Truck, permission: 'Fleet.View' },
   { label: 'Users', to: '/users', icon: Users, permission: 'User.View' },
+  {
+    label: 'Edge devices',
+    to: '/edge-devices',
+    icon: Cpu,
+    permission: 'EdgeDevice.View',
+  },
 ] as const
 
 export function AppShell() {

@@ -38,6 +38,7 @@ internal sealed class LocationConfiguration : IEntityTypeConfiguration<Location>
             entity.Type,
             entity.IsActive,
         });
+        builder.HasAlternateKey(entity => new { entity.TenantId, entity.Id });
         builder.HasOne<Tenant>()
             .WithMany()
             .HasForeignKey(entity => entity.TenantId)

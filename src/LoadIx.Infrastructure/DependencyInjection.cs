@@ -1,6 +1,7 @@
 using LoadIx.Application.Abstractions;
 using LoadIx.Application.Contracts;
 using LoadIx.Application.Documents;
+using LoadIx.Application.Edge;
 using LoadIx.Application.Finance;
 using LoadIx.Application.Instructions;
 using LoadIx.Application.MasterData;
@@ -8,8 +9,10 @@ using LoadIx.Application.Notifications;
 using LoadIx.Application.Reporting;
 using LoadIx.Application.Security;
 using LoadIx.Application.Trips;
+using LoadIx.Domain.Edge;
 using LoadIx.Infrastructure.Contracts;
 using LoadIx.Infrastructure.Documents;
+using LoadIx.Infrastructure.Edge;
 using LoadIx.Infrastructure.Finance;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Instructions;
@@ -61,6 +64,12 @@ public static class DependencyInjection
         services.AddScoped<DevelopmentIdentitySeeder>();
         services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
         services.AddScoped<SecurityAuditWriter>();
+        services.AddScoped<CurrentEdgeDeviceRequestContext>();
+        services.AddScoped<IEdgeDeviceRequestContext>(serviceProvider =>
+            serviceProvider.GetRequiredService<CurrentEdgeDeviceRequestContext>());
+        services.AddSingleton<IPasswordHasher<EdgeDeviceCredential>, PasswordHasher<EdgeDeviceCredential>>();
+        services.AddScoped<IEdgeDeviceService, EdgeDeviceService>();
+        services.AddHostedService<EdgeCredentialCleanupWorker>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ILoadInstructionService, LoadInstructionService>();
         services.AddScoped<ITripService, TripService>();

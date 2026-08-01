@@ -10,6 +10,10 @@ public sealed class SecurityAuditEvent
 
     public Guid? ActorUserId { get; set; }
 
+    public Guid? ActorDeviceId { get; set; }
+
+    public Guid? ActorCredentialId { get; set; }
+
     public string EventType { get; set; } = string.Empty;
 
     public string Outcome { get; set; } = string.Empty;
@@ -23,4 +27,14 @@ public sealed class SecurityAuditEvent
     public DateTimeOffset OccurredAtUtc { get; set; }
 
     public string IpAddress { get; set; } = string.Empty;
+
+    public string? CorrelationId { get; set; }
+
+    public string? FailureCode { get; set; }
+
+    public string? TraceId { get; set; }
+
+    public string? NonceHash { get; set; }
+
+    public string? IdempotencyKeyHash { get; set; }
 }

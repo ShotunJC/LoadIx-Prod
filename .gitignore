@@ -21,6 +21,11 @@ apps/loadix-web/test-results/
 *.pfx
 *.p12
 *.key
+edge-simulator-state.json
+edge-simulator-state.json.pending
+**/edge-simulator-state*.json
+**/edge-simulator-state*.json.*
+**/*.edge-simulator-state
 
 # IDE and OS
 .idea/
