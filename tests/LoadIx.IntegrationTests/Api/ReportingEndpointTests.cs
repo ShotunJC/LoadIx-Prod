@@ -31,6 +31,8 @@ public sealed class ReportingEndpointTests(
 {
     private const string AdministratorPassword = "LoadIx Demo Admin 2026!";
     private const string UnprivilegedPassword = "Reporting Test User 2026!";
+    private static readonly JsonSerializerOptions WebJsonOptions =
+        new(JsonSerializerDefaults.Web);
     private WebApplicationFactory<Program> _factory = null!;
 
     public async Task InitializeAsync()
@@ -349,7 +351,7 @@ public sealed class ReportingEndpointTests(
             HttpStatusCode.OK,
             $"dashboard should execute against SQL Server. Response: {dashboardBody}");
         var dashboard = JsonSerializer.Deserialize<DashboardKpis>(
-            dashboardBody, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            dashboardBody, WebJsonOptions);
         var exceptionsResponse = await client.GetAsync(
             "/api/v1/reports/exceptions?page=1&pageSize=100");
         var exceptionsBody = await exceptionsResponse.Content.ReadAsStringAsync();
@@ -357,7 +359,7 @@ public sealed class ReportingEndpointTests(
             HttpStatusCode.OK,
             $"exceptions should execute against SQL Server. Response: {exceptionsBody}");
         var exceptions = JsonSerializer.Deserialize<ReportingPagedResponse<ExceptionReportRow>>(
-            exceptionsBody, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            exceptionsBody, WebJsonOptions);
 
         dashboard!.TripsOutsideTolerance.Should().Be(1);
         exceptions!.Items.Should().ContainSingle(item =>
@@ -665,7 +667,7 @@ public sealed class ReportingEndpointTests(
             HttpStatusCode.OK,
             $"invoice status should execute against SQL Server. Response: {responseBody}");
         var response = JsonSerializer.Deserialize<ReportingPagedResponse<InvoiceStatusRow>>(
-            responseBody, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            responseBody, WebJsonOptions);
         return response!.Items;
     }
 
