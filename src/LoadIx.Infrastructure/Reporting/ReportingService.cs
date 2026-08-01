@@ -246,12 +246,23 @@ public sealed class ReportingService(
     {
         var settings = await GetTenantSettingsAsync(cancellationToken);
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), settings.TimeZone).DateTime.Date);
-        var start = filter.FromDate ?? today;
-        var endExclusive = (filter.ToDate ?? today.AddDays(90)).AddDays(1);
+        if (filter.FromDate.HasValue && filter.ToDate.HasValue
+            && filter.ToDate.Value < filter.FromDate.Value)
+        {
+            throw new ArgumentException("The expiry end date must be on or after the start date.", nameof(filter));
+        }
+
+        // With no explicit dates, keep the operational default bounded. A
+        // one-sided filter is intentionally open on the missing side so that
+        // historical and future expiry searches are not silently truncated.
+        var start = filter.FromDate ?? (filter.ToDate.HasValue ? (DateOnly?)null : today);
+        var endExclusive = filter.ToDate?.AddDays(1)
+            ?? (filter.FromDate.HasValue ? null : today.AddDays(91));
         var drivers = db.Drivers.AsNoTracking()
             .Where(item => item.IsActive
                 && (!filter.BranchId.HasValue || item.BranchId == filter.BranchId.Value)
-                && item.LicenceExpiry >= start && item.LicenceExpiry < endExclusive)
+                && (!start.HasValue || item.LicenceExpiry >= start.Value)
+                && (!endExclusive.HasValue || item.LicenceExpiry < endExclusive.Value))
             .Select(item => new ExpiryProjection
             {
                 ResourceType = "Driver",
@@ -264,7 +275,8 @@ public sealed class ReportingService(
             .Where(item => item.IsActive
                 && (!filter.BranchId.HasValue || item.BranchId == filter.BranchId.Value));
         var vehicleLicences = vehicleBase
-            .Where(item => item.LicenceExpiry >= start && item.LicenceExpiry < endExclusive)
+            .Where(item => (!start.HasValue || item.LicenceExpiry >= start.Value)
+                && (!endExclusive.HasValue || item.LicenceExpiry < endExclusive.Value))
             .Select(item => new ExpiryProjection
             {
                 ResourceType = "Vehicle licence",
@@ -274,7 +286,8 @@ public sealed class ReportingService(
                 SortId = item.Id,
             });
         var vehicleRoadworthies = vehicleBase
-            .Where(item => item.RoadworthyExpiry >= start && item.RoadworthyExpiry < endExclusive)
+            .Where(item => (!start.HasValue || item.RoadworthyExpiry >= start.Value)
+                && (!endExclusive.HasValue || item.RoadworthyExpiry < endExclusive.Value))
             .Select(item => new ExpiryProjection
             {
                 ResourceType = "Vehicle roadworthy",
@@ -293,17 +306,49 @@ public sealed class ReportingService(
 
     public async Task<ReportingPagedResponse<InvoiceStatusRow>> GetInvoiceStatusAsync(ReportingFilter filter, CancellationToken cancellationToken)
     {
-        var query = db.InvoiceBatches.AsNoTracking();
+        var batches = db.InvoiceBatches.AsNoTracking();
         var range = await GetRangeAsync(filter, cancellationToken);
         if (range is { } dateRange)
         {
-            if (dateRange.Start.HasValue) query = query.Where(item => item.CreatedAtUtc >= dateRange.Start.Value);
-            if (dateRange.EndExclusive.HasValue) query = query.Where(item => item.CreatedAtUtc < dateRange.EndExclusive.Value);
+            if (dateRange.Start.HasValue) batches = batches.Where(item => item.CreatedAtUtc >= dateRange.Start.Value);
+            if (dateRange.EndExclusive.HasValue) batches = batches.Where(item => item.CreatedAtUtc < dateRange.EndExclusive.Value);
         }
-        if (filter.CustomerId.HasValue) query = query.Where(item => item.CustomerId == filter.CustomerId.Value);
-        var grouped = query.GroupBy(item => item.Status)
-            .Select(group => new InvoiceStatusRow(group.Key.ToString(), group.Count(), group.Sum(item => item.Total),
-                group.Max(item => (DateTimeOffset?)item.CreatedAtUtc)));
+        if (filter.CustomerId.HasValue) batches = batches.Where(item => item.CustomerId == filter.CustomerId.Value);
+
+        var lineTotals = from line in db.InvoiceBatchLines.AsNoTracking()
+                         join trip in db.Trips.AsNoTracking()
+                             on line.TripId equals trip.Id
+                         where !filter.BranchId.HasValue
+                             || (trip.DriverId.HasValue
+                                 && db.Drivers.Any(driver => driver.Id == trip.DriverId.Value
+                                     && driver.BranchId == filter.BranchId.Value))
+                             || (trip.VehicleId.HasValue
+                                 && db.Vehicles.Any(vehicle => vehicle.Id == trip.VehicleId.Value
+                                     && vehicle.BranchId == filter.BranchId.Value))
+                         group line by line.InvoiceBatchId into groupLines
+                         select new
+                         {
+                             InvoiceBatchId = groupLines.Key,
+                             Total = groupLines.Sum(line => line.Total),
+                         };
+
+        // The grouping above produces one row per batch before status
+        // aggregation, so a batch with lines from multiple branches is counted
+        // once and contributes only the selected branch's line totals.
+        var scopedBatches = from batch in batches
+                            join lineTotal in lineTotals
+                                on batch.Id equals lineTotal.InvoiceBatchId
+                            select new InvoiceStatusBatchProjection
+                            {
+                                BatchId = batch.Id,
+                                Status = batch.Status,
+                                CreatedAtUtc = batch.CreatedAtUtc,
+                                Total = lineTotal.Total,
+                            };
+
+        var grouped = scopedBatches.GroupBy(item => item.Status)
+            .Select(group => new InvoiceStatusRow(group.Key.ToString(), group.Count(),
+                group.Sum(item => item.Total), group.Max(item => (DateTimeOffset?)item.CreatedAtUtc)));
         return await PageAsync(grouped.OrderBy(item => item.Status), filter, cancellationToken);
     }
 
@@ -573,6 +618,7 @@ public sealed class ReportingService(
     private sealed class VehicleUtilisationProjection { public string Vehicle { get; set; } = string.Empty; public int AssignedTrips { get; set; } public int CompletedTrips { get; set; } public decimal UtilisationPercent { get; set; } public DateOnly? LicenceExpiry { get; set; } public DateOnly? RoadworthyExpiry { get; set; } }
     private sealed class ContractPerformanceProjection { public string Contract { get; set; } = string.Empty; public int CompletedTrips { get; set; } public decimal DeliveredTonnes { get; set; } public decimal Revenue { get; set; } public decimal GrossMargin { get; set; } public decimal ExceptionPercent { get; set; } }
     private sealed class ExpiryProjection { public string ResourceType { get; set; } = string.Empty; public string Resource { get; set; } = string.Empty; public DateOnly ExpiryDate { get; set; } public string Status { get; set; } = string.Empty; public Guid SortId { get; set; } }
+    private sealed class InvoiceStatusBatchProjection { public Guid BatchId { get; set; } public InvoiceBatchStatus Status { get; set; } public DateTimeOffset CreatedAtUtc { get; set; } public decimal Total { get; set; } }
 }
 
 public sealed class ReportExportTooLargeException(int maximumRows, int totalRows) : Exception

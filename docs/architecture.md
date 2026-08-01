@@ -484,6 +484,12 @@ creation; expiry uses the expiry date.
 Branch filtering follows the assigned driver or vehicle branch and customer
 filtering follows the trip/customer relationship.
 
+Expiry report date semantics are inclusive at the date level: with no dates the
+report covers tenant-local today through today plus 90 days; with both dates it
+covers `from` through `to`; with only `from` it has no upper date boundary; and
+with only `to` it has no lower date boundary. Query predicates use an exclusive
+upper bound internally.
+
 Reporting query indexes include tenant-scoped trip keys for customer plus
 completed/planned-delivery ordering, invoice-batch customer plus creation-time
 ordering, and export-job tenant/status/lease scheduling.

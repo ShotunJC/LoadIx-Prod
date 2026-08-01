@@ -5,14 +5,17 @@ using System.Text.Json;
 using FluentAssertions;
 using LoadIx.Api.Endpoints;
 using LoadIx.Application.Contracts;
+using LoadIx.Application.Finance;
 using LoadIx.Application.Instructions;
 using LoadIx.Application.MasterData;
 using LoadIx.Application.Reporting;
+using LoadIx.Application.Security;
 using LoadIx.Application.Trips;
 using LoadIx.Domain.Common;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
 using LoadIx.Infrastructure.Seed;
+using LoadIx.Infrastructure.Tenancy;
 using LoadIx.IntegrationTests.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -111,6 +114,325 @@ public sealed class ReportingEndpointTests(
         root.GetProperty("customerConcentrationPercent").GetDecimal().Should().Be(0m);
     }
 
+    [Fact]
+    public async Task EveryReportEndpointExecutesAgainstSqlServer()
+    {
+        var client = await AdministratorClientAsync();
+        var reports = new[]
+        {
+            "trip-register", "tonnage-by-customer", "tonnage-by-commodity",
+            "tonnage-by-route", "variance", "driver-performance",
+            "vehicle-utilisation", "contract-performance", "customer-revenue",
+            "trip-profitability", "exceptions", "outstanding-pod", "expiries",
+            "invoice-status",
+        };
+
+        foreach (var report in reports)
+        {
+            var response = await client.GetAsync(
+                $"/api/v1/reports/{report}?page=1&pageSize=10");
+
+            response.StatusCode.Should().Be(
+                HttpStatusCode.OK,
+                $"report {report} should execute against SQL Server");
+        }
+    }
+
+    [Fact]
+    public async Task ReportPaginationAndFiltersReturnTrueCountsAndStablePages()
+    {
+        var client = await AdministratorClientAsync();
+        var generated = await GenerateTripsAsync(client, 3);
+
+        var pageOne = await client.GetFromJsonAsync<ReportingPagedResponse<TripRegisterRow>>(
+            "/api/v1/reports/trip-register?page=1&pageSize=2");
+        var pageTwo = await client.GetFromJsonAsync<ReportingPagedResponse<TripRegisterRow>>(
+            "/api/v1/reports/trip-register?page=2&pageSize=2");
+        var customer = await client.GetFromJsonAsync<ReportingPagedResponse<TripRegisterRow>>(
+            $"/api/v1/reports/trip-register?customerId={DevelopmentSeedIds.CustomerIds[1]:D}&page=1&pageSize=10");
+
+        pageOne!.TotalCount.Should().Be(3);
+        pageOne.TotalPages.Should().Be(2);
+        pageOne.Items.Should().HaveCount(2);
+        pageTwo!.TotalCount.Should().Be(3);
+        pageTwo.Items.Should().ContainSingle();
+        pageOne.Items.Select(item => item.TripId)
+            .Intersect(pageTwo.Items.Select(item => item.TripId))
+            .Should().BeEmpty();
+        pageOne.Items.Select(item => item.PlannedDeliveryAtUtc)
+            .Should().BeInDescendingOrder();
+        customer!.TotalCount.Should().Be(0);
+        generated.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task SynchronousCsvExportIncludesHeadersAndProtectsFormulaCells()
+    {
+        var client = await AdministratorClientAsync();
+        var vehicle = await CreateFormulaVehicleAsync(client);
+        var generated = await GenerateTripsAsync(client, 1);
+        var resources = await ResourcesAsync(client);
+        var trip = (await client.GetFromJsonAsync<TripDetail>(
+            $"/api/v1/trips/{generated[0].Id}"))!;
+        await SendTripCommandAsync(client, trip.Id, "assign",
+            new AssignTripModel(trip.Version, resources.DriverIds[0], vehicle.Id,
+                [resources.TrailerIds[0]]), "csv-formula-assign");
+
+        var csv = await client.GetAsync(
+            "/api/v1/reports/trip-register/export.csv?page=1&pageSize=100");
+        csv.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await csv.Content.ReadAsStringAsync();
+        content.Should().StartWith("Trip Number,");
+        content.Should().Contain("'=FORMULA-FLEET");
+
+        var many = await GenerateTripsAsync(client, 101);
+        many.Should().HaveCount(101);
+        var tooLarge = await client.GetAsync(
+            "/api/v1/reports/trip-register/export.csv?page=1&pageSize=100");
+        tooLarge.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await tooLarge.Content.ReadAsStringAsync())
+            .Should().Contain("report.export_requires_background");
+    }
+
+    [Fact]
+    public async Task ExportStatusAndDownloadAreTenantScoped()
+    {
+        var client = await AdministratorClientAsync();
+        var enqueue = await client.PostAsync(
+            "/api/v1/reports/trip-register/export-jobs?page=1&pageSize=100", null);
+        enqueue.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        var job = (await enqueue.Content
+            .ReadFromJsonAsync<ReportExportJobResponse>())!;
+
+        var status = await client.GetAsync(
+            $"/api/v1/reports/export-jobs/{job.JobId:D}");
+        status.StatusCode.Should().Be(HttpStatusCode.OK);
+        var download = await client.GetAsync(
+            $"/api/v1/reports/export-jobs/{job.JobId:D}/download");
+        download.StatusCode.Should().BeOneOf(
+            HttpStatusCode.Conflict, HttpStatusCode.OK);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var requestContext = scope.ServiceProvider
+            .GetRequiredService<CurrentRequestContext>();
+        requestContext.Set(TenantId.New(), Guid.NewGuid(),
+            permissions: [LoadIxPermissions.ReportView]);
+        var queue = scope.ServiceProvider.GetRequiredService<IReportExportService>();
+        queue.GetJob(job.JobId, requestContext.TenantId!.Value).Should().BeNull();
+        queue.GetContent(job.JobId, requestContext.TenantId.Value).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ReportRowsAndDashboardAreTenantScoped()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var requestContext = scope.ServiceProvider
+            .GetRequiredService<CurrentRequestContext>();
+        requestContext.Set(TenantId.New(), Guid.NewGuid(),
+            permissions: [LoadIxPermissions.ReportView]);
+        var service = scope.ServiceProvider.GetRequiredService<IReportingService>();
+
+        var dashboard = await service.GetDashboardKpisAsync(
+            new ReportingFilter(), CancellationToken.None);
+        var rows = await service.GetTripRegisterAsync(
+            new ReportingFilter(), CancellationToken.None);
+
+        dashboard.ActiveTrips.Should().Be(0);
+        dashboard.Revenue.Should().Be(0m);
+        rows.Items.Should().BeEmpty();
+        rows.TotalCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task InvoiceStatusRespectsBranchAndCustomerFiltersWithoutCountingWholeMixedBatch()
+    {
+        var client = await AdministratorClientAsync();
+        (await client.PutAsJsonAsync(
+            "/api/v1/finance/tax-configuration",
+            new TenantTaxConfigurationWriteModel("StandardRated", 15m)))
+            .EnsureSuccessStatusCode();
+
+        var contract = await ActiveContractAsync(client);
+        var generated = await GenerateTripsAsync(client, 2, contract);
+        var resources = await ResourcesAsync(client);
+        var financialIds = new List<Guid>();
+        for (var index = 0; index < generated.Length; index++)
+        {
+            var trip = await CompleteTripAsync(
+                client,
+                generated[index].Id,
+                resources,
+                index == 0 ? 0 : 6,
+                $"invoice-branch-{index}");
+            var financial = await client.PostAsync(
+                $"/api/v1/finance/trips/{trip.Id}/recalculate", null);
+            financial.EnsureSuccessStatusCode();
+            var details = (await financial.Content
+                .ReadFromJsonAsync<TripFinancialsDetail>())!;
+            var approval = await client.PostAsJsonAsync(
+                $"/api/v1/finance/trips/{trip.Id}/approve",
+                new ApproveFinancialsModel(details.Version, "Reporting branch test"));
+            approval.EnsureSuccessStatusCode();
+            financialIds.Add(details.Id);
+        }
+
+        var create = await client.PostAsJsonAsync(
+            "/api/v1/finance/invoice-batches",
+            new InvoiceBatchCreateModel(financialIds));
+        create.EnsureSuccessStatusCode();
+
+        var all = await InvoiceStatusAsync(client);
+        var branchA = await InvoiceStatusAsync(client, DevelopmentSeedIds.JohannesburgBranchId);
+        var branchB = await InvoiceStatusAsync(client, DevelopmentSeedIds.MpumalangaBranchId);
+        var combined = await InvoiceStatusAsync(
+            client,
+            DevelopmentSeedIds.JohannesburgBranchId,
+            contract.CustomerId);
+
+        all.Should().ContainSingle(item => item.Status == "Draft")
+            .Which.Should().Match<InvoiceStatusRow>(item =>
+                item.BatchCount == 1 && item.Total == 2_875m);
+        branchA.Should().ContainSingle(item => item.Status == "Draft")
+            .Which.Should().Match<InvoiceStatusRow>(item =>
+                item.BatchCount == 1 && item.Total == 1_437.5m);
+        branchB.Should().ContainSingle(item => item.Status == "Draft")
+            .Which.Should().Match<InvoiceStatusRow>(item =>
+                item.BatchCount == 1 && item.Total == 1_437.5m);
+        combined.Should().BeEquivalentTo(branchA);
+    }
+
+    [Fact]
+    public async Task ExpiryReportSupportsUnboundedOneSidedAndTenantLocalDateRanges()
+    {
+        var client = await AdministratorClientAsync();
+        var today = DateOnly.FromDateTime(
+            TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
+                DateTimeOffset.UtcNow, "Africa/Johannesburg").DateTime.Date);
+        var historical = await CreateExpiryDriverAsync(client, "Historical", today.AddDays(-60));
+        var yesterday = await CreateExpiryDriverAsync(client, "Yesterday", today.AddDays(-1));
+        var todayDriver = await CreateExpiryDriverAsync(client, "Today", today);
+        var thirtyDays = await CreateExpiryDriverAsync(client, "ThirtyDays", today.AddDays(30));
+        var thirtyOneDays = await CreateExpiryDriverAsync(client, "ThirtyOneDays", today.AddDays(31));
+        var distant = await CreateExpiryDriverAsync(client, "Distant", today.AddDays(180));
+
+        var noDates = await ExpiryAsync(client);
+        noDates.Items.Select(item => item.Resource)
+            .Should().Contain(todayDriver).And.Contain(thirtyDays).And.Contain(thirtyOneDays)
+            .And.NotContain(yesterday).And.NotContain(historical).And.NotContain(distant);
+
+        var fromOnly = await ExpiryAsync(client, from: today.AddDays(31));
+        fromOnly.Items.Select(item => item.Resource)
+            .Should().Contain(thirtyOneDays).And.Contain(distant)
+            .And.NotContain(todayDriver).And.NotContain(thirtyDays);
+
+        var toOnly = await ExpiryAsync(client, to: today.AddDays(-1));
+        toOnly.Items.Select(item => item.Resource)
+            .Should().Contain(historical).And.Contain(yesterday)
+            .And.NotContain(todayDriver);
+
+        var historicalRange = await ExpiryAsync(
+            client, today.AddDays(-60), today.AddDays(-30));
+        historicalRange.Items.Select(item => item.Resource)
+            .Should().Contain(historical).And.NotContain(yesterday);
+
+        var futureRange = await ExpiryAsync(
+            client, today.AddDays(31), today.AddDays(180));
+        futureRange.Items.Select(item => item.Resource)
+            .Should().Contain(thirtyOneDays).And.Contain(distant)
+            .And.NotContain(todayDriver);
+
+        var reversed = await client.GetAsync(
+            $"/api/v1/reports/expiries?from={today:yyyy-MM-dd}&to={today.AddDays(-1):yyyy-MM-dd}");
+        reversed.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ProductionToleranceQueryCoversActiveExceptionAndExceptionReport()
+    {
+        var client = await AdministratorClientAsync();
+        var generated = await GenerateTripsAsync(client, 1);
+        var resources = await ResourcesAsync(client);
+        var trip = (await client.GetFromJsonAsync<TripDetail>(
+            $"/api/v1/trips/{generated[0].Id}"))!;
+        trip = await SendTripCommandAsync(client, trip.Id, "assign",
+            new AssignTripModel(trip.Version, resources.DriverIds[1],
+                resources.VehicleIds[1], [resources.TrailerIds[1]]), "tolerance-assign");
+        trip = await SendTripCommandAsync(client, trip.Id, "dispatch",
+            new TripCommandModel(trip.Version), "tolerance-dispatch");
+        trip = await SendTripCommandAsync(client, trip.Id, "collection-arrival",
+            new TripCommandModel(trip.Version), "tolerance-arrival");
+        trip = await SendTripCommandAsync(client, trip.Id, "start-loading",
+            new TripCommandModel(trip.Version), "tolerance-loading");
+        await SendTripCommandAsync(client, trip.Id, "source-weighbridge",
+            new TripWeighbridgeModel(trip.Version, 43_600m, 12_000m, "TOL-SRC"),
+            "tolerance-source");
+
+        var dashboard = await client.GetFromJsonAsync<DashboardKpis>(
+            "/api/v1/reports/dashboard");
+        var exceptions = await client.GetFromJsonAsync<ReportingPagedResponse<ExceptionReportRow>>(
+            "/api/v1/reports/exceptions?page=1&pageSize=100");
+
+        dashboard!.TripsOutsideTolerance.Should().Be(1);
+        exceptions!.Items.Should().ContainSingle(item =>
+            item.TripId == trip.Id && item.Reason == "Outside tolerance");
+    }
+
+    [Fact]
+    public async Task DashboardCalculatesOperationalFinancialAndExpiryKpis()
+    {
+        var client = await AdministratorClientAsync();
+        (await client.PutAsJsonAsync(
+            "/api/v1/finance/tax-configuration",
+            new TenantTaxConfigurationWriteModel("StandardRated", 15m)))
+            .EnsureSuccessStatusCode();
+        var resources = await ResourcesAsync(client);
+
+        var completed = await CompleteTripAsync(
+            client,
+            (await GenerateTripsAsync(client, 1))[0].Id,
+            resources,
+            0,
+            "kpi-completed");
+        var financialResponse = await client.PostAsync(
+            $"/api/v1/finance/trips/{completed.Id}/recalculate", null);
+        financialResponse.EnsureSuccessStatusCode();
+
+        var delayed = (await GenerateTripsAsync(
+            client, 1, collectionAt: DateTimeOffset.UtcNow.AddDays(-2)))[0];
+        var outside = (await GenerateTripsAsync(client, 1))[0];
+        var outsideTrip = await StartLoadingTripAsync(
+            client, outside.Id, resources, 1, "kpi-outside");
+        await SendTripCommandAsync(client, outsideTrip.Id, "source-weighbridge",
+            new TripWeighbridgeModel(outsideTrip.Version, 43_600m, 12_000m, "KPI-OUTSIDE"),
+            "kpi-outside-source");
+
+        var awaiting = (await GenerateTripsAsync(client, 1))[0];
+        await SubmitReconciliationTripAsync(
+            client, awaiting.Id, resources, 2, "kpi-awaiting");
+        var expiryDriver = await CreateExpiryDriverAsync(
+            client,
+            "KpiToday",
+            DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
+                DateTimeOffset.UtcNow, "Africa/Johannesburg").DateTime.Date));
+
+        var dashboard = await client.GetFromJsonAsync<DashboardKpis>(
+            "/api/v1/reports/dashboard");
+
+        dashboard!.ActiveTrips.Should().Be(3);
+        dashboard.CompletedTripsToday.Should().Be(1);
+        dashboard.TonnesDeliveredToday.Should().Be(30m);
+        dashboard.AwaitingReconciliation.Should().Be(1);
+        dashboard.TripsOutsideTolerance.Should().Be(1);
+        dashboard.DelayedTrips.Should().Be(1);
+        dashboard.FleetUtilisationPercent.Should().Be(10m);
+        dashboard.Revenue.Should().Be(1_250m);
+        dashboard.EstimatedGrossMargin.Should().Be(1_250m);
+        dashboard.CustomerConcentrationPercent.Should().Be(100m);
+        dashboard.UpcomingLicenceExpiries.Should().Be(1);
+        delayed.Id.Should().NotBe(Guid.Empty);
+        expiryDriver.Should().Contain("KpiToday");
+    }
+
 
 
     [Fact]
@@ -152,10 +474,12 @@ public sealed class ReportingEndpointTests(
 
     private static async Task<GeneratedTripModel[]> GenerateTripsAsync(
         HttpClient client,
-        int count)
+        int count,
+        ContractDetail? contract = null,
+        DateTimeOffset? collectionAt = null)
     {
-        var contract = await ActiveContractAsync(client);
-        var collection = DateTimeOffset.UtcNow.AddDays(1);
+        contract ??= await ActiveContractAsync(client);
+        var collection = collectionAt ?? DateTimeOffset.UtcNow.AddDays(1);
         var instructionModel = new InstructionWriteModel(
             $"LI-REPORT-{Guid.NewGuid():N}"[..20],
             contract.CustomerId,
@@ -191,12 +515,14 @@ public sealed class ReportingEndpointTests(
             .Trips.ToArray();
     }
 
-    private static async Task<ContractDetail> ActiveContractAsync(HttpClient client)
+    private static async Task<ContractDetail> ActiveContractAsync(
+        HttpClient client,
+        Guid? customerId = null)
     {
         var routeId = Guid.NewGuid();
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var model = new ContractWriteModel(
-            DevelopmentSeedIds.CustomerIds[0],
+            customerId ?? DevelopmentSeedIds.CustomerIds[0],
             $"TC-{Guid.NewGuid():N}"[..18],
             "Reporting integration contract",
             today.AddDays(-30),
@@ -237,6 +563,174 @@ public sealed class ReportingEndpointTests(
             drivers!.Items.Select(item => item.Id).ToArray(),
             vehicles!.Items.Select(item => item.Id).ToArray(),
             trailers!.Items.Select(item => item.Id).ToArray());
+    }
+
+    private static async Task<TripDetail> CompleteTripAsync(
+        HttpClient client,
+        Guid tripId,
+        ResourceIds resources,
+        int resourceIndex,
+        string keyPrefix)
+    {
+        var trip = (await client.GetFromJsonAsync<TripDetail>(
+            $"/api/v1/trips/{tripId}"))!;
+        trip = await SendTripCommandAsync(client, trip.Id, "assign",
+            new AssignTripModel(trip.Version, resources.DriverIds[resourceIndex],
+                resources.VehicleIds[resourceIndex], [resources.TrailerIds[resourceIndex]]),
+            $"{keyPrefix}-assign");
+        trip = await SendTripCommandAsync(client, trip.Id, "dispatch",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-dispatch");
+        foreach (var route in new[] { "collection-arrival", "start-loading" })
+        {
+            trip = await SendTripCommandAsync(client, trip.Id, route,
+                new TripCommandModel(trip.Version), $"{keyPrefix}-{route}");
+        }
+
+        trip = await SendTripCommandAsync(client, trip.Id, "source-weighbridge",
+            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+                $"{keyPrefix}-source"), $"{keyPrefix}-source");
+        trip = await SendTripCommandAsync(client, trip.Id, "complete-collection",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-complete-collection");
+        trip = await SendTripCommandAsync(client, trip.Id, "depart-collection",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-depart");
+        trip = await SendTripCommandAsync(client, trip.Id, "delivery-arrival",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-delivery-arrival");
+        trip = await SendTripCommandAsync(client, trip.Id, "start-unloading",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-start-unloading");
+        trip = await SendTripCommandAsync(client, trip.Id, "destination-weighbridge",
+            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+                $"{keyPrefix}-destination"), $"{keyPrefix}-destination");
+        foreach (var route in new[]
+                 {
+                     "complete-delivery", "submit-reconciliation",
+                     "confirm-reconciliation", "confirm-required-documents", "complete",
+                 })
+        {
+            trip = await SendTripCommandAsync(client, trip.Id, route,
+                new TripCommandModel(trip.Version), $"{keyPrefix}-{route}");
+        }
+
+        return trip;
+    }
+
+    private static async Task<TripDetail> StartLoadingTripAsync(
+        HttpClient client,
+        Guid tripId,
+        ResourceIds resources,
+        int resourceIndex,
+        string keyPrefix)
+    {
+        var trip = (await client.GetFromJsonAsync<TripDetail>(
+            $"/api/v1/trips/{tripId}"))!;
+        trip = await SendTripCommandAsync(client, trip.Id, "assign",
+            new AssignTripModel(trip.Version, resources.DriverIds[resourceIndex],
+                resources.VehicleIds[resourceIndex], [resources.TrailerIds[resourceIndex]]),
+            $"{keyPrefix}-assign");
+        trip = await SendTripCommandAsync(client, trip.Id, "dispatch",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-dispatch");
+        trip = await SendTripCommandAsync(client, trip.Id, "collection-arrival",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-arrival");
+        return await SendTripCommandAsync(client, trip.Id, "start-loading",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-loading");
+    }
+
+    private static async Task<TripDetail> SubmitReconciliationTripAsync(
+        HttpClient client,
+        Guid tripId,
+        ResourceIds resources,
+        int resourceIndex,
+        string keyPrefix)
+    {
+        var trip = await StartLoadingTripAsync(
+            client, tripId, resources, resourceIndex, keyPrefix);
+        trip = await SendTripCommandAsync(client, trip.Id, "source-weighbridge",
+            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+                $"{keyPrefix}-source"), $"{keyPrefix}-source");
+        trip = await SendTripCommandAsync(client, trip.Id, "complete-collection",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-complete-collection");
+        trip = await SendTripCommandAsync(client, trip.Id, "depart-collection",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-depart");
+        trip = await SendTripCommandAsync(client, trip.Id, "delivery-arrival",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-delivery-arrival");
+        trip = await SendTripCommandAsync(client, trip.Id, "start-unloading",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-start-unloading");
+        trip = await SendTripCommandAsync(client, trip.Id, "destination-weighbridge",
+            new TripWeighbridgeModel(trip.Version, 42_000m, 12_000m,
+                $"{keyPrefix}-destination"), $"{keyPrefix}-destination");
+        trip = await SendTripCommandAsync(client, trip.Id, "complete-delivery",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-complete-delivery");
+        return await SendTripCommandAsync(client, trip.Id, "submit-reconciliation",
+            new TripCommandModel(trip.Version), $"{keyPrefix}-submit-reconciliation");
+    }
+
+    private static async Task<IReadOnlyList<InvoiceStatusRow>> InvoiceStatusAsync(
+        HttpClient client,
+        Guid? branchId = null,
+        Guid? customerId = null)
+    {
+        var query = new List<string> { "page=1", "pageSize=100" };
+        if (branchId.HasValue) query.Add($"branchId={branchId.Value:D}");
+        if (customerId.HasValue) query.Add($"customerId={customerId.Value:D}");
+        var response = await client.GetFromJsonAsync<ReportingPagedResponse<InvoiceStatusRow>>(
+            $"/api/v1/reports/invoice-status?{string.Join('&', query)}");
+        return response!.Items;
+    }
+
+    private static async Task<ReportingPagedResponse<ExpiryReportRow>> ExpiryAsync(
+        HttpClient client,
+        DateOnly? from = null,
+        DateOnly? to = null)
+    {
+        var query = new List<string> { "page=1", "pageSize=100" };
+        if (from.HasValue) query.Add($"from={from.Value:yyyy-MM-dd}");
+        if (to.HasValue) query.Add($"to={to.Value:yyyy-MM-dd}");
+        return (await client.GetFromJsonAsync<ReportingPagedResponse<ExpiryReportRow>>(
+            $"/api/v1/reports/expiries?{string.Join('&', query)}"))!;
+    }
+
+    private static async Task<string> CreateExpiryDriverAsync(
+        HttpClient client,
+        string name,
+        DateOnly expiry)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/drivers",
+            new DriverWriteModel(
+                DevelopmentSeedIds.JohannesburgBranchId,
+                "Expiry",
+                $"{name}-{Guid.NewGuid():N}"[..18],
+                "Employee",
+                $"EXP-{Guid.NewGuid():N}"[..16],
+                "+27 00 099 0001",
+                $"EXP-LIC-{Guid.NewGuid():N}"[..16],
+                expiry,
+                "Expiry Contact",
+                "+27 00 099 0002"));
+        response.EnsureSuccessStatusCode();
+        var item = (await response.Content.ReadFromJsonAsync<DriverItem>())!;
+        return $"{item.FirstName} {item.LastName}";
+    }
+
+    private static async Task<VehicleItem> CreateFormulaVehicleAsync(
+        HttpClient client)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/vehicles",
+            new VehicleWriteModel(
+                DevelopmentSeedIds.JohannesburgBranchId,
+                "FORMULA-REG",
+                "=FORMULA-FLEET",
+                "Test Motors",
+                "Formula Test Hauler",
+                2026,
+                8_500m,
+                34_000m,
+                "Kilograms",
+                new DateOnly(2030, 12, 31),
+                new DateOnly(2030, 6, 30),
+                true));
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<VehicleItem>())!;
     }
 
     private static async Task<TripDetail> SendTripCommandAsync<T>(
