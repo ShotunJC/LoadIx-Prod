@@ -61,7 +61,8 @@ public sealed class TenantContextMiddleware(
                 nonce,
                 idempotencyKey,
                 timestamp,
-                context.Connection.RemoteIpAddress?.ToString());
+                context.Connection.RemoteIpAddress?.ToString(),
+                context.TraceIdentifier);
             requestContext.Set(
                 tenant,
                 null,

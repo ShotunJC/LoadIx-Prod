@@ -20,7 +20,12 @@ public interface IEdgeDeviceService
 
     Task<EdgeResult<EdgeCredentialIssued>> RotateCredentialAsync(
         Guid? deviceId,
+        string? replacementSecret,
         EdgeRequestEnvelope? envelope,
+        CancellationToken cancellationToken);
+
+    Task<EdgeResult<EdgeCredentialConfirmation>> ConfirmCredentialRotationAsync(
+        EdgeRequestEnvelope envelope,
         CancellationToken cancellationToken);
 
     Task<EdgeResult<EdgeActionResponse>> RevokeAsync(

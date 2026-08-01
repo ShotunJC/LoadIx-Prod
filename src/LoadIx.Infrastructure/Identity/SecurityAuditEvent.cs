@@ -12,6 +12,8 @@ public sealed class SecurityAuditEvent
 
     public Guid? ActorDeviceId { get; set; }
 
+    public Guid? ActorCredentialId { get; set; }
+
     public string EventType { get; set; } = string.Empty;
 
     public string Outcome { get; set; } = string.Empty;
@@ -27,4 +29,12 @@ public sealed class SecurityAuditEvent
     public string IpAddress { get; set; } = string.Empty;
 
     public string? CorrelationId { get; set; }
+
+    public string? FailureCode { get; set; }
+
+    public string? TraceId { get; set; }
+
+    public string? NonceHash { get; set; }
+
+    public string? IdempotencyKeyHash { get; set; }
 }

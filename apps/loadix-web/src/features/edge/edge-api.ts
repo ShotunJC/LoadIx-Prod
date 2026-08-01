@@ -36,8 +36,9 @@ const credentialSchema = z.object({
   deviceId: z.string(),
   credentialId: z.string(),
   credentialType: z.string(),
-  secret: z.string(),
+  secret: z.string().nullable(),
   expiresAtUtc: z.string().nullable(),
+  isReplay: z.boolean().optional(),
 })
 
 const readingSchema = z.object({
@@ -92,6 +93,7 @@ const diagnosticsSchema = z.object({
       actorDeviceId: z.string().nullable(),
       occurredAtUtc: z.string(),
       correlationId: z.string().nullable(),
+      failureCode: z.string().nullable(),
     }),
   ),
 })
@@ -173,12 +175,22 @@ export async function rotateEdgeCredential(
   request: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
   deviceId: string,
 ) {
+  const secretBytes = crypto.getRandomValues(new Uint8Array(32))
+  const secret = btoa(String.fromCharCode(...secretBytes))
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replaceAll('=', '')
   const response = await request(
     '/api/v1/edge-devices/' + deviceId + '/credentials/rotate',
-    { method: 'POST' },
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replacementSecret: secret }),
+    },
   )
   await ensureOk(response)
-  return credentialSchema.parse(await response.json())
+  const credential = credentialSchema.parse(await response.json())
+  return { ...credential, secret: credential.secret ?? secret }
 }
 
 export async function revokeEdgeDevice(

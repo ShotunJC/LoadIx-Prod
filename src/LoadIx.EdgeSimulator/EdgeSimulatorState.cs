@@ -7,7 +7,18 @@ public sealed record EdgeSimulatorState(
     string DeviceSecret,
     Guid? WeighbridgeDeviceId,
     string? DeviceName,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    string? PendingBootstrapToken = null,
+    string? PendingBootstrapSecret = null,
+    string? PendingBootstrapIdempotencyKey = null,
+    string? PendingBootstrapNonce = null,
+    string? PreviousDeviceSecret = null,
+    string? PendingReplacementSecret = null,
+    Guid? PendingReplacementCredentialId = null,
+    string? PendingRotationIdempotencyKey = null,
+    string? PendingRotationNonce = null,
+    string? PendingConfirmationIdempotencyKey = null,
+    string? PendingConfirmationNonce = null);
 
 public sealed class EdgeSimulatorStateStore(string path)
 {

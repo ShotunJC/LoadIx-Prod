@@ -142,6 +142,7 @@ builder.Services.AddApplication(new SystemInfoDescriptor(
 builder.Services.AddInfrastructure(databaseConnectionString);
 builder.Services.AddScoped<IdentityTokenService>();
 builder.Services.AddScoped<TenantContextMiddleware>();
+builder.Services.AddSingleton<EdgeDeviceRateLimiter>();
 
 var authenticationOptions = builder.Configuration
     .GetRequiredSection(AuthenticationOptions.SectionName)
@@ -279,15 +280,6 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
-    options.AddPolicy("edge-device", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = builder.Environment.IsDevelopment() ? 120 : 60,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-            }));
     options.AddPolicy("edge-bootstrap", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -408,6 +400,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<TenantContextMiddleware>();
+app.UseMiddleware<EdgeDeviceRateLimitingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

@@ -653,6 +653,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "CredentialId");
+
                     b.HasIndex("TenantId", "EdgeDeviceId", "IdempotencyKey")
                         .IsUnique();
 
@@ -757,6 +759,14 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset>("ActivatedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasPrecision(7)
                         .HasColumnType("datetimeoffset(7)");
@@ -769,6 +779,10 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset(7)");
 
                     b.Property<DateTimeOffset?>("LastUsedAtUtc")
+                        .HasPrecision(7)
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset?>("OverlapExpiresAtUtc")
                         .HasPrecision(7)
                         .HasColumnType("datetimeoffset(7)");
 
@@ -785,6 +799,12 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(512)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -796,11 +816,17 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "ReplacedCredentialId");
+
                     b.HasIndex("TenantId", "EdgeDeviceId", "Type")
                         .IsUnique()
-                        .HasFilter("[RevokedAtUtc] IS NULL");
+                        .HasFilter("[RevokedAtUtc] IS NULL AND [Type] = 'Bootstrap'");
 
                     b.HasIndex("TenantId", "EdgeDeviceId", "Type", "RevokedAtUtc");
+
+                    b.HasIndex("TenantId", "EdgeDeviceId", "Type", "Status")
+                        .IsUnique()
+                        .HasFilter("[RevokedAtUtc] IS NULL AND [Status] = 'PendingConfirmation'");
 
                     b.ToTable("EdgeDeviceCredentials", "edge");
                 });
@@ -856,6 +882,10 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EdgeCommandId");
+
+                    b.HasIndex("TenantId", "WeighbridgeDeviceId");
 
                     b.HasIndex("TenantId", "EdgeDeviceId", "ReceivedAtUtc", "Id");
 
@@ -925,6 +955,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "EdgeCommandId");
+
                     b.HasIndex("TenantId", "EdgeDeviceId", "ReceivedAtUtc", "Id");
 
                     b.HasIndex("TenantId", "WeighbridgeDeviceId", "ReceivedAtUtc", "Id");
@@ -983,6 +1015,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "RawWeightReadingId")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "WeighbridgeDeviceId");
 
                     b.HasIndex("TenantId", "EdgeDeviceId", "ReceivedAtUtc", "Id");
 
@@ -1054,6 +1088,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Code")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "SiteId");
 
                     b.HasIndex("TenantId", "EdgeDeviceId", "SiteId", "IsActive", "Id");
 
@@ -2843,6 +2879,9 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<Guid?>("ActorCredentialId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("ActorDeviceId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2860,6 +2899,16 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(120)");
 
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(160)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(160)");
+
+                    b.Property<string>("IdempotencyKeyHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<string>("IpAddress")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -2868,6 +2917,11 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("IsSupportContext")
                         .HasColumnType("bit");
+
+                    b.Property<string>("NonceHash")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
 
                     b.Property<DateTimeOffset>("OccurredAtUtc")
                         .HasColumnType("datetimeoffset");
@@ -2890,6 +2944,10 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -3631,6 +3689,196 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.DeviceHeartbeat", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.EdgeCommand", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDeviceCredential", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CredentialId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.EdgeDevice", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Locations.Location", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "SiteId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.EdgeDeviceCredential", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDeviceCredential", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ReplacedCredentialId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.EdgeTicketSubmission", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeCommand", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeCommandId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.WeighbridgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WeighbridgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.RawWeightReading", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeCommand", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeCommandId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.WeighbridgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WeighbridgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.StableWeightReading", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.RawWeightReading", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RawWeightReadingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.WeighbridgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WeighbridgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LoadIx.Domain.Edge.WeighbridgeDevice", b =>
+                {
+                    b.HasOne("LoadIx.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Edge.EdgeDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EdgeDeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LoadIx.Domain.Locations.Location", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "SiteId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

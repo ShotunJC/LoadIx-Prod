@@ -11,7 +11,10 @@ public sealed record CreateEdgeDeviceBootstrapRequest(
 public sealed record RegisterEdgeDeviceRequest(
     Guid DeviceId,
     string BootstrapToken,
+    string DeviceSecret,
     string? AgentVersion);
+
+public sealed record RotateEdgeCredentialRequest(string ReplacementSecret);
 
 public sealed record EdgeHeartbeatRequest(
     DateTimeOffset DeviceTimestampUtc,

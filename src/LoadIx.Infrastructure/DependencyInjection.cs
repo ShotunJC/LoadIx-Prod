@@ -69,6 +69,7 @@ public static class DependencyInjection
             serviceProvider.GetRequiredService<CurrentEdgeDeviceRequestContext>());
         services.AddSingleton<IPasswordHasher<EdgeDeviceCredential>, PasswordHasher<EdgeDeviceCredential>>();
         services.AddScoped<IEdgeDeviceService, EdgeDeviceService>();
+        services.AddHostedService<EdgeCredentialCleanupWorker>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ILoadInstructionService, LoadInstructionService>();
         services.AddScoped<ITripService, TripService>();

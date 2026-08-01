@@ -328,32 +328,35 @@ requirements, support model, legal/privacy sign-off.
 weighbridge observations and remain recoverable across intermittent
 connectivity, without putting hardware-specific serial parsing in the main API.
 
-**Status:** Implemented on 2026-08-01. Domain/application/API, SQL migration,
-simulator, administration UI, parser tests, and security-focused integration
-coverage are present. SQL-backed integration execution remains dependent on the
-repository's Docker/Testcontainers environment being available.
+**Status:** Implemented on 2026-08-01. Domain/application/API, corrective SQL
+migrations, simulator, administration UI, parser tests, and security-focused
+integration coverage are present. SQL-backed integration execution remains
+dependent on the repository's Docker/Testcontainers environment being available.
 
 **Deliverables:**
 
 - tenant-bound `EdgeDevice`, credential, weighbridge, raw/stable reading,
   command, heartbeat, and ticket-submission records;
-- one-time registration bootstrap, device-specific hashed credentials, rotation,
-  revocation, timestamp tolerance, nonce/idempotency replay protection, rate
-  limits, audit evidence, and RFC Problem Details;
+- client-generated recoverable bootstrap, device-specific hashed credentials,
+  overlap-and-confirm rotation, revocation, timestamp tolerance,
+  nonce/idempotency replay protection, device-partitioned rate limits, failed
+  audit evidence, restrictive relational constraints, and RFC Problem Details;
 - authenticated endpoints for bootstrap, rotation, heartbeat, configuration,
   weight readings, ticket submissions, and diagnostics;
 - application-level parser-plugin contract, generic line parser, and a .NET
-  simulator with local pending queue, retries, disconnect simulation, heartbeat,
-  and rotation demonstration;
+  simulator with atomic local state, recoverable bootstrap/rotation, local
+  pending queue, retries, disconnect simulation, heartbeat, and confirmation;
 - tenant administrator UI for device inventory, online/offline state, heartbeat,
   site assignment, credential actions, diagnostics, and live simulated readings;
 - ADR-045 documenting the Raspberry Pi/industrial-PC deployment boundary and
   the requirement for verified manufacturer protocol documentation.
 
-**Key tests:** authentication and invalid credentials, nonce replay and
-idempotency mismatch, credential rotation/revocation, stale timestamps,
-cross-tenant device hiding, offline captured-time replay, stable-reading
-deduplication, and generic parser acceptance/rejection.
+**Key tests:** authentication and failed security audits, client-generated
+bootstrap replay/lost-response recovery, nonce/idempotency mismatch,
+concurrent duplicate submissions, overlap-and-confirm rotation, revocation,
+stale timestamps, cross-tenant device hiding, offline captured-time replay,
+stable-reading deduplication, relational constraints, and generic parser
+acceptance/rejection.
 
 **Decision gates:** verified indicator protocol fixtures, local agent secret-store
 choice, queue retention/backpressure limits, hardware electrical safety review,

@@ -52,10 +52,12 @@ public static class EdgeEndpoints
         }).RequireAuthorization(LoadIxPermissions.EdgeDeviceManage);
         group.MapPost("/{deviceId:guid}/credentials/rotate", async (
             Guid deviceId,
+            RotateEdgeCredentialRequest request,
             IEdgeDeviceService service,
             CancellationToken cancellationToken) =>
             ToResult(await service.RotateCredentialAsync(
                 deviceId,
+                request.ReplacementSecret,
                 null,
                 cancellationToken)))
             .RequireAuthorization(LoadIxPermissions.EdgeDeviceManage);
@@ -94,6 +96,7 @@ public static class EdgeEndpoints
                 new EdgeRegistrationModel(
                     request.DeviceId,
                     request.BootstrapToken,
+                    request.DeviceSecret,
                     request.AgentVersion),
                 envelope,
                 cancellationToken));
@@ -102,16 +105,32 @@ public static class EdgeEndpoints
 
         var authenticated = group
             .MapGroup("")
-            .RequireAuthorization(EdgeDeviceAuthenticationDefaults.Policy)
-            .RequireRateLimiting("edge-device");
+            .RequireAuthorization(EdgeDeviceAuthenticationDefaults.Policy);
         authenticated.MapPost("/credential/rotate", async (
+            HttpContext httpContext,
+            RotateEdgeCredentialRequest request,
+            IEdgeDeviceService service,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryGetEnvelope(httpContext, out var envelope, out var failure))
+                return failure!;
+            return ToResult(await service.RotateCredentialAsync(
+                null,
+                request.ReplacementSecret,
+                envelope,
+                cancellationToken));
+        });
+        authenticated.MapPost("/credential/rotation-confirm", async (
             HttpContext httpContext,
             IEdgeDeviceService service,
             CancellationToken cancellationToken) =>
-            await WithEnvelopeAsync(
-                httpContext,
-                service.RotateCredentialAsync,
+        {
+            if (!TryGetEnvelope(httpContext, out var envelope, out var failure))
+                return failure!;
+            return ToResult(await service.ConfirmCredentialRotationAsync(
+                envelope,
                 cancellationToken));
+        });
         authenticated.MapPost("/heartbeat", async (
             EdgeHeartbeatRequest request,
             HttpContext httpContext,
@@ -207,16 +226,6 @@ public static class EdgeEndpoints
         });
     }
 
-    private static async Task<IResult> WithEnvelopeAsync(
-        HttpContext httpContext,
-        Func<Guid?, EdgeRequestEnvelope?, CancellationToken, Task<EdgeResult<EdgeCredentialIssued>>> action,
-        CancellationToken cancellationToken)
-    {
-        if (!TryGetEnvelope(httpContext, out var envelope, out var failure))
-            return failure!;
-        return ToResult(await action(null, envelope, cancellationToken));
-    }
-
     private static bool TryGetEnvelope(
         HttpContext httpContext,
         out EdgeRequestEnvelope envelope,
@@ -247,7 +256,8 @@ public static class EdgeEndpoints
                 idempotencyKey,
                 nonce,
                 DateTimeOffset.FromUnixTimeSeconds(unixSeconds),
-                httpContext.Connection.RemoteIpAddress?.ToString());
+                httpContext.Connection.RemoteIpAddress?.ToString(),
+                httpContext.TraceIdentifier);
         }
         catch (ArgumentOutOfRangeException)
         {

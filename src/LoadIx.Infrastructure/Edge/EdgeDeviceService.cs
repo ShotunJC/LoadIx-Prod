@@ -281,31 +281,52 @@ public sealed class EdgeDeviceService(
     {
         var envelopeFailure = ValidateEnvelope<EdgeCredentialIssued>(envelope);
         if (envelopeFailure is not null)
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.RegistrationFailed",
+                null,
+                envelopeFailure.Code,
+                envelope,
+                cancellationToken);
             return envelopeFailure;
+        }
         if (model.DeviceId == Guid.Empty || string.IsNullOrWhiteSpace(model.BootstrapToken))
         {
+            await RecordFailureAsync(
+                "EdgeDevice.RegistrationFailed",
+                model.DeviceId == Guid.Empty ? null : model.DeviceId,
+                "edge_devices.registration_invalid",
+                envelope,
+                cancellationToken);
             return Fail<EdgeCredentialIssued>(
                 EdgeFailure.Validation,
                 "edge_devices.registration_invalid",
                 "A device identifier and one-time bootstrap token are required.");
         }
+        if (!EdgeCredentialSecretGenerator.IsValid(model.DeviceSecret))
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.RegistrationFailed",
+                model.DeviceId,
+                "edge_devices.device_secret_invalid",
+                envelope,
+                cancellationToken);
+            return Fail<EdgeCredentialIssued>(
+                EdgeFailure.Validation,
+                "edge_devices.device_secret_invalid",
+                "A client-generated device secret with at least 32 safe characters is required.");
+        }
 
         var device = await dbContext.EdgeDevices.IgnoreQueryFilters()
             .SingleOrDefaultAsync(item => item.Id == model.DeviceId, cancellationToken);
-        var bootstrap = await dbContext.EdgeDeviceCredentials.IgnoreQueryFilters()
-            .SingleOrDefaultAsync(item => item.EdgeDeviceId == model.DeviceId
-                && item.Type == EdgeDeviceCredentialType.Bootstrap
-                && item.RevokedAtUtc == null, cancellationToken);
-        if (device is null
-            || bootstrap is null
-            || device.Status != EdgeDeviceStatus.PendingRegistration
-            || !bootstrap.IsUsableAt(timeProvider.GetUtcNow())
-            || passwordHasher.VerifyHashedPassword(
-                null!,
-                bootstrap.SecretHash,
-                model.BootstrapToken)
-                == PasswordVerificationResult.Failed)
+        if (device is null)
         {
+            await RecordFailureAsync(
+                "EdgeDevice.RegistrationFailed",
+                model.DeviceId,
+                "edge_devices.bootstrap_invalid",
+                envelope,
+                cancellationToken);
             return Fail<EdgeCredentialIssued>(
                 EdgeFailure.Forbidden,
                 "edge_devices.bootstrap_invalid",
@@ -317,6 +338,84 @@ public sealed class EdgeDeviceService(
             null,
             false,
             [LoadIxPermissions.EdgeDeviceReceive]);
+
+        var requestHash = Hash(
+            model.DeviceId,
+            SecretFingerprint(model.BootstrapToken),
+            SecretFingerprint(model.DeviceSecret),
+            model.AgentVersion ?? string.Empty);
+        var existingByNonce = await dbContext.EdgeCommands.IgnoreQueryFilters()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(command => command.EdgeDeviceId == device.Id
+                && command.Nonce == envelope.Nonce,
+                cancellationToken);
+        var existingByKey = await dbContext.EdgeCommands.IgnoreQueryFilters()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(command => command.EdgeDeviceId == device.Id
+                && command.IdempotencyKey == envelope.IdempotencyKey,
+                cancellationToken);
+        var existing = existingByNonce ?? existingByKey;
+        if (existing is not null
+            || existingByKey is not null)
+        {
+            var matches = existingByNonce is null
+                ? existingByKey is not null
+                    && MatchesRegistration(existingByKey, requestHash)
+                : MatchesRegistration(existingByNonce, requestHash)
+                    && (existingByKey is null || existingByKey.Id == existingByNonce.Id);
+            if (matches)
+            {
+                return EdgeResult<EdgeCredentialIssued>.Success(
+                    new EdgeCredentialIssued(
+                        device.Id,
+                        existing!.ResourceId ?? Guid.Empty,
+                        EdgeDeviceCredentialType.Device.ToString(),
+                        null,
+                        null,
+                        true));
+            }
+
+            await RecordFailureAsync(
+                "EdgeDevice.RegistrationFailed",
+                device.Id,
+                existingByNonce is not null
+                    ? "edge.replay_detected"
+                    : "edge.idempotency_payload_mismatch",
+                envelope,
+                cancellationToken);
+            return Fail<EdgeCredentialIssued>(
+                EdgeFailure.Conflict,
+                existingByNonce is not null
+                    ? "edge.replay_detected"
+                    : "edge.idempotency_payload_mismatch",
+                "The registration request was already used with different content.");
+        }
+
+        var bootstrap = await dbContext.EdgeDeviceCredentials.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.EdgeDeviceId == model.DeviceId
+                && item.Type == EdgeDeviceCredentialType.Bootstrap
+                && item.RevokedAtUtc == null, cancellationToken);
+        if (bootstrap is null
+            || device.Status != EdgeDeviceStatus.PendingRegistration
+            || !bootstrap.IsUsableAt(timeProvider.GetUtcNow())
+            || passwordHasher.VerifyHashedPassword(
+                null!,
+                bootstrap.SecretHash,
+                model.BootstrapToken)
+                == PasswordVerificationResult.Failed)
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.RegistrationFailed",
+                device.Id,
+                "edge_devices.bootstrap_invalid",
+                envelope,
+                cancellationToken);
+            return Fail<EdgeCredentialIssued>(
+                EdgeFailure.Forbidden,
+                "edge_devices.bootstrap_invalid",
+                "The registration bootstrap is invalid or expired.");
+        }
+
         currentEdgeRequestContext.Set(
             device.TenantId,
             device.Id,
@@ -324,32 +423,20 @@ public sealed class EdgeDeviceService(
             envelope.Nonce,
             envelope.IdempotencyKey,
             envelope.TimestampUtc,
-            envelope.ClientIpAddress);
-        var existing = await dbContext.EdgeCommands.IgnoreQueryFilters()
-            .SingleOrDefaultAsync(command => command.EdgeDeviceId == device.Id
-                && (command.Nonce == envelope.Nonce
-                    || command.IdempotencyKey == envelope.IdempotencyKey),
-                cancellationToken);
-        if (existing is not null)
-        {
-            return Fail<EdgeCredentialIssued>(
-                EdgeFailure.Conflict,
-                "edge_devices.bootstrap_replay",
-                "A registration bootstrap request can only be used once.");
-        }
+            envelope.ClientIpAddress,
+            envelope.TraceId);
 
         var now = timeProvider.GetUtcNow().ToUniversalTime();
         var registerResult = device.Register(now, model.AgentVersion);
         if (registerResult.IsFailure)
             return Validation<EdgeCredentialIssued>(registerResult.Error!);
         bootstrap.Revoke(now);
-        var secret = EdgeCredentialSecretGenerator.Create();
         var credentialResult = EdgeDeviceCredential.Create(
             Guid.NewGuid(),
             device.TenantId,
             device.Id,
             EdgeDeviceCredentialType.Device,
-            passwordHasher.HashPassword(null!, secret),
+            passwordHasher.HashPassword(null!, model.DeviceSecret),
             now);
         if (credentialResult.IsFailure)
             return Validation<EdgeCredentialIssued>(credentialResult.Error!);
@@ -362,7 +449,7 @@ public sealed class EdgeDeviceService(
             "Registration",
             envelope.IdempotencyKey,
             envelope.Nonce,
-            Hash(model.DeviceId, model.AgentVersion ?? string.Empty),
+            requestHash,
             envelope.TimestampUtc,
             now,
             null);
@@ -378,35 +465,72 @@ public sealed class EdgeDeviceService(
             envelope.ClientIpAddress,
             now,
             null);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var save = await SaveCommandChangesAsync(
+            commandResult.Value,
+            requestHash,
+            envelope,
+            cancellationToken);
+        if (save.Failure != EdgeFailure.None)
+            return Fail<EdgeCredentialIssued>(save.Failure, save.Code, save.Message);
+        if (save.IsReplay)
+        {
+            return EdgeResult<EdgeCredentialIssued>.Success(
+                new EdgeCredentialIssued(
+                    device.Id,
+                    save.Existing!.ResourceId ?? Guid.Empty,
+                    EdgeDeviceCredentialType.Device.ToString(),
+                    null,
+                    null,
+                    true));
+        }
         return EdgeResult<EdgeCredentialIssued>.Success(new EdgeCredentialIssued(
             device.Id,
             credentialResult.Value.Id,
             credentialResult.Value.Type.ToString(),
-            secret,
-            null));
+            model.DeviceSecret,
+            null,
+            false));
     }
 
     public async Task<EdgeResult<EdgeCredentialIssued>> RotateCredentialAsync(
         Guid? deviceId,
+        string? replacementSecret,
         EdgeRequestEnvelope? envelope,
         CancellationToken cancellationToken)
     {
-        var isDeviceRequest = envelope is not null;
-        if (isDeviceRequest)
+        if (envelope is not null)
         {
-            var contextFailure = await LoadDeviceAsync(envelope!, cancellationToken);
+            var contextFailure = await LoadDeviceAsync(envelope, cancellationToken);
             if (contextFailure.Failure != EdgeFailure.None)
                 return Fail<EdgeCredentialIssued>(
                     contextFailure.Failure,
                     contextFailure.Code,
                     contextFailure.Message);
+
             deviceId = edgeRequestContext.EdgeDeviceId;
+            if (!EdgeCredentialSecretGenerator.IsValid(replacementSecret))
+            {
+                await RecordFailureAsync(
+                    "EdgeDevice.CredentialRotationFailed",
+                    deviceId,
+                    "edge_devices.replacement_secret_invalid",
+                    envelope,
+                    cancellationToken);
+                return Fail<EdgeCredentialIssued>(
+                    EdgeFailure.Validation,
+                    "edge_devices.replacement_secret_invalid",
+                    "A client-generated replacement secret with at least 32 safe characters is required.");
+            }
+
+            var requestHash = Hash(
+                deviceId!.Value,
+                edgeRequestContext.CredentialId!.Value,
+                SecretFingerprint(replacementSecret!));
             var start = await BeginCommandAsync(
                 "CredentialRotation",
-                Hash(deviceId!.Value),
+                requestHash,
                 null,
-                envelope!,
+                envelope,
                 cancellationToken);
             if (start.Failure != EdgeFailure.None)
                 return Fail<EdgeCredentialIssued>(
@@ -415,18 +539,28 @@ public sealed class EdgeDeviceService(
                     start.Message);
             if (start.IsReplay)
             {
-                return Fail<EdgeCredentialIssued>(
-                    EdgeFailure.Conflict,
-                    "edge_devices.rotation_replay",
-                    "The new credential is returned only once; start a new rotation if it was not stored by the agent.");
+                var replayCredential = await dbContext.EdgeDeviceCredentials
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(
+                        item => item.Id == start.Existing!.ResourceId,
+                        cancellationToken);
+                return EdgeResult<EdgeCredentialIssued>.Success(
+                    new EdgeCredentialIssued(
+                        deviceId.Value,
+                        replayCredential?.Id ?? Guid.Empty,
+                        EdgeDeviceCredentialType.Device.ToString(),
+                        null,
+                        replayCredential?.OverlapExpiresAtUtc,
+                        true));
             }
 
-            var result = await RotateCredentialCoreAsync(
-                deviceId!.Value,
-                envelope!,
+            return await RotateCredentialCoreAsync(
+                deviceId.Value,
+                replacementSecret!,
+                envelope,
                 start.Command!,
                 cancellationToken);
-            return result;
         }
 
         var denied = Authorize<EdgeCredentialIssued>(LoadIxPermissions.EdgeDeviceManage);
@@ -438,40 +572,102 @@ public sealed class EdgeDeviceService(
                 "edge_devices.identifier_required",
                 "An edge device identifier is required.");
         }
+        if (!EdgeCredentialSecretGenerator.IsValid(replacementSecret))
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                deviceId,
+                "edge_devices.replacement_secret_invalid",
+                null,
+                cancellationToken);
+            return Fail<EdgeCredentialIssued>(
+                EdgeFailure.Validation,
+                "edge_devices.replacement_secret_invalid",
+                "A client-generated replacement secret with at least 32 safe characters is required.");
+        }
 
         var device = await dbContext.EdgeDevices
             .SingleOrDefaultAsync(item => item.Id == deviceId.Value, cancellationToken);
-        if (device is null) return NotFound<EdgeCredentialIssued>();
+        if (device is null)
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                deviceId,
+                "edge_devices.not_found",
+                null,
+                cancellationToken);
+            return NotFound<EdgeCredentialIssued>();
+        }
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        await ExpirePendingCredentialsAsync(device.Id, now, cancellationToken);
+        var pending = await dbContext.EdgeDeviceCredentials
+            .Where(item => item.EdgeDeviceId == device.Id
+                && item.Type == EdgeDeviceCredentialType.Device
+                && item.Status == EdgeDeviceCredentialStatus.PendingConfirmation
+                && item.RevokedAtUtc == null
+                && item.OverlapExpiresAtUtc > now)
+            .AnyAsync(cancellationToken);
+        if (pending)
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                device.Id,
+                "edge_devices.rotation_pending",
+                null,
+                cancellationToken);
+            return Fail<EdgeCredentialIssued>(
+                EdgeFailure.Conflict,
+                "edge_devices.rotation_pending",
+                "The edge device already has a credential awaiting confirmation.");
+        }
+
         var active = await dbContext.EdgeDeviceCredentials
             .Where(item => item.EdgeDeviceId == device.Id
                 && item.Type == EdgeDeviceCredentialType.Device
-                && item.RevokedAtUtc == null)
+                && item.Status == EdgeDeviceCredentialStatus.Active
+                && item.RevokedAtUtc == null
+                && item.IsUsableAt(now))
             .OrderByDescending(item => item.CreatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
         if (active is null)
         {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                device.Id,
+                "edge_devices.credential_missing",
+                null,
+                cancellationToken);
             return Fail<EdgeCredentialIssued>(
                 EdgeFailure.Conflict,
                 "edge_devices.credential_missing",
                 "The edge device has no active credential to rotate.");
         }
 
-        var now = timeProvider.GetUtcNow().ToUniversalTime();
-        active.Revoke(now);
-        var secret = EdgeCredentialSecretGenerator.Create();
-        var credentialResult = EdgeDeviceCredential.Create(
-            Guid.NewGuid(),
-            device.TenantId,
-            device.Id,
-            EdgeDeviceCredentialType.Device,
-            passwordHasher.HashPassword(null!, secret),
-            now,
-            null,
-            active.Id);
+        var credentialResult = CreatePendingCredential(
+            device,
+            active,
+            replacementSecret!,
+            now);
         if (credentialResult.IsFailure)
             return Validation<EdgeCredentialIssued>(credentialResult.Error!);
         dbContext.EdgeDeviceCredentials.Add(credentialResult.Value);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsDuplicate(exception))
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                device.Id,
+                "edge_devices.rotation_pending",
+                null,
+                cancellationToken);
+            return Fail<EdgeCredentialIssued>(
+                EdgeFailure.Conflict,
+                "edge_devices.rotation_pending",
+                "The edge device already has a credential awaiting confirmation.");
+        }
         await auditWriter.WriteAsync(
             "EdgeDevice.CredentialRotated",
             "Succeeded",
@@ -486,8 +682,110 @@ public sealed class EdgeDeviceService(
             device.Id,
             credentialResult.Value.Id,
             credentialResult.Value.Type.ToString(),
-            secret,
-            null));
+            replacementSecret,
+            credentialResult.Value.OverlapExpiresAtUtc));
+    }
+
+    public async Task<EdgeResult<EdgeCredentialConfirmation>>
+        ConfirmCredentialRotationAsync(
+            EdgeRequestEnvelope envelope,
+            CancellationToken cancellationToken)
+    {
+        var contextFailure = await LoadDeviceAsync(envelope, cancellationToken);
+        if (contextFailure.Failure != EdgeFailure.None)
+            return Fail<EdgeCredentialConfirmation>(
+                contextFailure.Failure,
+                contextFailure.Code,
+                contextFailure.Message);
+
+        var device = contextFailure.Device!;
+        var credential = contextFailure.Credential!;
+        var requestHash = Hash(device.Id, credential.Id, "confirm");
+        var start = await BeginCommandAsync(
+            "CredentialRotationConfirmation",
+            requestHash,
+            null,
+            envelope,
+            cancellationToken);
+        if (start.Failure != EdgeFailure.None)
+            return Fail<EdgeCredentialConfirmation>(
+                start.Failure,
+                start.Code,
+                start.Message);
+        if (start.IsReplay)
+        {
+            return EdgeResult<EdgeCredentialConfirmation>.Success(
+                new EdgeCredentialConfirmation(
+                    device.Id,
+                    credential.Id,
+                    start.Existing!.ReceivedAtUtc,
+                    true));
+        }
+        if (credential.Status != EdgeDeviceCredentialStatus.PendingConfirmation
+            || !credential.ReplacedCredentialId.HasValue)
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                device.Id,
+                "edge_devices.rotation_not_pending",
+                envelope,
+                cancellationToken);
+            return Fail<EdgeCredentialConfirmation>(
+                EdgeFailure.Conflict,
+                "edge_devices.rotation_not_pending",
+                "The authenticated credential is not awaiting rotation confirmation.");
+        }
+
+        var previous = await dbContext.EdgeDeviceCredentials
+            .SingleOrDefaultAsync(
+                item => item.Id == credential.ReplacedCredentialId.Value
+                    && item.EdgeDeviceId == device.Id,
+                cancellationToken);
+        if (previous is null)
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                device.Id,
+                "edge_devices.previous_credential_missing",
+                envelope,
+                cancellationToken);
+            return Fail<EdgeCredentialConfirmation>(
+                EdgeFailure.Conflict,
+                "edge_devices.previous_credential_missing",
+                "The previous credential could not be found.");
+        }
+
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        var confirmation = credential.Confirm(now);
+        if (confirmation.IsFailure)
+            return Validation<EdgeCredentialConfirmation>(confirmation.Error!);
+        previous.Revoke(now);
+        start.Command!.Succeed();
+        AddEdgeAudit(
+            "EdgeDevice.CredentialRotationConfirmed",
+            device.Id,
+            credential.Id,
+            envelope.ClientIpAddress,
+            now,
+            null);
+        var save = await SaveCommandChangesAsync(
+            start.Command,
+            requestHash,
+            envelope,
+            cancellationToken);
+        if (save.Failure != EdgeFailure.None)
+            return Fail<EdgeCredentialConfirmation>(save.Failure, save.Code, save.Message);
+        if (save.IsReplay)
+        {
+            return EdgeResult<EdgeCredentialConfirmation>.Success(
+                new EdgeCredentialConfirmation(
+                    device.Id,
+                    credential.Id,
+                    save.Existing!.ReceivedAtUtc,
+                    true));
+        }
+        return EdgeResult<EdgeCredentialConfirmation>.Success(
+            new EdgeCredentialConfirmation(device.Id, credential.Id, now, false));
     }
 
     public async Task<EdgeResult<EdgeActionResponse>> RevokeAsync(
@@ -589,7 +887,8 @@ public sealed class EdgeDeviceService(
                 item.TargetId,
                 item.ActorDeviceId,
                 item.OccurredAtUtc,
-                item.CorrelationId))
+                item.CorrelationId,
+                item.FailureCode))
             .ToListAsync(cancellationToken);
         return EdgeResult<EdgeDeviceDiagnostics>.Success(new EdgeDeviceDiagnostics(
             device.Id,
@@ -684,7 +983,13 @@ public sealed class EdgeDeviceService(
                 envelope.ClientIpAddress,
                 timeProvider.GetUtcNow().ToUniversalTime(),
                 null);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            var save = await SaveCommandChangesAsync(
+                start.Command!,
+                hash,
+                envelope,
+                cancellationToken);
+            if (save.Failure != EdgeFailure.None)
+                return Fail<EdgeConfiguration>(save.Failure, save.Code, save.Message);
         }
 
         return EdgeResult<EdgeConfiguration>.Success(configuration);
@@ -754,7 +1059,20 @@ public sealed class EdgeDeviceService(
             envelope.ClientIpAddress,
             now,
             null);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var save = await SaveCommandChangesAsync(
+            start.Command,
+            start.Command.RequestHash,
+            envelope,
+            cancellationToken);
+        if (save.Failure != EdgeFailure.None)
+            return Fail<EdgeHeartbeatAck>(save.Failure, save.Code, save.Message);
+        if (save.IsReplay)
+        {
+            return EdgeResult<EdgeHeartbeatAck>.Success(new EdgeHeartbeatAck(
+                save.Existing!.Id,
+                save.Existing.ReceivedAtUtc,
+                true));
+        }
         return EdgeResult<EdgeHeartbeatAck>.Success(new EdgeHeartbeatAck(
             start.Command.Id,
             now,
@@ -826,6 +1144,12 @@ public sealed class EdgeDeviceService(
                 && item.IsActive, cancellationToken);
         if (weighbridge is null)
         {
+            await RecordFailureAsync(
+                "EdgeDevice.WeightReadingRejected",
+                device.Id,
+                "edge.reading.weighbridge_not_assigned",
+                envelope,
+                cancellationToken);
             return Fail<EdgeReadingReceipt>(
                 EdgeFailure.Forbidden,
                 "edge.reading.weighbridge_not_assigned",
@@ -880,7 +1204,27 @@ public sealed class EdgeDeviceService(
             envelope.ClientIpAddress,
             now,
             correlationId);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var save = await SaveCommandChangesAsync(
+            start.Command,
+            start.Command.RequestHash,
+            envelope,
+            cancellationToken);
+        if (save.Failure != EdgeFailure.None)
+            return Fail<EdgeReadingReceipt>(save.Failure, save.Code, save.Message);
+        if (save.IsReplay)
+        {
+            if (!save.Existing!.ResourceId.HasValue)
+                return Fail<EdgeReadingReceipt>(
+                    EdgeFailure.Conflict,
+                    "edge.reading.replay_missing",
+                    "The prior reading submission has no stored result.");
+            var raceReplay = await MapReadingAsync(
+                save.Existing.ResourceId.Value,
+                save.Existing.Id,
+                true,
+                cancellationToken);
+            return raceReplay ?? NotFound<EdgeReadingReceipt>();
+        }
         return EdgeResult<EdgeReadingReceipt>.Success(new EdgeReadingReceipt(
             start.Command.Id,
             readingResult.Value.Id,
@@ -979,6 +1323,12 @@ public sealed class EdgeDeviceService(
                 && item.IsActive, cancellationToken);
         if (weighbridge is null)
         {
+            await RecordFailureAsync(
+                "EdgeDevice.TicketRejected",
+                device.Id,
+                "edge.ticket.weighbridge_not_assigned",
+                envelope,
+                cancellationToken);
             return Fail<EdgeTicketReceipt>(
                 EdgeFailure.Forbidden,
                 "edge.ticket.weighbridge_not_assigned",
@@ -1010,7 +1360,36 @@ public sealed class EdgeDeviceService(
             envelope.ClientIpAddress,
             now,
             correlationId);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var save = await SaveCommandChangesAsync(
+            start.Command,
+            start.Command.RequestHash,
+            envelope,
+            cancellationToken);
+        if (save.Failure != EdgeFailure.None)
+            return Fail<EdgeTicketReceipt>(save.Failure, save.Code, save.Message);
+        if (save.IsReplay)
+        {
+            if (!save.Existing!.ResourceId.HasValue)
+                return Fail<EdgeTicketReceipt>(
+                    EdgeFailure.Conflict,
+                    "edge.ticket.replay_missing",
+                    "The prior ticket submission has no stored result.");
+            var raceTicket = await dbContext.EdgeTicketSubmissions.AsNoTracking()
+                .SingleOrDefaultAsync(
+                    item => item.Id == save.Existing.ResourceId.Value,
+                    cancellationToken);
+            return raceTicket is null
+                ? NotFound<EdgeTicketReceipt>()
+                : EdgeResult<EdgeTicketReceipt>.Success(new EdgeTicketReceipt(
+                    save.Existing.Id,
+                    raceTicket.Id,
+                    raceTicket.WeighbridgeDeviceId,
+                    raceTicket.TicketNumber,
+                    raceTicket.CapturedAtUtc,
+                    raceTicket.ReceivedAtUtc,
+                    raceTicket.CorrelationId,
+                    true));
+        }
         return EdgeResult<EdgeTicketReceipt>.Success(new EdgeTicketReceipt(
             start.Command.Id,
             ticketResult.Value.Id,
@@ -1052,7 +1431,13 @@ public sealed class EdgeDeviceService(
                 envelope.ClientIpAddress,
                 timeProvider.GetUtcNow().ToUniversalTime(),
                 null);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            var save = await SaveCommandChangesAsync(
+                start.Command!,
+                start.Command!.RequestHash,
+                envelope,
+                cancellationToken);
+            if (save.Failure != EdgeFailure.None)
+                return Fail<EdgeDiagnosticStatus>(save.Failure, save.Code, save.Message);
         }
 
         return EdgeResult<EdgeDiagnosticStatus>.Success(status);
@@ -1060,6 +1445,7 @@ public sealed class EdgeDeviceService(
 
     private async Task<EdgeResult<EdgeCredentialIssued>> RotateCredentialCoreAsync(
         Guid deviceId,
+        string replacementSecret,
         EdgeRequestEnvelope envelope,
         EdgeCommand command,
         CancellationToken cancellationToken)
@@ -1067,32 +1453,56 @@ public sealed class EdgeDeviceService(
         var device = await dbContext.EdgeDevices
             .SingleOrDefaultAsync(item => item.Id == deviceId, cancellationToken);
         if (device is null) return NotFound<EdgeCredentialIssued>();
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        var pending = await dbContext.EdgeDeviceCredentials
+            .Where(item => item.EdgeDeviceId == device.Id
+                && item.Type == EdgeDeviceCredentialType.Device
+                && item.Status == EdgeDeviceCredentialStatus.PendingConfirmation
+                && item.RevokedAtUtc == null
+                && item.OverlapExpiresAtUtc > now)
+            .AnyAsync(cancellationToken);
+        if (pending)
+        {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                device.Id,
+                "edge_devices.rotation_pending",
+                envelope,
+                cancellationToken);
+            return Fail<EdgeCredentialIssued>(
+                EdgeFailure.Conflict,
+                "edge_devices.rotation_pending",
+                "The edge device already has a credential awaiting confirmation.");
+        }
+
         var active = await dbContext.EdgeDeviceCredentials
             .Where(item => item.EdgeDeviceId == device.Id
                 && item.Type == EdgeDeviceCredentialType.Device
-                && item.RevokedAtUtc == null)
+                && item.Id == edgeRequestContext.CredentialId
+                && item.Status == EdgeDeviceCredentialStatus.Active
+                && item.RevokedAtUtc == null
+                && item.IsUsableAt(now))
             .OrderByDescending(item => item.CreatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
         if (active is null)
         {
+            await RecordFailureAsync(
+                "EdgeDevice.CredentialRotationFailed",
+                device.Id,
+                "edge_devices.credential_missing",
+                envelope,
+                cancellationToken);
             return Fail<EdgeCredentialIssued>(
                 EdgeFailure.Conflict,
                 "edge_devices.credential_missing",
                 "The edge device has no active credential to rotate.");
         }
 
-        var now = timeProvider.GetUtcNow().ToUniversalTime();
-        active.Revoke(now);
-        var secret = EdgeCredentialSecretGenerator.Create();
-        var credentialResult = EdgeDeviceCredential.Create(
-            Guid.NewGuid(),
-            device.TenantId,
-            device.Id,
-            EdgeDeviceCredentialType.Device,
-            passwordHasher.HashPassword(null!, secret),
-            now,
-            null,
-            active.Id);
+        var credentialResult = CreatePendingCredential(
+            device,
+            active,
+            replacementSecret,
+            now);
         if (credentialResult.IsFailure)
             return Validation<EdgeCredentialIssued>(credentialResult.Error!);
         command.Succeed(credentialResult.Value.Id);
@@ -1104,13 +1514,54 @@ public sealed class EdgeDeviceService(
             envelope.ClientIpAddress,
             now,
             null);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        var requestHash = command.RequestHash;
+        var save = await SaveCommandChangesAsync(
+            command,
+            requestHash,
+            envelope,
+            cancellationToken);
+        if (save.Failure != EdgeFailure.None)
+            return Fail<EdgeCredentialIssued>(save.Failure, save.Code, save.Message);
+        if (save.IsReplay)
+        {
+            return EdgeResult<EdgeCredentialIssued>.Success(
+                new EdgeCredentialIssued(
+                    device.Id,
+                    save.Existing!.ResourceId ?? Guid.Empty,
+                    EdgeDeviceCredentialType.Device.ToString(),
+                    null,
+                    null,
+                    true));
+        }
         return EdgeResult<EdgeCredentialIssued>.Success(new EdgeCredentialIssued(
             device.Id,
             credentialResult.Value.Id,
             credentialResult.Value.Type.ToString(),
-            secret,
-            null));
+            replacementSecret,
+            credentialResult.Value.OverlapExpiresAtUtc,
+            false));
+    }
+
+    private Result<EdgeDeviceCredential> CreatePendingCredential(
+        EdgeDevice device,
+        EdgeDeviceCredential previous,
+        string replacementSecret,
+        DateTimeOffset now)
+    {
+        var overlapExpiresAt = now.AddMinutes(options.Value.CredentialOverlapMinutes);
+        return EdgeDeviceCredential.Create(
+            Guid.NewGuid(),
+            device.TenantId,
+            device.Id,
+            EdgeDeviceCredentialType.Device,
+            passwordHasher.HashPassword(null!, replacementSecret),
+            now,
+            null,
+            previous.Id,
+            now,
+            null,
+            overlapExpiresAt,
+            EdgeDeviceCredentialStatus.PendingConfirmation);
     }
 
     private async Task<EdgeContextLoad> LoadDeviceAsync(
@@ -1120,6 +1571,12 @@ public sealed class EdgeDeviceService(
         var envelopeFailure = ValidateEnvelope<object>(envelope);
         if (envelopeFailure is not null)
         {
+            await RecordFailureAsync(
+                "EdgeDevice.RequestRejected",
+                edgeRequestContext.EdgeDeviceId,
+                envelopeFailure.Code,
+                envelope,
+                cancellationToken);
             return EdgeContextLoad.Rejected(
                 envelopeFailure.Failure,
                 envelopeFailure.Code,
@@ -1138,6 +1595,12 @@ public sealed class EdgeDeviceService(
                 envelope.IdempotencyKey,
                 StringComparison.Ordinal))
         {
+            await RecordFailureAsync(
+                "EdgeDevice.RequestRejected",
+                edgeRequestContext.EdgeDeviceId,
+                "edge.authentication.required",
+                envelope,
+                cancellationToken);
             return EdgeContextLoad.Rejected(
                 EdgeFailure.Forbidden,
                 "edge.authentication.required",
@@ -1147,6 +1610,10 @@ public sealed class EdgeDeviceService(
         var device = await dbContext.EdgeDevices.SingleOrDefaultAsync(
             item => item.Id == deviceId
                 && item.TenantId == tenantId,
+            cancellationToken);
+        await ExpirePendingCredentialsAsync(
+            deviceId,
+            timeProvider.GetUtcNow().ToUniversalTime(),
             cancellationToken);
         var credential = await dbContext.EdgeDeviceCredentials.SingleOrDefaultAsync(
             item => item.Id == credentialId
@@ -1158,6 +1625,12 @@ public sealed class EdgeDeviceService(
             || device.Status != EdgeDeviceStatus.Active
             || !credential.IsUsableAt(timeProvider.GetUtcNow()))
         {
+            await RecordFailureAsync(
+                "EdgeDevice.RequestRejected",
+                deviceId,
+                "edge.authentication.revoked",
+                envelope,
+                cancellationToken);
             return EdgeContextLoad.Rejected(
                 EdgeFailure.Forbidden,
                 "edge.authentication.revoked",
@@ -1166,6 +1639,25 @@ public sealed class EdgeDeviceService(
 
         credential.MarkUsed(timeProvider.GetUtcNow().ToUniversalTime());
         return EdgeContextLoad.Success(device, credential);
+    }
+
+    private async Task ExpirePendingCredentialsAsync(
+        Guid deviceId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var expired = await dbContext.EdgeDeviceCredentials
+            .IgnoreQueryFilters()
+            .Where(item => item.EdgeDeviceId == deviceId
+                && item.Type == EdgeDeviceCredentialType.Device
+                && item.Status == EdgeDeviceCredentialStatus.PendingConfirmation
+                && item.RevokedAtUtc == null
+                && item.OverlapExpiresAtUtc <= now)
+            .ToListAsync(cancellationToken);
+        if (expired.Count == 0) return;
+        foreach (var credential in expired)
+            credential.Revoke(now);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<CommandStart> BeginCommandAsync(
@@ -1190,12 +1682,18 @@ public sealed class EdgeDeviceService(
                 && command.Nonce == envelope.Nonce, cancellationToken);
         if (existingByNonce is not null)
         {
-            return Matches(existingByNonce, commandType, requestHash, envelope)
-                ? CommandStart.Replay(existingByNonce)
-                : CommandStart.Rejected(
-                    EdgeFailure.Conflict,
-                    "edge.replay_detected",
-                    "The request nonce has already been used with different content.");
+            if (Matches(existingByNonce, commandType, requestHash, envelope))
+                return CommandStart.Replay(existingByNonce);
+            await RecordFailureAsync(
+                "EdgeDevice.CommandRejected",
+                deviceId,
+                "edge.replay_detected",
+                envelope,
+                cancellationToken);
+            return CommandStart.Rejected(
+                EdgeFailure.Conflict,
+                "edge.replay_detected",
+                "The request nonce has already been used with different content.");
         }
 
         var existingByKey = await dbContext.EdgeCommands.AsNoTracking()
@@ -1204,12 +1702,18 @@ public sealed class EdgeDeviceService(
                 cancellationToken);
         if (existingByKey is not null)
         {
-            return Matches(existingByKey, commandType, requestHash, envelope)
-                ? CommandStart.Replay(existingByKey)
-                : CommandStart.Rejected(
-                    EdgeFailure.Conflict,
-                    "edge.idempotency_payload_mismatch",
-                    "The idempotency key was already used for different content.");
+            if (Matches(existingByKey, commandType, requestHash, envelope))
+                return CommandStart.Replay(existingByKey);
+            await RecordFailureAsync(
+                "EdgeDevice.CommandRejected",
+                deviceId,
+                "edge.idempotency_payload_mismatch",
+                envelope,
+                cancellationToken);
+            return CommandStart.Rejected(
+                EdgeFailure.Conflict,
+                "edge.idempotency_payload_mismatch",
+                "The idempotency key was already used for different content.");
         }
 
         var commandResult = EdgeCommand.Create(
@@ -1383,6 +1887,10 @@ public sealed class EdgeDeviceService(
             OccurredAtUtc = occurredAtUtc,
             IpAddress = ipAddress ?? string.Empty,
             CorrelationId = correlationId,
+            ActorCredentialId = edgeRequestContext.CredentialId,
+            TraceId = currentEdgeRequestContext.TraceId,
+            NonceHash = HashHeader(edgeRequestContext.Nonce),
+            IdempotencyKeyHash = HashHeader(edgeRequestContext.IdempotencyKey),
         });
     }
 
@@ -1393,7 +1901,14 @@ public sealed class EdgeDeviceService(
         EdgeRequestEnvelope envelope) =>
         command.CommandType == commandType
         && command.RequestHash == requestHash
-        && command.IdempotencyKey == envelope.IdempotencyKey;
+        && (command.IdempotencyKey == envelope.IdempotencyKey
+            || command.Nonce == envelope.Nonce);
+
+    private static bool MatchesRegistration(
+        EdgeCommand command,
+        string requestHash) =>
+        command.CommandType == "Registration"
+        && command.RequestHash == requestHash;
 
     private static bool IsSafeHeaderValue(string value) => value.All(character =>
         char.IsAsciiLetterOrDigit(character)
@@ -1402,6 +1917,124 @@ public sealed class EdgeDeviceService(
     private static string Hash(params object[] values) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(values))));
+
+    private static string SecretFingerprint(string secret) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
+
+    private static string HashHeader(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+
+    private async Task<CommandSaveResult> SaveCommandChangesAsync(
+        EdgeCommand command,
+        string requestHash,
+        EdgeRequestEnvelope envelope,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return CommandSaveResult.Saved();
+        }
+        catch (DbUpdateException exception) when (IsDuplicate(exception))
+        {
+            dbContext.ChangeTracker.Clear();
+            var existingByNonce = await dbContext.EdgeCommands
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.EdgeDeviceId == command.EdgeDeviceId
+                    && item.Nonce == envelope.Nonce,
+                    cancellationToken);
+            var existingByKey = await dbContext.EdgeCommands
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .SingleOrDefaultAsync(item => item.EdgeDeviceId == command.EdgeDeviceId
+                    && item.IdempotencyKey == envelope.IdempotencyKey,
+                    cancellationToken);
+            var existing = existingByNonce ?? existingByKey;
+            if (existing is null)
+            {
+                if (command.CommandType == "CredentialRotation"
+                    && await dbContext.EdgeDeviceCredentials
+                        .AnyAsync(item => item.EdgeDeviceId == command.EdgeDeviceId
+                            && item.Type == EdgeDeviceCredentialType.Device
+                            && item.Status == EdgeDeviceCredentialStatus.PendingConfirmation
+                            && item.RevokedAtUtc == null,
+                            cancellationToken))
+                {
+                    await RecordFailureAsync(
+                        "EdgeDevice.CredentialRotationFailed",
+                        command.EdgeDeviceId,
+                        "edge_devices.rotation_pending",
+                        envelope,
+                        cancellationToken);
+                    return CommandSaveResult.Conflict(
+                        "edge_devices.rotation_pending",
+                        "The edge device already has a credential awaiting confirmation.");
+                }
+
+                throw;
+            }
+
+            if (existingByNonce is not null
+                && !Matches(existingByNonce, command.CommandType, requestHash, envelope))
+            {
+                await RecordFailureAsync(
+                    "EdgeDevice.CommandRejected",
+                    command.EdgeDeviceId,
+                    "edge.replay_detected",
+                    envelope,
+                    cancellationToken);
+                return CommandSaveResult.Conflict(
+                    "edge.replay_detected",
+                    "The request nonce has already been used with different content.");
+            }
+
+            if (existingByKey is not null
+                && !Matches(existingByKey, command.CommandType, requestHash, envelope))
+            {
+                await RecordFailureAsync(
+                    "EdgeDevice.CommandRejected",
+                    command.EdgeDeviceId,
+                    "edge.idempotency_payload_mismatch",
+                    envelope,
+                    cancellationToken);
+                return CommandSaveResult.Conflict(
+                    "edge.idempotency_payload_mismatch",
+                    "The idempotency key was already used for different content.");
+            }
+
+            return CommandSaveResult.Replay(existing);
+        }
+    }
+
+    private async Task RecordFailureAsync(
+        string eventType,
+        Guid? deviceId,
+        string failureCode,
+        EdgeRequestEnvelope? envelope,
+        CancellationToken cancellationToken)
+    {
+        dbContext.ChangeTracker.Clear();
+        await auditWriter.TryWriteAsync(
+            eventType,
+            "Failed",
+            "EdgeDevice",
+            deviceId?.ToString(),
+            edgeRequestContext.TenantId ?? requestContext.TenantId,
+            requestContext.UserId,
+            requestContext.IsSupportContext,
+            envelope?.ClientIpAddress ?? currentEdgeRequestContext.ClientIpAddress,
+            cancellationToken,
+            deviceId ?? edgeRequestContext.EdgeDeviceId,
+            edgeRequestContext.CredentialId,
+            null,
+            failureCode,
+            envelope?.TraceId ?? currentEdgeRequestContext.TraceId,
+            HashHeader(envelope?.Nonce ?? edgeRequestContext.Nonce),
+            HashHeader(envelope?.IdempotencyKey ?? edgeRequestContext.IdempotencyKey));
+    }
 
     private static string Version(byte[] value) => Convert.ToBase64String(value);
 
@@ -1465,6 +2098,23 @@ public sealed class EdgeDeviceService(
             string code,
             string message) =>
             new(null, null, false, failure, code, message);
+    }
+
+    private sealed record CommandSaveResult(
+        EdgeCommand? Existing,
+        bool IsReplay,
+        EdgeFailure Failure,
+        string Code,
+        string Message)
+    {
+        public static CommandSaveResult Saved() =>
+            new(null, false, EdgeFailure.None, string.Empty, string.Empty);
+
+        public static CommandSaveResult Replay(EdgeCommand command) =>
+            new(command, true, EdgeFailure.None, string.Empty, string.Empty);
+
+        public static CommandSaveResult Conflict(string code, string message) =>
+            new(null, false, EdgeFailure.Conflict, code, message);
     }
 
     private CommandStart AddAndReturnCommand(EdgeCommand command)

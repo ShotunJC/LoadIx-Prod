@@ -6,7 +6,8 @@ public sealed record EdgeRequestEnvelope(
     string IdempotencyKey,
     string Nonce,
     DateTimeOffset TimestampUtc,
-    string? ClientIpAddress);
+    string? ClientIpAddress,
+    string? TraceId = null);
 
 public sealed record EdgeDeviceQuery(
     int Page = 1,
@@ -60,6 +61,7 @@ public sealed record EdgeRegistrationBootstrap(
 public sealed record EdgeRegistrationModel(
     Guid DeviceId,
     string BootstrapToken,
+    string DeviceSecret,
     string? AgentVersion);
 
 
@@ -67,8 +69,17 @@ public sealed record EdgeCredentialIssued(
     Guid DeviceId,
     Guid CredentialId,
     string CredentialType,
-    string Secret,
-    DateTimeOffset? ExpiresAtUtc);
+    string? Secret,
+    DateTimeOffset? ExpiresAtUtc,
+    bool IsReplay = false);
+
+public sealed record EdgeCredentialRotationModel(string ReplacementSecret);
+
+public sealed record EdgeCredentialConfirmation(
+    Guid DeviceId,
+    Guid CredentialId,
+    DateTimeOffset ConfirmedAtUtc,
+    bool IsReplay);
 
 public sealed record EdgeActionResponse(Guid DeviceId, string Status);
 
@@ -207,7 +218,8 @@ public sealed record EdgeAuditItem(
     string? TargetId,
     Guid? ActorDeviceId,
     DateTimeOffset OccurredAtUtc,
-    string? CorrelationId);
+    string? CorrelationId,
+    string? FailureCode);
 
 public sealed record EdgeLiveReading(
     EdgeReadingItem? LatestReading,

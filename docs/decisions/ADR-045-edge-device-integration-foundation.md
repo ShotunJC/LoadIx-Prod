@@ -29,20 +29,38 @@ these tenant-owned records:
 
 Registration is a two-step flow. An authorized tenant administrator creates a
 short-lived, one-use bootstrap token. The API stores only its password-hash and
-returns the token once. The agent exchanges it for a device credential, which
-is also returned once and stored only as a password-hash by the API. Rotation
-revokes the previous credential before issuing a replacement; administrator
-revocation disables the device and all of its credentials.
+returns the token once. Before calling bootstrap, the agent generates the device
+secret locally and durably records that secret, nonce, and idempotency key. The
+API hashes the proposed secret and stores it with a replay command; it never
+generates or persists the plaintext device secret. An exact retry after a lost
+response returns an acknowledgement with no secret, while a changed secret or
+payload returns `409 Conflict`.
+
+Rotation is client-generated and two-phase. The current credential submits a
+locally generated replacement. The old credential remains usable and the new
+credential is marked `PendingConfirmation` until the agent authenticates with it
+at `/api/v1/edge/credential/rotation-confirm`. Confirmation revokes the old
+credential immediately. A pending replacement expires after the configured
+overlap period; the old credential remains the recovery path. A request/admin
+operation cleans up the stale replacement immediately, and a scheduled worker
+also expires stale pending credentials. Only one pending replacement is
+permitted. Administrator-triggered rotation uses the same lifecycle and
+displays the client-generated replacement for delivery to the agent; it does not
+revoke the old credential at request time.
 
 Every authenticated device request carries a device ID, device secret, current
 Unix timestamp, nonce, and idempotency key. The API validates the timestamp
 tolerance, verifies the hashed secret, resolves tenant and site from the stored
 device, and records the request hash in `EdgeCommand`. Unique tenant/device
 indexes on nonce and idempotency key make sequential retries replayable and
-payload changes conflicts. Device endpoints are rate-limited separately from
-browser endpoints. Reading and ticket submissions retain captured time and
-received time independently so offline replay is supported without extending
-credential validity.
+payload changes conflicts. Command writes use duplicate-key recovery around the
+same SaveChanges transaction as the resulting resource, so concurrent identical
+requests reload the winning command rather than returning a database 500.
+Unauthenticated/bootstrap traffic is IP rate-limited; authenticated requests use
+`tenantId:deviceId` partitions so devices behind one NAT do not share a bucket.
+Reading and ticket submissions retain captured time and received time
+independently so offline replay is supported without extending credential
+validity.
 
 The reading contract preserves the displayed decimal value, unit, stable flag,
 captured/received timestamps, device and weighbridge IDs, optional vehicle
@@ -59,9 +77,18 @@ tests; it does not claim compatibility with any real indicator.
   contains an ID from another tenant.
 - The API remains independent of serial ports and manufacturer protocol details.
 - `EdgeCommand` and the security audit table provide operational and security
-  evidence for accepted device activity. Rejected requests are not persisted as
-  readings or tickets and are surfaced through Problem Details/rate-limit
-  responses.
+  evidence for accepted device activity. Authentication failures, stale
+  timestamps, malformed envelopes, replay mismatches, binding failures, and
+  failed bootstrap/rotation attempts are recorded with deterministic failure
+  codes, trace/correlation data, remote IP, and hashes of nonce/idempotency
+  values. Audit writes are best effort during authentication and never block the
+  authentication decision; rate-limit rejection is also emitted as a structured
+  security log because the rejection callback may not have a safe tenant DB
+  context.
+- Composite restrictive foreign keys cover tenant, site, device, credential,
+  weighbridge, command, raw-reading, stable-reading, heartbeat, and ticket
+  relationships. The one-stable-reading-per-raw-reading and replay uniqueness
+  constraints remain database-enforced.
 - The simulator's local state file is a test artifact. It must not be used as a
   production secret store.
 
@@ -79,8 +106,9 @@ The host should use outbound-only HTTPS to the LoadIx API, strict certificate
 validation, an accurate NTP-synchronised clock, and firewall rules that deny
 unneeded inbound access. Device secrets should be held in the platform's
 protected secret store (for example, an OS keyring or deployment-managed
-encrypted store), not in logs or a world-readable configuration file. Pending
-submissions should use an atomic, bounded local queue with crash recovery,
+encrypted store), not in logs or a world-readable configuration file. The
+simulator JSON state is intentionally a test-only artifact and is not a model
+for production storage. Pending submissions should use an atomic, bounded local queue with crash recovery,
 retention/backpressure rules, and clear offline/failed state. Heartbeats,
 agent version, parser version, queue depth, and last successful submission
 should be exposed through redacted diagnostics. Rotation and revocation should

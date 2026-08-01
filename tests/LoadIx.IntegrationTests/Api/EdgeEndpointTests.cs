@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using LoadIx.Api.Endpoints;
@@ -9,6 +11,7 @@ using LoadIx.Application.Edge;
 using LoadIx.Application.Security;
 using LoadIx.Domain.Common;
 using LoadIx.Domain.Edge;
+using LoadIx.Domain.Locations;
 using LoadIx.Domain.Tenancy;
 using LoadIx.Infrastructure.Edge;
 using LoadIx.Infrastructure.Identity;
@@ -68,6 +71,7 @@ public sealed class EdgeEndpointTests(
         var bootstrap = new HttpRequestMessage(
             HttpMethod.Post,
             "/api/v1/edge/bootstrap");
+        var clientGeneratedSecret = ClientSecret();
 
         AddEnvelopeHeaders(
             bootstrap,
@@ -78,6 +82,7 @@ public sealed class EdgeEndpointTests(
         {
             deviceId = device.DeviceId,
             bootstrapToken = device.BootstrapToken,
+            deviceSecret = clientGeneratedSecret,
             agentVersion = "integration-agent/1",
         });
 
@@ -100,6 +105,7 @@ public sealed class EdgeEndpointTests(
 
         credential.Should().NotBeNull();
         credential!.Secret.Should().NotBeNullOrWhiteSpace();
+        credential.Secret.Should().Be(clientGeneratedSecret);
 
         var invalidSecret = DeviceRequest(
             HttpMethod.Post,
@@ -125,7 +131,7 @@ public sealed class EdgeEndpointTests(
 
         var first = await SendHeartbeatAsync(
             device.DeviceId,
-            credential.Secret,
+            credential.Secret!,
             heartbeatKey,
             heartbeatNonce,
             "Running",
@@ -146,7 +152,7 @@ public sealed class EdgeEndpointTests(
 
         var replay = await SendHeartbeatAsync(
             device.DeviceId,
-            credential.Secret,
+            credential.Secret!,
             heartbeatKey,
             heartbeatNonce,
             "Running",
@@ -167,7 +173,7 @@ public sealed class EdgeEndpointTests(
 
         var changedReplay = await SendHeartbeatAsync(
             device.DeviceId,
-            credential.Secret,
+            credential.Secret!,
             heartbeatKey,
             heartbeatNonce,
             "Changed",
@@ -182,7 +188,7 @@ public sealed class EdgeEndpointTests(
 
         var changedIdempotency = await SendHeartbeatAsync(
             device.DeviceId,
-            credential.Secret,
+            credential.Secret!,
             heartbeatKey,
             $"heartbeat-changed-nonce-{testRunId}",
             "Changed",
@@ -203,7 +209,7 @@ public sealed class EdgeEndpointTests(
             HttpMethod.Post,
             "/api/v1/edge/readings",
             device.DeviceId,
-            credential.Secret,
+            credential.Secret!,
             readingKey,
             $"reading-nonce-first-{testRunId}",
             new
@@ -240,7 +246,7 @@ public sealed class EdgeEndpointTests(
             HttpMethod.Post,
             "/api/v1/edge/readings",
             device.DeviceId,
-            credential.Secret,
+            credential.Secret!,
             readingKey,
             $"reading-nonce-replay-{testRunId}",
             new
@@ -312,37 +318,61 @@ public sealed class EdgeEndpointTests(
         var bootstrap = await RegisterAsync(device);
         var rotation = await admin.PostAsync(
             $"/api/v1/edge-devices/{device.DeviceId}/credentials/rotate",
-            null);
+            JsonContent.Create(new
+            {
+                replacementSecret = ClientSecret(),
+            }));
         rotation.StatusCode.Should().Be(HttpStatusCode.OK);
         var rotated = (await rotation.Content
             .ReadFromJsonAsync<EdgeCredentialIssued>())!;
+        rotated.Secret.Should().NotBeNullOrWhiteSpace();
 
         var oldSecret = DeviceRequest(
             HttpMethod.Get,
             "/api/v1/edge/configuration",
             device.DeviceId,
-            bootstrap.Secret,
+            bootstrap.Secret!,
             "old-secret-key-001",
             "old-secret-nonce-001");
         (await _factory.CreateClient().SendAsync(oldSecret)).StatusCode
-            .Should().Be(HttpStatusCode.Unauthorized);
+            .Should().Be(HttpStatusCode.OK);
 
         var currentSecret = DeviceRequest(
             HttpMethod.Get,
             "/api/v1/edge/configuration",
             device.DeviceId,
-            rotated.Secret,
+            rotated.Secret!,
             "current-secret-key-001",
             "current-secret-nonce-001");
         (await _factory.CreateClient().SendAsync(currentSecret)).StatusCode
             .Should().Be(HttpStatusCode.OK);
+
+        var confirmation = DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/credential/rotation-confirm",
+            device.DeviceId,
+            rotated.Secret!,
+            "confirm-key-0001",
+            "confirm-nonce-0001");
+        (await _factory.CreateClient().SendAsync(confirmation)).StatusCode
+            .Should().Be(HttpStatusCode.OK);
+
+        var oldAfterConfirmation = DeviceRequest(
+            HttpMethod.Get,
+            "/api/v1/edge/configuration",
+            device.DeviceId,
+            bootstrap.Secret!,
+            "old-after-confirm-key-1",
+            "old-after-confirm-nonce-1");
+        (await _factory.CreateClient().SendAsync(oldAfterConfirmation)).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
 
         var ticketCapturedAt = DateTimeOffset.UtcNow;
         var ticket = DeviceRequest(
             HttpMethod.Post,
             "/api/v1/edge/tickets",
             device.DeviceId,
-            rotated.Secret,
+            rotated.Secret!,
             "ticket-key-0001",
             "ticket-nonce-0001",
             new
@@ -360,7 +390,7 @@ public sealed class EdgeEndpointTests(
             HttpMethod.Post,
             "/api/v1/edge/tickets",
             device.DeviceId,
-            rotated.Secret,
+            rotated.Secret!,
             "ticket-key-0001",
             "ticket-nonce-0002",
             new
@@ -386,7 +416,7 @@ public sealed class EdgeEndpointTests(
             HttpMethod.Post,
             "/api/v1/edge/heartbeat",
             device.DeviceId,
-            rotated.Secret,
+            rotated.Secret!,
             "revoked-key-0001",
             "revoked-nonce-0001",
             new
@@ -408,7 +438,7 @@ public sealed class EdgeEndpointTests(
             HttpMethod.Get,
             "/api/v1/edge/diagnostic-status",
             device.DeviceId,
-            credential.Secret,
+            credential.Secret!,
             "stale-key-0001",
             "stale-nonce-0001");
         request.Headers.Remove("X-LoadIx-Device-Timestamp");
@@ -438,6 +468,489 @@ public sealed class EdgeEndpointTests(
             .Items.Should().NotContain(item => item.Id == foreign.DeviceId);
     }
 
+    [Fact]
+    public async Task ClientGeneratedBootstrapCanRecoverAfterAReplayedResponse()
+    {
+        var admin = await AdministratorClientAsync();
+        var device = await CreateDeviceAsync(admin);
+        var secret = ClientSecret();
+        var idempotencyKey = $"bootstrap-replay-key-{Guid.NewGuid():N}";
+        var nonce = $"bootstrap-replay-nonce-{Guid.NewGuid():N}";
+        var anonymous = _factory.CreateClient();
+
+        var first = await SendBootstrapAsync(
+            anonymous,
+            device,
+            secret,
+            idempotencyKey,
+            nonce);
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var replay = await SendBootstrapAsync(
+            anonymous,
+            device,
+            secret,
+            idempotencyKey,
+            nonce);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        var replayCredential = (await replay.Content
+            .ReadFromJsonAsync<EdgeCredentialIssued>())!;
+        replayCredential.IsReplay.Should().BeTrue();
+        replayCredential.Secret.Should().BeNull();
+
+        var changed = await SendBootstrapAsync(
+            anonymous,
+            device,
+            ClientSecret(),
+            idempotencyKey,
+            $"bootstrap-changed-nonce-{Guid.NewGuid():N}");
+        changed.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var heartbeat = DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/heartbeat",
+            device.DeviceId,
+            secret,
+            "bootstrap-auth-key-0001",
+            "bootstrap-auth-nonce-0001",
+            new
+            {
+                deviceTimestampUtc = DateTimeOffset.UtcNow,
+                status = "Running",
+            });
+        (await anonymous.SendAsync(heartbeat)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        var registrationCommands = await db.EdgeCommands
+            .IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.CommandType == "Registration");
+        registrationCommands.Should().Be(1);
+        var credential = await db.EdgeDeviceCredentials
+            .IgnoreQueryFilters()
+            .SingleAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.Type == EdgeDeviceCredentialType.Device);
+        credential.SecretHash.Should().NotBe(secret);
+    }
+
+    [Fact]
+    public async Task DeviceRotationRetainsTheOldSecretUntilTheNewSecretConfirms()
+    {
+        var admin = await AdministratorClientAsync();
+        var device = await CreateDeviceAsync(admin);
+        var original = await RegisterAsync(device);
+        var replacement = ClientSecret();
+        var key = $"device-rotation-key-{Guid.NewGuid():N}";
+        var nonce = $"device-rotation-nonce-{Guid.NewGuid():N}";
+
+        var first = DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/credential/rotate",
+            device.DeviceId,
+            original.Secret!,
+            key,
+            nonce,
+            new { replacementSecret = replacement });
+        var firstResponse = await _factory.CreateClient().SendAsync(first);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var retry = DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/credential/rotate",
+            device.DeviceId,
+            original.Secret!,
+            key,
+            nonce,
+            new { replacementSecret = replacement });
+        var retryResponse = await _factory.CreateClient().SendAsync(retry);
+        retryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await retryResponse.Content.ReadFromJsonAsync<EdgeCredentialIssued>())!
+            .IsReplay.Should().BeTrue();
+
+        var oldConfiguration = DeviceRequest(
+            HttpMethod.Get,
+            "/api/v1/edge/configuration",
+            device.DeviceId,
+            original.Secret!,
+            "rotation-old-config-key-1",
+            "rotation-old-config-nonce-1");
+        (await _factory.CreateClient().SendAsync(oldConfiguration)).StatusCode
+            .Should().Be(HttpStatusCode.OK);
+
+        var newConfiguration = DeviceRequest(
+            HttpMethod.Get,
+            "/api/v1/edge/configuration",
+            device.DeviceId,
+            replacement,
+            "rotation-new-config-key-1",
+            "rotation-new-config-nonce-1");
+        (await _factory.CreateClient().SendAsync(newConfiguration)).StatusCode
+            .Should().Be(HttpStatusCode.OK);
+
+        var confirmation = DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/credential/rotation-confirm",
+            device.DeviceId,
+            replacement,
+            "rotation-confirm-key-1",
+            "rotation-confirm-nonce-1");
+        (await _factory.CreateClient().SendAsync(confirmation)).StatusCode
+            .Should().Be(HttpStatusCode.OK);
+
+        var oldAfterConfirmation = DeviceRequest(
+            HttpMethod.Get,
+            "/api/v1/edge/configuration",
+            device.DeviceId,
+            original.Secret!,
+            "rotation-old-after-key-1",
+            "rotation-old-after-nonce-1");
+        (await _factory.CreateClient().SendAsync(oldAfterConfirmation)).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ConcurrentIdenticalReadingSubmissionsCreateOneResource()
+    {
+        var admin = await AdministratorClientAsync();
+        var device = await CreateDeviceAsync(admin);
+        var credential = await RegisterAsync(device);
+        var key = $"parallel-reading-key-{Guid.NewGuid():N}";
+        var nonce = $"parallel-reading-nonce-{Guid.NewGuid():N}";
+        var capturedAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+
+        HttpRequestMessage CreateRequest() => DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/readings",
+            device.DeviceId,
+            credential.Secret!,
+            key,
+            nonce,
+            new
+            {
+                weighbridgeDeviceId = device.WeighbridgeDeviceId,
+                displayedValue = 10_000.125m,
+                unit = "kg",
+                isStable = true,
+                capturedAtUtc = capturedAt,
+                vehicleRegistration = "PAR-001",
+                serialMessageMetadata = "WEIGHT|value=10000.125|unit=kg|stable=true",
+                parserVersion = "generic-line-v1",
+                correlationId = "parallel-reading",
+            });
+
+        var responses = await Task.WhenAll(
+            Enumerable.Range(0, 2)
+                .Select(_ => _factory.CreateClient().SendAsync(CreateRequest())));
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+        var receipts = await Task.WhenAll(
+            responses.Select(response => response.Content
+                .ReadFromJsonAsync<EdgeReadingReceipt>()));
+        receipts.Select(receipt => receipt!.RawReadingId).Distinct().Should().ContainSingle();
+        receipts.Count(receipt => receipt!.IsReplay).Should().Be(1);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        (await db.RawWeightReadings.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId))
+            .Should().Be(1);
+        (await db.StableWeightReadings.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId))
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ConcurrentIdenticalBootstrapRequestsConvergeOnOneCredential()
+    {
+        var admin = await AdministratorClientAsync();
+        var device = await CreateDeviceAsync(admin);
+        var secret = ClientSecret();
+        var key = $"parallel-bootstrap-key-{Guid.NewGuid():N}";
+        var nonce = $"parallel-bootstrap-nonce-{Guid.NewGuid():N}";
+
+        var responses = await Task.WhenAll(
+            Enumerable.Range(0, 2)
+                .Select(_ => SendBootstrapAsync(
+                    _factory.CreateClient(),
+                    device,
+                    secret,
+                    key,
+                    nonce)));
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+        var credentials = await Task.WhenAll(
+            responses.Select(response => response.Content
+                .ReadFromJsonAsync<EdgeCredentialIssued>()));
+        credentials.Select(item => item!.CredentialId).Distinct().Should().ContainSingle();
+        credentials.Count(item => !item!.IsReplay).Should().Be(1);
+        credentials.Count(item => item!.IsReplay).Should().Be(1);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        (await db.EdgeCommands.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.CommandType == "Registration"))
+            .Should().Be(1);
+        (await db.EdgeDeviceCredentials.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.Type == EdgeDeviceCredentialType.Device))
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ConcurrentIdenticalCredentialRotationsConvergeOnOnePendingCredential()
+    {
+        var admin = await AdministratorClientAsync();
+        var device = await CreateDeviceAsync(admin);
+        var original = await RegisterAsync(device);
+        var replacement = ClientSecret();
+        var key = $"parallel-rotation-key-{Guid.NewGuid():N}";
+        var nonce = $"parallel-rotation-nonce-{Guid.NewGuid():N}";
+
+        var responses = await Task.WhenAll(
+            Enumerable.Range(0, 2).Select(_ =>
+            {
+                var request = DeviceRequest(
+                    HttpMethod.Post,
+                    "/api/v1/edge/credential/rotate",
+                    device.DeviceId,
+                    original.Secret!,
+                    key,
+                    nonce,
+                    new { replacementSecret = replacement });
+                return _factory.CreateClient().SendAsync(request);
+            }));
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
+        var credentials = await Task.WhenAll(
+            responses.Select(response => response.Content
+                .ReadFromJsonAsync<EdgeCredentialIssued>()));
+        credentials.Select(item => item!.CredentialId).Distinct().Should().ContainSingle();
+        credentials.Count(item => !item!.IsReplay).Should().Be(1);
+        credentials.Count(item => item!.IsReplay).Should().Be(1);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        (await db.EdgeDeviceCredentials.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.Type == EdgeDeviceCredentialType.Device
+                && item.RevokedAtUtc == null))
+            .Should().Be(2);
+        (await db.EdgeCommands.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.CommandType == "CredentialRotation"))
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ConcurrentIdenticalHeartbeatsAndTicketsConvergeWithoutServerErrors()
+    {
+        var admin = await AdministratorClientAsync();
+        var device = await CreateDeviceAsync(admin);
+        var credential = await RegisterAsync(device);
+        var heartbeatTimestamp = DateTimeOffset.UtcNow;
+        var heartbeatKey = $"parallel-heartbeat-key-{Guid.NewGuid():N}";
+        var heartbeatNonce = $"parallel-heartbeat-nonce-{Guid.NewGuid():N}";
+        var heartbeatResponses = await Task.WhenAll(
+            Enumerable.Range(0, 2).Select(_ => SendHeartbeatAsync(
+                device.DeviceId,
+                credential.Secret!,
+                heartbeatKey,
+                heartbeatNonce,
+                "Running",
+                heartbeatTimestamp)));
+        heartbeatResponses.Should().OnlyContain(
+            response => response.StatusCode == HttpStatusCode.OK);
+        var heartbeats = await Task.WhenAll(
+            heartbeatResponses.Select(response => response.Content
+                .ReadFromJsonAsync<EdgeHeartbeatAck>()));
+        heartbeats.Select(item => item!.CommandId).Distinct().Should().ContainSingle();
+        heartbeats.Count(item => item!.IsReplay).Should().Be(1);
+
+        var capturedAt = DateTimeOffset.UtcNow;
+        var ticketKey = $"parallel-ticket-key-{Guid.NewGuid():N}";
+        var ticketNonce = $"parallel-ticket-nonce-{Guid.NewGuid():N}";
+        var ticketResponses = await Task.WhenAll(
+            Enumerable.Range(0, 2).Select(_ =>
+            {
+                var request = DeviceRequest(
+                    HttpMethod.Post,
+                    "/api/v1/edge/tickets",
+                    device.DeviceId,
+                    credential.Secret!,
+                    ticketKey,
+                    ticketNonce,
+                    new
+                    {
+                        weighbridgeDeviceId = device.WeighbridgeDeviceId,
+                        ticketNumber = "PARALLEL-TICKET",
+                        capturedAtUtc = capturedAt,
+                        content = "parallel ticket",
+                        contentType = "text/plain",
+                        correlationId = "parallel-ticket",
+                    });
+                return _factory.CreateClient().SendAsync(request);
+            }));
+        ticketResponses.Should().OnlyContain(
+            response => response.StatusCode == HttpStatusCode.OK);
+        var tickets = await Task.WhenAll(
+            ticketResponses.Select(response => response.Content
+                .ReadFromJsonAsync<EdgeTicketReceipt>()));
+        tickets.Select(item => item!.TicketId).Distinct().Should().ContainSingle();
+        tickets.Count(item => item!.IsReplay).Should().Be(1);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        (await db.DeviceHeartbeats.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.DeviceTimestampUtc == heartbeatTimestamp))
+            .Should().Be(1);
+        (await db.EdgeTicketSubmissions.IgnoreQueryFilters()
+            .CountAsync(item => item.EdgeDeviceId == device.DeviceId
+                && item.TicketNumber == "PARALLEL-TICKET"))
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task FailedEdgeRequestsAreAuditedWithHashedRequestIdentifiers()
+    {
+        var admin = await AdministratorClientAsync();
+        var device = await CreateDeviceAsync(admin);
+        var secret = ClientSecret();
+        var anonymous = _factory.CreateClient();
+
+        var invalidBootstrap = device with
+        {
+            BootstrapToken = "invalid-bootstrap-token",
+        };
+        var invalidBootstrapResponse = await SendBootstrapAsync(
+            anonymous,
+            invalidBootstrap,
+            secret,
+            "audit-bootstrap-invalid-key-1",
+            "audit-bootstrap-invalid-nonce-1");
+        invalidBootstrapResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var registration = await SendBootstrapAsync(
+            anonymous,
+            device,
+            secret,
+            "audit-register-key-001",
+            "audit-register-nonce-001");
+        registration.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var invalidSecret = DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/heartbeat",
+            device.DeviceId,
+            "invalid-secret-for-audit",
+            "audit-invalid-secret-key-1",
+            "audit-invalid-secret-nonce-1",
+            new
+            {
+                deviceTimestampUtc = DateTimeOffset.UtcNow,
+                status = "Running",
+            });
+        (await anonymous.SendAsync(invalidSecret)).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
+
+        var stale = DeviceRequest(
+            HttpMethod.Get,
+            "/api/v1/edge/diagnostic-status",
+            device.DeviceId,
+            secret,
+            "audit-stale-key-001",
+            "audit-stale-nonce-001");
+        stale.Headers.Remove("X-LoadIx-Device-Timestamp");
+        stale.Headers.Add(
+            "X-LoadIx-Device-Timestamp",
+            DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds()
+                .ToString(CultureInfo.InvariantCulture));
+        (await anonymous.SendAsync(stale)).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
+
+        var firstHeartbeat = await SendHeartbeatAsync(
+            device.DeviceId,
+            secret,
+            "audit-replay-key-001",
+            "audit-replay-nonce-001",
+            "Running",
+            DateTimeOffset.UtcNow);
+        firstHeartbeat.StatusCode.Should().Be(HttpStatusCode.OK);
+        var changedReplay = await SendHeartbeatAsync(
+            device.DeviceId,
+            secret,
+            "audit-replay-key-001",
+            "audit-replay-nonce-001",
+            "Changed",
+            DateTimeOffset.UtcNow);
+        changedReplay.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var bindingFailure = DeviceRequest(
+            HttpMethod.Post,
+            "/api/v1/edge/readings",
+            device.DeviceId,
+            secret,
+            "audit-binding-key-001",
+            "audit-binding-nonce-001",
+            new
+            {
+                weighbridgeDeviceId = Guid.NewGuid(),
+                displayedValue = 1m,
+                unit = "kg",
+                isStable = false,
+                capturedAtUtc = DateTimeOffset.UtcNow,
+                serialMessageMetadata = "WEIGHT|value=1|unit=kg|stable=false",
+                parserVersion = "generic-line-v1",
+            });
+        (await anonymous.SendAsync(bindingFailure)).StatusCode
+            .Should().Be(HttpStatusCode.Forbidden);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        var audits = await db.SecurityAuditEvents
+            .IgnoreQueryFilters()
+            .Where(item => item.ActorDeviceId == device.DeviceId
+                && item.Outcome == "Failed")
+            .ToListAsync();
+        audits.Select(item => item.FailureCode)
+            .Should().Contain("edge_devices.bootstrap_invalid");
+        audits.Select(item => item.FailureCode)
+            .Should().Contain("edge.authentication.invalid_secret");
+        audits.Select(item => item.FailureCode)
+            .Should().Contain("edge.timestamp_outside_tolerance");
+        audits.Select(item => item.FailureCode)
+            .Should().Contain("edge.replay_detected");
+        audits.Select(item => item.FailureCode)
+            .Should().Contain("edge.reading.weighbridge_not_assigned");
+        audits.All(item => item.NonceHash?.Length == 64
+                && item.IdempotencyKeyHash?.Length == 64)
+            .Should().BeTrue();
+        JsonSerializer.Serialize(audits)
+            .Should().NotContain("invalid-secret-for-audit");
+        Convert.ToHexString(SHA256.HashData(
+                Encoding.UTF8.GetBytes("audit-invalid-secret-nonce-1")))
+            .Should().Be(audits.Single(item =>
+                item.FailureCode == "edge.authentication.invalid_secret").NonceHash);
+    }
+
+    private static async Task<HttpResponseMessage> SendBootstrapAsync(
+        HttpClient client,
+        BootstrapResponse device,
+        string secret,
+        string idempotencyKey,
+        string nonce)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/edge/bootstrap");
+        AddEnvelopeHeaders(request, idempotencyKey, nonce);
+        request.Content = JsonContent.Create(new
+        {
+            deviceId = device.DeviceId,
+            bootstrapToken = device.BootstrapToken,
+            deviceSecret = secret,
+            agentVersion = "integration-agent/1",
+        });
+        return await client.SendAsync(request);
+    }
+
     private static async Task<BootstrapResponse> CreateDeviceAsync(HttpClient admin)
     {
         var response = await admin.PostAsJsonAsync(
@@ -464,12 +977,16 @@ public sealed class EdgeEndpointTests(
         {
             deviceId = device.DeviceId,
             bootstrapToken = device.BootstrapToken,
+            deviceSecret = ClientSecret(),
             agentVersion = "integration-agent/1",
         });
         var response = await _factory.CreateClient().SendAsync(request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         return (await response.Content.ReadFromJsonAsync<EdgeCredentialIssued>())!;
     }
+
+    private static string ClientSecret() =>
+        $"client-generated-secret-{Guid.NewGuid():N}";
 
     private async Task<HttpResponseMessage> SendHeartbeatAsync(
         Guid deviceId,
@@ -559,11 +1076,31 @@ public sealed class EdgeEndpointTests(
             "Africa/Johannesburg").Value);
         await db.SaveChangesAsync();
         context.Set(tenantId, Guid.NewGuid(), permissions: LoadIxPermissions.All);
+        var location = Location.Create(
+            Guid.NewGuid(),
+            tenantId,
+            null,
+            "Foreign edge site",
+            $"FES-{tenantId.Value:N}"[..12],
+            LocationType.Generic,
+            Address.Create(
+                "1 Foreign Road",
+                null,
+                "Johannesburg",
+                "Gauteng",
+                "2000",
+                "ZA").Value!,
+            null,
+            null,
+            null,
+            null).Value!;
+        db.Locations.Add(location);
+        await db.SaveChangesAsync();
         var device = EdgeDevice.Create(
             Guid.NewGuid(),
             tenantId,
             "Foreign edge",
-            Guid.NewGuid(),
+            location.Id,
             "generic-line",
             "generic-line-v1").Value!;
         device.Register(DateTimeOffset.UtcNow, "foreign-test");
@@ -581,7 +1118,7 @@ public sealed class EdgeEndpointTests(
             Guid.NewGuid(),
             tenantId,
             device.Id,
-            device.SiteId,
+            location.Id,
             "Foreign indicator",
             $"FOREIGN-{Guid.NewGuid():N}"[..18],
             "generic-line",

@@ -19,6 +19,8 @@ public sealed class CurrentEdgeDeviceRequestContext : IEdgeDeviceRequestContext
 
     public string? ClientIpAddress { get; private set; }
 
+    public string? TraceId { get; private set; }
+
     public void Set(
         TenantId tenantId,
         Guid edgeDeviceId,
@@ -26,7 +28,8 @@ public sealed class CurrentEdgeDeviceRequestContext : IEdgeDeviceRequestContext
         string nonce,
         string idempotencyKey,
         DateTimeOffset timestampUtc,
-        string? clientIpAddress)
+        string? clientIpAddress,
+        string? traceId = null)
     {
         TenantId = tenantId;
         EdgeDeviceId = edgeDeviceId;
@@ -35,6 +38,7 @@ public sealed class CurrentEdgeDeviceRequestContext : IEdgeDeviceRequestContext
         IdempotencyKey = idempotencyKey;
         TimestampUtc = timestampUtc;
         ClientIpAddress = clientIpAddress;
+        TraceId = traceId;
     }
 
     public void Clear()
@@ -46,5 +50,6 @@ public sealed class CurrentEdgeDeviceRequestContext : IEdgeDeviceRequestContext
         IdempotencyKey = null;
         TimestampUtc = null;
         ClientIpAddress = null;
+        TraceId = null;
     }
 }

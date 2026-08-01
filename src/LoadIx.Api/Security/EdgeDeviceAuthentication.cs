@@ -1,8 +1,11 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
 using LoadIx.Domain.Edge;
 using LoadIx.Infrastructure.Edge;
+using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
@@ -29,7 +32,8 @@ public sealed class EdgeDeviceAuthenticationHandler(
     LoadIxDbContext dbContext,
     IPasswordHasher<EdgeDeviceCredential> passwordHasher,
     TimeProvider timeProvider,
-    IOptions<EdgeDeviceOptions> edgeOptions)
+    IOptions<EdgeDeviceOptions> edgeOptions,
+    SecurityAuditWriter auditWriter)
     : AuthenticationHandler<AuthenticationSchemeOptions>(
         options,
         logger,
@@ -38,34 +42,73 @@ public sealed class EdgeDeviceAuthenticationHandler(
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var request = Context.Request;
-        if (!Guid.TryParse(
-                request.Headers[EdgeDeviceAuthenticationDefaults.DeviceIdHeader].ToString(),
-                out var deviceId)
-            || string.IsNullOrWhiteSpace(
-                request.Headers[EdgeDeviceAuthenticationDefaults.SecretHeader])
-            || !TryGetRequestEnvelope(request, out var timestamp, out var nonce, out var idempotencyKey))
+        var deviceHeader = request.Headers[
+            EdgeDeviceAuthenticationDefaults.DeviceIdHeader].ToString();
+        if (!Guid.TryParse(deviceHeader, out var deviceId))
         {
             return AuthenticateResult.NoResult();
         }
 
-        var credential = await dbContext.EdgeDeviceCredentials
+        var secret = request.Headers[
+            EdgeDeviceAuthenticationDefaults.SecretHeader].ToString();
+        var nonce = request.Headers[EdgeDeviceAuthenticationDefaults.NonceHeader].ToString();
+        var idempotencyKey = request.Headers[
+            EdgeDeviceAuthenticationDefaults.IdempotencyHeader].ToString();
+        string? envelopeFailureCode = null;
+        if (string.IsNullOrWhiteSpace(secret)
+            || !TryGetRequestEnvelope(
+                request,
+                out var timestamp,
+                out envelopeFailureCode))
+        {
+            var failedDevice = await dbContext.EdgeDevices
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    item => item.Id == deviceId,
+                    Context.RequestAborted);
+            await RecordFailureAsync(
+                deviceId,
+                failedDevice?.TenantId,
+                null,
+                envelopeFailureCode ?? "edge.authentication.headers_invalid",
+                nonce,
+                idempotencyKey);
+            return AuthenticateResult.Fail("The device credential is invalid.");
+        }
+
+        var credentials = await dbContext.EdgeDeviceCredentials
             .IgnoreQueryFilters()
-            .SingleOrDefaultAsync(item => item.EdgeDeviceId == deviceId
-                && item.Type == EdgeDeviceCredentialType.Device
-                && item.RevokedAtUtc == null, Context.RequestAborted);
+            .Where(item => item.EdgeDeviceId == deviceId
+                && item.Type == EdgeDeviceCredentialType.Device)
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .ToListAsync(Context.RequestAborted);
         var device = await dbContext.EdgeDevices
             .IgnoreQueryFilters()
             .SingleOrDefaultAsync(item => item.Id == deviceId, Context.RequestAborted);
-        if (credential is null
-            || device is null
-            || device.Status != EdgeDeviceStatus.Active
-            || !credential.IsUsableAt(timeProvider.GetUtcNow())
-            || passwordHasher.VerifyHashedPassword(
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        var matchingCredential = credentials.FirstOrDefault(credential =>
+            passwordHasher.VerifyHashedPassword(
                 null!,
                 credential.SecretHash,
-                request.Headers[EdgeDeviceAuthenticationDefaults.SecretHeader].ToString())
-                == PasswordVerificationResult.Failed)
+                secret) != PasswordVerificationResult.Failed);
+        if (device is null
+            || device.Status != EdgeDeviceStatus.Active
+            || matchingCredential is null
+            || !matchingCredential.IsUsableAt(now))
         {
+            var failureCode = device?.Status != EdgeDeviceStatus.Active
+                ? "edge.authentication.device_revoked"
+                : matchingCredential is not null
+                    ? "edge.authentication.credential_revoked_or_expired"
+                    : "edge.authentication.invalid_secret";
+            await RecordFailureAsync(
+                deviceId,
+                device?.TenantId,
+                matchingCredential?.Id,
+                failureCode,
+                nonce,
+                idempotencyKey);
             return AuthenticateResult.Fail("The device credential is invalid.");
         }
 
@@ -76,7 +119,7 @@ public sealed class EdgeDeviceAuthenticationHandler(
                 device.Id.ToString()),
             new(
                 LoadIxClaimTypes.EdgeCredentialId,
-                credential.Id.ToString()),
+                matchingCredential.Id.ToString()),
             new(
                 LoadIxClaimTypes.TenantId,
                 device.TenantId.Value.ToString()),
@@ -95,19 +138,20 @@ public sealed class EdgeDeviceAuthenticationHandler(
     private bool TryGetRequestEnvelope(
         HttpRequest request,
         out DateTimeOffset timestamp,
-        out string nonce,
-        out string idempotencyKey)
+        out string? failureCode)
     {
         timestamp = default;
-        nonce = request.Headers[EdgeDeviceAuthenticationDefaults.NonceHeader].ToString();
-        idempotencyKey = request.Headers[EdgeDeviceAuthenticationDefaults.IdempotencyHeader]
-            .ToString();
+        failureCode = null;
+        var nonce = request.Headers[EdgeDeviceAuthenticationDefaults.NonceHeader].ToString();
+        var idempotencyKey = request.Headers[
+            EdgeDeviceAuthenticationDefaults.IdempotencyHeader].ToString();
         if (!long.TryParse(
                 request.Headers[EdgeDeviceAuthenticationDefaults.TimestampHeader],
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
                 out var unixSeconds))
         {
+            failureCode = "edge.timestamp_invalid";
             return false;
         }
 
@@ -117,17 +161,59 @@ public sealed class EdgeDeviceAuthenticationHandler(
         }
         catch (ArgumentOutOfRangeException)
         {
+            failureCode = "edge.timestamp_invalid";
             return false;
         }
 
         var now = timeProvider.GetUtcNow().ToUniversalTime();
-        return (now - timestamp).Duration()
-                <= TimeSpan.FromSeconds(edgeOptions.Value.TimestampToleranceSeconds)
-            && nonce.Length is >= 16 and <= 128
-            && idempotencyKey.Length is >= 8 and <= 128
-            && IsSafeHeaderValue(nonce)
-            && IsSafeHeaderValue(idempotencyKey);
+        if ((now - timestamp).Duration()
+            > TimeSpan.FromSeconds(edgeOptions.Value.TimestampToleranceSeconds))
+        {
+            failureCode = "edge.timestamp_outside_tolerance";
+            return false;
+        }
+
+        if (nonce.Length is not >= 16 and <= 128
+            || idempotencyKey.Length is not >= 8 and <= 128
+            || !IsSafeHeaderValue(nonce)
+            || !IsSafeHeaderValue(idempotencyKey))
+        {
+            failureCode = "edge.envelope_invalid";
+            return false;
+        }
+
+        return true;
     }
+
+    private async Task RecordFailureAsync(
+        Guid deviceId,
+        LoadIx.Domain.Common.TenantId? tenantId,
+        Guid? credentialId,
+        string failureCode,
+        string nonce,
+        string idempotencyKey)
+    {
+        await auditWriter.TryWriteAsync(
+            "EdgeDevice.AuthenticationFailed",
+            "Failed",
+            "EdgeDevice",
+            deviceId.ToString(),
+            tenantId,
+            null,
+            false,
+            Context.Connection.RemoteIpAddress?.ToString(),
+            Context.RequestAborted,
+            deviceId,
+            credentialId,
+            null,
+            failureCode,
+            Context.TraceIdentifier,
+            HashHeader(nonce),
+            HashHeader(idempotencyKey));
+    }
+
+    private static string HashHeader(string value) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     private static bool IsSafeHeaderValue(string value) => value.All(character =>
         char.IsAsciiLetterOrDigit(character)

@@ -1,4 +1,6 @@
 using LoadIx.Domain.Edge;
+using LoadIx.Domain.Locations;
+using LoadIx.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -45,6 +47,15 @@ internal sealed class EdgeDeviceConfiguration : IEntityTypeConfiguration<EdgeDev
             entity.Status,
             entity.Id,
         });
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Location>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.SiteId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -66,9 +77,17 @@ internal sealed class EdgeDeviceCredentialConfiguration
             .IsUnicode(false)
             .IsRequired();
         builder.Property(entity => entity.CreatedAtUtc).HasPrecision(7);
+        builder.Property(entity => entity.ActivatedAtUtc).HasPrecision(7);
+        builder.Property(entity => entity.ConfirmedAtUtc).HasPrecision(7);
+        builder.Property(entity => entity.OverlapExpiresAtUtc).HasPrecision(7);
         builder.Property(entity => entity.ExpiresAtUtc).HasPrecision(7);
         builder.Property(entity => entity.RevokedAtUtc).HasPrecision(7);
         builder.Property(entity => entity.LastUsedAtUtc).HasPrecision(7);
+        builder.Property(entity => entity.Status)
+            .HasConversion<string>()
+            .HasMaxLength(32)
+            .IsUnicode(false)
+            .IsRequired();
         builder.HasIndex(entity => new
         {
             entity.TenantId,
@@ -81,9 +100,32 @@ internal sealed class EdgeDeviceCredentialConfiguration
             entity.TenantId,
             entity.EdgeDeviceId,
             entity.Type,
+            entity.Status,
         })
             .IsUnique()
-            .HasFilter("[RevokedAtUtc] IS NULL");
+            .HasFilter("[RevokedAtUtc] IS NULL AND [Status] = 'PendingConfirmation'");
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
+            entity.EdgeDeviceId,
+            entity.Type,
+        })
+            .IsUnique()
+            .HasFilter("[RevokedAtUtc] IS NULL AND [Type] = 'Bootstrap'");
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDeviceCredential>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.ReplacedCredentialId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -120,6 +162,20 @@ internal sealed class WeighbridgeDeviceConfiguration
             entity.IsActive,
             entity.Id,
         });
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Location>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.SiteId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -159,6 +215,25 @@ internal sealed class RawWeightReadingConfiguration
             entity.ReceivedAtUtc,
             entity.Id,
         });
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<WeighbridgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.WeighbridgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeCommand>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeCommandId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(entity => new
         {
             entity.TenantId,
@@ -201,6 +276,25 @@ internal sealed class StableWeightReadingConfiguration
         });
         builder.HasIndex(entity => new { entity.TenantId, entity.RawWeightReadingId })
             .IsUnique();
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<RawWeightReading>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.RawWeightReadingId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<WeighbridgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.WeighbridgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -228,6 +322,15 @@ internal sealed class DeviceHeartbeatConfiguration
             entity.ReceivedAtUtc,
             entity.Id,
         });
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -286,6 +389,20 @@ internal sealed class EdgeCommandConfiguration : IEntityTypeConfiguration<EdgeCo
             entity.ReceivedAtUtc,
             entity.Id,
         });
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDeviceCredential>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.CredentialId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -318,5 +435,24 @@ internal sealed class EdgeTicketSubmissionConfiguration
             entity.ReceivedAtUtc,
             entity.Id,
         });
+        builder.HasOne<Tenant>()
+            .WithMany()
+            .HasForeignKey(entity => entity.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<WeighbridgeDevice>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.WeighbridgeDeviceId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<EdgeCommand>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.EdgeCommandId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

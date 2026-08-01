@@ -22,20 +22,18 @@ if (state is null
     && !string.IsNullOrWhiteSpace(options.BootstrapToken))
 {
     Console.WriteLine("Registering the simulator with the one-time bootstrap token.");
-    var issued = await client.BootstrapAsync(
-        options.DeviceId.Value,
-        options.BootstrapToken,
-        "loadix-edge-simulator/1.0",
-        CancellationToken.None);
+    var proposedSecret = options.DeviceSecret ?? SimulatorSecretGenerator.Create();
     state = new EdgeSimulatorState(
-        issued.DeviceId,
-        issued.Secret,
+        options.DeviceId.Value,
+        proposedSecret,
         null,
         null,
-        DateTimeOffset.UtcNow);
+        DateTimeOffset.UtcNow,
+        options.BootstrapToken,
+        proposedSecret,
+        SimulatorSecretGenerator.CreateRequestKey("sim-bootstrap"),
+        SimulatorSecretGenerator.CreateRequestKey("sim-bootstrap-nonce"));
     await stateStore.SaveAsync(state, CancellationToken.None);
-    Console.WriteLine(
-        "Registration succeeded; the credential was stored in the local state file.");
 }
 
 if (state is null)
@@ -45,7 +43,43 @@ if (state is null)
     return 2;
 }
 
-client.SetCredentials(state.DeviceId, options.DeviceSecret ?? state.DeviceSecret);
+if (!string.IsNullOrWhiteSpace(state.PendingBootstrapToken)
+    && !string.IsNullOrWhiteSpace(state.PendingBootstrapSecret)
+    && !string.IsNullOrWhiteSpace(state.PendingBootstrapIdempotencyKey)
+    && !string.IsNullOrWhiteSpace(state.PendingBootstrapNonce))
+{
+    var issued = await client.BootstrapAsync(
+        state.DeviceId,
+        state.PendingBootstrapToken,
+        state.PendingBootstrapSecret,
+        state.PendingBootstrapIdempotencyKey,
+        state.PendingBootstrapNonce,
+        "loadix-edge-simulator/1.0",
+        CancellationToken.None);
+    state = state with
+    {
+        DeviceId = issued.DeviceId,
+        DeviceSecret = state.PendingBootstrapSecret,
+        PendingBootstrapToken = null,
+        PendingBootstrapSecret = null,
+        PendingBootstrapIdempotencyKey = null,
+        PendingBootstrapNonce = null,
+        UpdatedAtUtc = DateTimeOffset.UtcNow,
+    };
+    await stateStore.SaveAsync(state, CancellationToken.None);
+    Console.WriteLine("Bootstrap completed; local credential state was updated.");
+}
+
+client.SetCredentials(state.DeviceId, state.DeviceSecret);
+if (!string.IsNullOrWhiteSpace(state.PendingReplacementSecret)
+    && !string.IsNullOrWhiteSpace(state.PendingRotationIdempotencyKey)
+    && !string.IsNullOrWhiteSpace(state.PendingRotationNonce)
+    && !string.IsNullOrWhiteSpace(state.PendingConfirmationIdempotencyKey)
+    && !string.IsNullOrWhiteSpace(state.PendingConfirmationNonce))
+{
+    await CompletePendingRotationAsync();
+}
+
 var configuration = await client.GetConfigurationAsync(CancellationToken.None);
 state = state with
 {
@@ -124,23 +158,27 @@ for (var index = 0; index < options.ReadingCount; index++)
 
     if (options.RotateAfter > 0 && index + 1 == options.RotateAfter)
     {
-        var rotated = await client.RotateCredentialAsync(CancellationToken.None);
-        if (rotated is null)
+        var replacementSecret = SimulatorSecretGenerator.Create();
+        var oldSecret = state.DeviceSecret;
+        state = state with
         {
-            Console.Error.WriteLine("Credential rotation failed.");
-        }
+            PreviousDeviceSecret = oldSecret,
+            PendingReplacementSecret = replacementSecret,
+            PendingRotationIdempotencyKey =
+                SimulatorSecretGenerator.CreateRequestKey("sim-rotation"),
+            PendingRotationNonce =
+                SimulatorSecretGenerator.CreateRequestKey("sim-rotation-nonce"),
+            PendingConfirmationIdempotencyKey =
+                SimulatorSecretGenerator.CreateRequestKey("sim-rotation-confirm"),
+            PendingConfirmationNonce =
+                SimulatorSecretGenerator.CreateRequestKey("sim-rotation-confirm-nonce"),
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+        };
+        await stateStore.SaveAsync(state, CancellationToken.None);
+        if (await CompletePendingRotationAsync())
+            Console.WriteLine("Credential rotation confirmed; local state was updated.");
         else
-        {
-            client.SetCredentials(rotated.DeviceId, rotated.Secret);
-            state = state with
-            {
-                DeviceSecret = rotated.Secret,
-                UpdatedAtUtc = DateTimeOffset.UtcNow,
-            };
-            await stateStore.SaveAsync(state, CancellationToken.None);
-            Console.WriteLine(
-                "Credential rotation succeeded; local state was updated.");
-        }
+            Console.Error.WriteLine("Credential rotation remains pending and will be retried.");
     }
 
     if (index + 1 < options.ReadingCount)
@@ -190,4 +228,58 @@ async Task<bool> TrySendReadingAsync(PendingReading pendingReading)
     {
         return false;
     }
+}
+
+async Task<bool> CompletePendingRotationAsync()
+{
+    if (string.IsNullOrWhiteSpace(state.PendingReplacementSecret)
+        || string.IsNullOrWhiteSpace(state.PendingRotationIdempotencyKey)
+        || string.IsNullOrWhiteSpace(state.PendingRotationNonce)
+        || string.IsNullOrWhiteSpace(state.PendingConfirmationIdempotencyKey)
+        || string.IsNullOrWhiteSpace(state.PendingConfirmationNonce))
+    {
+        return false;
+    }
+
+    var rotated = await client.RotateCredentialAsync(
+        state.PendingReplacementSecret,
+        state.PendingRotationIdempotencyKey,
+        state.PendingRotationNonce,
+        CancellationToken.None);
+    if (rotated is null) return false;
+
+    client.SetCredentials(state.DeviceId, state.PendingReplacementSecret);
+    if (!await client.ConfirmCredentialRotationAsync(
+            state.PendingConfirmationIdempotencyKey,
+            state.PendingConfirmationNonce,
+            CancellationToken.None))
+    {
+        if (!string.IsNullOrWhiteSpace(state.PreviousDeviceSecret))
+        {
+            state = state with
+            {
+                DeviceSecret = state.PreviousDeviceSecret,
+                UpdatedAtUtc = DateTimeOffset.UtcNow,
+            };
+            client.SetCredentials(state.DeviceId, state.DeviceSecret);
+            await stateStore.SaveAsync(state, CancellationToken.None);
+        }
+
+        return false;
+    }
+
+    state = state with
+    {
+        DeviceSecret = state.PendingReplacementSecret,
+        PreviousDeviceSecret = null,
+        PendingReplacementSecret = null,
+        PendingReplacementCredentialId = null,
+        PendingRotationIdempotencyKey = null,
+        PendingRotationNonce = null,
+        PendingConfirmationIdempotencyKey = null,
+        PendingConfirmationNonce = null,
+        UpdatedAtUtc = DateTimeOffset.UtcNow,
+    };
+    await stateStore.SaveAsync(state, CancellationToken.None);
+    return true;
 }
