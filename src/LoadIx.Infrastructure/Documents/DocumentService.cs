@@ -340,44 +340,13 @@ public sealed partial class DocumentService(
         catch (DbUpdateException)
         {
             dbContext.ChangeTracker.Clear();
-            var concurrentOperation = await dbContext.DocumentUploadOperations
-                .AsNoTracking()
-                .SingleOrDefaultAsync(operation =>
-                        operation.ActorUserId == actorId
-                        && operation.IdempotencyKey == idempotencyKey,
-                    CancellationToken.None);
-            if (concurrentOperation is null)
-            {
-                return Fail<DocumentItem>(
-                    DocumentFailure.StorageUnavailable,
-                    "document.upload_failed",
-                    "The document could not be stored safely.");
-            }
-
-            if (!string.Equals(
-                    concurrentOperation.RequestHash,
-                    requestHash,
-                    StringComparison.Ordinal))
-            {
-                return Fail<DocumentItem>(
-                    DocumentFailure.Conflict,
-                    "document.idempotency_key_reused",
-                    "The idempotency key was already used for a different upload.");
-            }
-
-            var concurrentDocument = await dbContext.Documents
-                .AsNoTracking()
-                .SingleOrDefaultAsync(
-                    document => document.Id == concurrentOperation.DocumentId,
-                    CancellationToken.None);
-            return concurrentDocument is null
-                ? Fail<DocumentItem>(
-                    DocumentFailure.Conflict,
-                    "document.replay_unavailable",
-                    "The original upload result is no longer available.")
-                : DocumentResults.Success(ToItem(
-                    concurrentDocument,
-                    access.CanManage && !access.IsFinalised));
+            return await RecoverConcurrentUploadAsync(
+                actorId,
+                idempotencyKey,
+                requestHash,
+                ownerType,
+                access.CanManage && !access.IsFinalised,
+                cancellationToken);
         }
         catch (Exception exception) when (
             exception is not OperationCanceledException)
@@ -402,6 +371,77 @@ public sealed partial class DocumentService(
                 }
             }
         }
+    }
+
+    private async Task<DocumentResult<DocumentItem>> RecoverConcurrentUploadAsync(
+        Guid actorId,
+        string idempotencyKey,
+        string requestHash,
+        DocumentOwnerType ownerType,
+        bool canManage,
+        CancellationToken cancellationToken)
+    {
+        const int maximumAttempts = 5;
+        for (var attempt = 1; attempt <= maximumAttempts; attempt++)
+        {
+            try
+            {
+                var concurrentOperation = await dbContext.DocumentUploadOperations
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(operation =>
+                            operation.ActorUserId == actorId
+                            && operation.IdempotencyKey == idempotencyKey,
+                        cancellationToken);
+                if (concurrentOperation is not null)
+                {
+                    if (!string.Equals(
+                            concurrentOperation.RequestHash,
+                            requestHash,
+                            StringComparison.Ordinal))
+                    {
+                        return Fail<DocumentItem>(
+                            DocumentFailure.Conflict,
+                            "document.idempotency_key_reused",
+                            "The idempotency key was already used for a different upload.");
+                    }
+
+                    var concurrentDocument = await dbContext.Documents
+                        .AsNoTracking()
+                        .SingleOrDefaultAsync(
+                            document => document.Id == concurrentOperation.DocumentId,
+                            cancellationToken);
+                    if (concurrentDocument is not null)
+                    {
+                        return DocumentResults.Success(ToItem(
+                            concurrentDocument,
+                            canManage));
+                    }
+                }
+
+                if (attempt < maximumAttempts)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(50 * attempt), cancellationToken);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (attempt < maximumAttempts)
+            {
+                LogUploadFailed(logger, exception.GetType().Name, ownerType, actorId);
+                await Task.Delay(TimeSpan.FromMilliseconds(50 * attempt), cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                LogUploadFailed(logger, exception.GetType().Name, ownerType, actorId);
+            }
+        }
+
+        return Fail<DocumentItem>(
+            DocumentFailure.StorageUnavailable,
+            "document.upload_failed",
+            "The original upload is still being committed. Retry with the same idempotency key.");
     }
 
     public async Task<DocumentResult<DocumentContent>> DownloadAsync(
