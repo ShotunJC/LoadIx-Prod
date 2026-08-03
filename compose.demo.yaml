@@ -127,6 +127,21 @@ services:
             -prune -exec rm -rf -- {} +
         }
 
+        generate_compile_manifest() {
+          manifest=/tmp/LoadIx.Infrastructure.CompileItems.props
+          {
+            printf '<Project><ItemGroup>\n'
+            find /workspace/src/LoadIx.Infrastructure -type f -name '*.cs' \
+              -not -path '*/bin/*' -not -path '*/obj/*' \
+              | sort \
+              | while IFS= read -r source; do
+                  printf '  <Compile Include="%s" />\n' "$$source"
+                done
+            printf '</ItemGroup></Project>\n'
+          } > "$$manifest"
+          export LoadIxCompileManifest="$$manifest"
+        }
+
         trap cleanup_build_outputs EXIT
         cleanup_build_outputs
         for project in \
@@ -141,6 +156,7 @@ services:
             "src/$$project/obj/Debug/net10.0" \
             "src/$$project/obj/Release/net10.0"
         done
+        generate_compile_manifest
 
         echo "Restoring project dependencies..."
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
@@ -198,6 +214,21 @@ services:
             -prune -exec rm -rf -- {} +
         }
 
+        generate_compile_manifest() {
+          manifest=/tmp/LoadIx.Infrastructure.CompileItems.props
+          {
+            printf '<Project><ItemGroup>\n'
+            find /workspace/src/LoadIx.Infrastructure -type f -name '*.cs' \
+              -not -path '*/bin/*' -not -path '*/obj/*' \
+              | sort \
+              | while IFS= read -r source; do
+                  printf '  <Compile Include="%s" />\n' "$$source"
+                done
+            printf '</ItemGroup></Project>\n'
+          } > "$$manifest"
+          export LoadIxCompileManifest="$$manifest"
+        }
+
         trap cleanup_build_outputs EXIT
         cleanup_build_outputs
         for project in \
@@ -212,6 +243,7 @@ services:
             "src/$$project/obj/Debug/net10.0" \
             "src/$$project/obj/Release/net10.0"
         done
+        generate_compile_manifest
 
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
 
