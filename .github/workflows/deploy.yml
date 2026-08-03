@@ -123,10 +123,59 @@ jobs:
                   "$minio_container" MINIO_ROOT_PASSWORD)"
               fi
 
+              rabbitmq_credentials_generated=false
+              if [ -z "${RABBITMQ_USERNAME:-}" ] || [ -z "${RABBITMQ_PASSWORD:-}" ]; then
+                export RABBITMQ_USERNAME=loadix
+                export RABBITMQ_PASSWORD="$(openssl rand -hex 32)"
+                rabbitmq_credentials_generated=true
+              fi
+
+              if [ -z "${MINIO_ACCESS_KEY:-}" ] || [ -z "${MINIO_SECRET_KEY:-}" ]; then
+                export MINIO_ACCESS_KEY=loadix
+                export MINIO_SECRET_KEY="$(openssl rand -hex 32)"
+              fi
+
               : "${RABBITMQ_USERNAME:?RabbitMQ username is not configured and could not be recovered.}"
               : "${RABBITMQ_PASSWORD:?RabbitMQ password is not configured and could not be recovered.}"
               : "${MINIO_ACCESS_KEY:?MinIO access key is not configured and could not be recovered.}"
               : "${MINIO_SECRET_KEY:?MinIO secret key is not configured and could not be recovered.}"
+
+              persist_environment_value() {
+                variable_name="$1"
+                variable_value="$2"
+                temporary_file="$(mktemp)"
+
+                if [ -f .env ]; then
+                  grep -v "^${variable_name}=" .env > "$temporary_file" || true
+                fi
+                printf '%s=%s\n' "$variable_name" "$variable_value" >> "$temporary_file"
+                chmod 600 "$temporary_file"
+                mv "$temporary_file" .env
+              }
+
+              persist_environment_value RABBITMQ_USERNAME "$RABBITMQ_USERNAME"
+              persist_environment_value RABBITMQ_PASSWORD "$RABBITMQ_PASSWORD"
+              persist_environment_value MINIO_ACCESS_KEY "$MINIO_ACCESS_KEY"
+              persist_environment_value MINIO_SECRET_KEY "$MINIO_SECRET_KEY"
+
+              if [ "$rabbitmq_credentials_generated" = true ] && [ -n "$rabbitmq_container" ]; then
+                if docker exec "$rabbitmq_container" \
+                  rabbitmqctl list_users --silent \
+                  | awk '{ print $1 }' \
+                  | grep -Fxq "$RABBITMQ_USERNAME"; then
+                  docker exec "$rabbitmq_container" \
+                    rabbitmqctl change_password \
+                    "$RABBITMQ_USERNAME" "$RABBITMQ_PASSWORD"
+                else
+                  docker exec "$rabbitmq_container" \
+                    rabbitmqctl add_user \
+                    "$RABBITMQ_USERNAME" "$RABBITMQ_PASSWORD"
+                fi
+
+                docker exec "$rabbitmq_container" \
+                  rabbitmqctl set_permissions -p / \
+                  "$RABBITMQ_USERNAME" '.*' '.*' '.*'
+              fi
 
               echo "Validating Docker Compose configuration..."
               docker compose \
@@ -163,11 +212,12 @@ jobs:
                 -f compose.demo.yaml \
                 images -q web)"
 
-              echo "Force-redeploying the freshly rebuilt API and frontend..."
+              echo "Force-redeploying the freshly rebuilt application and credentialed dependencies..."
               docker compose \
                 -f compose.yaml \
                 -f compose.demo.yaml \
-                up -d --force-recreate --remove-orphans api web caddy
+                up -d --force-recreate --remove-orphans \
+                rabbitmq minio api web caddy
 
               running_api_image="$(docker inspect --format '{{.Image}}' "$(docker compose \
                 -f compose.yaml \
