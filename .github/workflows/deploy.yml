@@ -89,11 +89,25 @@ jobs:
               rabbitmq_container="$(docker compose \
                 -f compose.yaml \
                 -f compose.demo.yaml \
-                ps -q rabbitmq)"
+                ps --all --quiet rabbitmq)"
               minio_container="$(docker compose \
                 -f compose.yaml \
                 -f compose.demo.yaml \
-                ps -q minio)"
+                ps --all --quiet minio)"
+
+              if [ -z "$rabbitmq_container" ]; then
+                rabbitmq_container="$(docker ps --all --quiet \
+                  --filter label=com.docker.compose.project=loadix-demo \
+                  --filter label=com.docker.compose.service=rabbitmq \
+                  | head -n 1)"
+              fi
+
+              if [ -z "$minio_container" ]; then
+                minio_container="$(docker ps --all --quiet \
+                  --filter label=com.docker.compose.project=loadix-demo \
+                  --filter label=com.docker.compose.service=minio \
+                  | head -n 1)"
+              fi
 
               if [ -n "$rabbitmq_container" ]; then
                 export RABBITMQ_USERNAME="$(read_container_environment \
