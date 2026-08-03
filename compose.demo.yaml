@@ -115,6 +115,15 @@ services:
       - |
         set -e
 
+        cleanup_build_outputs() {
+          find /workspace/src \
+            -type d \( -name bin -o -name obj \) \
+            -prune -exec rm -rf -- {} +
+        }
+
+        trap cleanup_build_outputs EXIT
+        cleanup_build_outputs
+
         echo "Restoring project dependencies..."
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
 
@@ -164,6 +173,15 @@ services:
     command:
       - |
         set -e
+
+        cleanup_build_outputs() {
+          find /workspace/src \
+            -type d \( -name bin -o -name obj \) \
+            -prune -exec rm -rf -- {} +
+        }
+
+        trap cleanup_build_outputs EXIT
+        cleanup_build_outputs
 
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
 
