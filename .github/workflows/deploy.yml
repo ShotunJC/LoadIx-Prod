@@ -74,6 +74,46 @@ jobs:
                 exit 1
               fi
 
+              echo "Loading dependency credentials from the existing containers..."
+              read_container_environment() {
+                container_id="$1"
+                variable_name="$2"
+
+                docker inspect \
+                  --format '{{range .Config.Env}}{{println .}}{{end}}' \
+                  "$container_id" \
+                  | sed -n "s/^${variable_name}=//p" \
+                  | tail -n 1
+              }
+
+              rabbitmq_container="$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                ps -q rabbitmq)"
+              minio_container="$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                ps -q minio)"
+
+              if [ -n "$rabbitmq_container" ]; then
+                export RABBITMQ_USERNAME="$(read_container_environment \
+                  "$rabbitmq_container" RABBITMQ_DEFAULT_USER)"
+                export RABBITMQ_PASSWORD="$(read_container_environment \
+                  "$rabbitmq_container" RABBITMQ_DEFAULT_PASS)"
+              fi
+
+              if [ -n "$minio_container" ]; then
+                export MINIO_ACCESS_KEY="$(read_container_environment \
+                  "$minio_container" MINIO_ROOT_USER)"
+                export MINIO_SECRET_KEY="$(read_container_environment \
+                  "$minio_container" MINIO_ROOT_PASSWORD)"
+              fi
+
+              : "${RABBITMQ_USERNAME:?RabbitMQ username is not configured and could not be recovered.}"
+              : "${RABBITMQ_PASSWORD:?RabbitMQ password is not configured and could not be recovered.}"
+              : "${MINIO_ACCESS_KEY:?MinIO access key is not configured and could not be recovered.}"
+              : "${MINIO_SECRET_KEY:?MinIO secret key is not configured and could not be recovered.}"
+
               echo "Validating Docker Compose configuration..."
               docker compose \
                 -f compose.yaml \
