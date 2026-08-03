@@ -2,6 +2,8 @@
 
   <PropertyGroup Condition="'$(LoadIxApiCompileManifest)' != ''">
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
     <EnableDefaultRazorGenerateItems>false</EnableDefaultRazorGenerateItems>
     <EnableDefaultRazorComponentItems>false</EnableDefaultRazorComponentItems>
   </PropertyGroup>
@@ -9,6 +11,11 @@
   <Import
     Project="$(LoadIxApiCompileManifest)"
     Condition="'$(LoadIxApiCompileManifest)' != '' and Exists('$(LoadIxApiCompileManifest)')" />
+
+  <ItemGroup Condition="'$(LoadIxApiCompileManifest)' != ''">
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LoadIx.Application\LoadIx.Application.csproj" />
