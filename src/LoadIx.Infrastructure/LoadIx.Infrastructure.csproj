@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <EnableDefaultCompileItems Condition="'$(LoadIxCompileManifest)' != ''">false</EnableDefaultCompileItems>
-    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
 
   <Import
