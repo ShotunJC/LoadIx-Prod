@@ -26,6 +26,7 @@ public static class LoadIxPermissions
     public const string FinanceManage = "Finance.Manage";
     public const string ReportView = "Report.View";
     public const string AuditView = "Audit.View";
+    public const string TenantDataExport = "Tenant.DataExport";
     public const string EdgeDeviceView = "EdgeDevice.View";
     public const string EdgeDeviceManage = "EdgeDevice.Manage";
     public const string EdgeDeviceReceive = "EdgeDevice.Receive";
@@ -56,6 +57,7 @@ public static class LoadIxPermissions
             FinanceManage,
             ReportView,
             AuditView,
+            TenantDataExport,
             EdgeDeviceView,
             EdgeDeviceManage,
             EdgeDeviceReceive,

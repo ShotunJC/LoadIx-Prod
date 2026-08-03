@@ -36,7 +36,9 @@ public sealed class IdentityTokenService(
     {
         var roleNames = await userManager.GetRolesAsync(user);
         var roles = await dbContext.Roles
-            .Where(role => roleNames.Contains(role.Name!))
+            .Where(role => roleNames.Contains(role.Name!)
+                && user.TenantId.HasValue
+                && role.TenantId == user.TenantId.Value)
             .Select(role => new
             {
                 role.Id,

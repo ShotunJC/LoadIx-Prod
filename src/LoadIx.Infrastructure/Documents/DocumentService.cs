@@ -378,7 +378,7 @@ public sealed partial class DocumentService(
         catch (Exception exception) when (
             exception is not OperationCanceledException)
         {
-            LogUploadFailed(logger, exception, ownerType, model.OwnerId);
+            LogUploadFailed(logger, exception.GetType().Name, ownerType, model.OwnerId);
             return Fail<DocumentItem>(
                 DocumentFailure.StorageUnavailable,
                 "document.upload_failed",
@@ -394,7 +394,7 @@ public sealed partial class DocumentService(
                 }
                 catch (Exception cleanupException)
                 {
-                    LogCleanupPending(logger, cleanupException, key);
+                    LogCleanupPending(logger, cleanupException.GetType().Name, Hash(key));
                 }
             }
         }
@@ -467,7 +467,7 @@ public sealed partial class DocumentService(
         catch (Exception exception) when (
             exception is not OperationCanceledException)
         {
-            LogOpenFailed(logger, exception, documentId);
+            LogOpenFailed(logger, exception.GetType().Name, documentId);
             return Fail<DocumentContent>(
                 DocumentFailure.StorageUnavailable,
                 "document.storage_unavailable",
@@ -864,7 +864,7 @@ public sealed partial class DocumentService(
         }
         catch (Exception exception)
         {
-            LogCleanupPending(logger, exception, key);
+            LogCleanupPending(logger, exception.GetType().Name, Hash(key));
         }
     }
 
@@ -1044,30 +1044,30 @@ public sealed partial class DocumentService(
     [LoggerMessage(
         EventId = 5101,
         Level = LogLevel.Error,
-        Message = "Document upload failed for owner {OwnerType}/{OwnerId}.")]
+        Message = "Document upload failed for owner {OwnerType}/{OwnerId}; provider error {ExceptionType}.")]
     private static partial void LogUploadFailed(
         ILogger logger,
-        Exception exception,
+        string exceptionType,
         DocumentOwnerType ownerType,
         Guid ownerId);
 
     [LoggerMessage(
         EventId = 5102,
         Level = LogLevel.Error,
-        Message = "Document object {DocumentId} could not be opened.")]
+        Message = "Document object {DocumentId} could not be opened; provider error {ExceptionType}.")]
     private static partial void LogOpenFailed(
         ILogger logger,
-        Exception exception,
+        string exceptionType,
         Guid documentId);
 
     [LoggerMessage(
         EventId = 5103,
         Level = LogLevel.Warning,
-        Message = "Document object cleanup is pending for {StorageKey}.")]
+        Message = "Document object cleanup is pending with {ExceptionType}; storage key hash {StorageKeyHash}.")]
     private static partial void LogCleanupPending(
         ILogger logger,
-        Exception exception,
-        string storageKey);
+        string exceptionType,
+        string storageKeyHash);
 
     private sealed record OwnerAccess(
         bool Exists,

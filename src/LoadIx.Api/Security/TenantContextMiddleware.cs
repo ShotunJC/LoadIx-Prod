@@ -17,6 +17,7 @@ public sealed class TenantContextMiddleware(
     ILogger<TenantContextMiddleware> logger) : IMiddleware
 {
     public const string SupportTenantHeader = "X-LoadIx-Support-Tenant";
+    public const string SupportReasonHeader = "X-LoadIx-Support-Reason";
     public const string SupportContextHeader = "X-LoadIx-Support-Context";
 
     public async Task InvokeAsync(
@@ -89,6 +90,7 @@ public sealed class TenantContextMiddleware(
             LoadIxClaimTypes.PlatformAdministrator,
             bool.TrueString);
         var supportHeader = context.Request.Headers[SupportTenantHeader].ToString();
+        var supportReason = context.Request.Headers[SupportReasonHeader].ToString();
 
         TenantId? effectiveTenantId = claimedTenantId.HasValue
             ? TenantId.From(claimedTenantId.Value)
@@ -101,6 +103,13 @@ public sealed class TenantContextMiddleware(
                 || !Guid.TryParse(supportHeader, out var supportTenantValue))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(supportReason)
+                || supportReason.Length > 500)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 return;
             }
 
@@ -129,7 +138,8 @@ public sealed class TenantContextMiddleware(
                 userId,
                 true,
                 context.Connection.RemoteIpAddress?.ToString(),
-                context.RequestAborted);
+                context.RequestAborted,
+                reason: supportReason);
         }
 
         if (effectiveTenantId.HasValue)

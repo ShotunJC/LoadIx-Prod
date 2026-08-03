@@ -38,24 +38,32 @@ public sealed class EdgeDeviceRateLimitingMiddleware(
     EdgeDeviceRateLimiter limiter,
     ILogger<EdgeDeviceRateLimitingMiddleware> logger)
 {
-    private static readonly Action<ILogger, Guid, Guid, Exception?> RateLimitRejected =
-        LoggerMessage.Define<Guid, Guid>(
+    private static readonly Action<ILogger, string, Exception?> RateLimitRejected =
+        LoggerMessage.Define<string>(
             LogLevel.Warning,
             new EventId(4201, "EdgeRateLimitRejected"),
-            "Edge device request rate limit rejected for tenant {TenantId} and device {EdgeDeviceId}.");
+            "Edge device request rate limit rejected for partition {Partition}.");
 
     public async Task InvokeAsync(
         HttpContext context,
         IEdgeDeviceRequestContext edgeRequestContext)
     {
-        if (edgeRequestContext.EdgeDeviceId is not { } deviceId
-            || edgeRequestContext.TenantId is not { } tenantId)
+        if (!context.Request.Path.StartsWithSegments("/api/v1/edge"))
         {
             await next(context);
             return;
         }
 
-        var partition = $"{tenantId.Value}:{deviceId}";
+        var rawDevicePartition = Guid.TryParse(
+            context.Request.Headers[EdgeDeviceAuthenticationDefaults.DeviceIdHeader],
+            out var rawDeviceId)
+            ? rawDeviceId.ToString()
+            : "invalid-device";
+        var partition = edgeRequestContext.EdgeDeviceId is { } deviceId
+            && edgeRequestContext.TenantId is { } tenantId
+            ? $"authenticated:{tenantId.Value}:{deviceId}"
+            : $"unauthenticated:{rawDevicePartition}:"
+                + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
         using var lease = await limiter.AcquireAsync(
             partition,
             context.RequestAborted);
@@ -65,8 +73,9 @@ public sealed class EdgeDeviceRateLimitingMiddleware(
             return;
         }
 
-        RateLimitRejected(logger, tenantId.Value, deviceId, null);
+        RateLimitRejected(logger, partition, null);
         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.Response.Headers["Retry-After"] = "60";
         context.Response.ContentType = "application/problem+json";
         await context.Response.WriteAsJsonAsync(
             new ProblemDetails

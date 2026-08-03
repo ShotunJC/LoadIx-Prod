@@ -8,12 +8,12 @@ public sealed class GlobalExceptionHandler(
     ILogger<GlobalExceptionHandler> logger,
     IProblemDetailsService problemDetailsService) : IExceptionHandler
 {
-    private static readonly Action<ILogger, string, string, Exception>
-        LogUnhandledException = LoggerMessage.Define<string, string>(
+    private static readonly Action<ILogger, string, string, string, Exception?>
+        LogUnhandledException = LoggerMessage.Define<string, string, string>(
             LogLevel.Error,
             new EventId(1, nameof(GlobalExceptionHandler)),
-            "Unhandled exception while processing {Method} {Path}");
-    private static readonly Action<ILogger, string, string, Exception>
+            "Unhandled {ExceptionType} while processing {Method} {Path}");
+    private static readonly Action<ILogger, string, string, Exception?>
         LogConcurrencyConflict = LoggerMessage.Define<string, string>(
             LogLevel.Warning,
             new EventId(2, "ConcurrencyConflict"),
@@ -41,15 +41,16 @@ public sealed class GlobalExceptionHandler(
                 logger,
                 httpContext.Request.Method,
                 httpContext.Request.Path,
-                exception);
+                null);
         }
         else
         {
             LogUnhandledException(
                 logger,
+                exception.GetType().Name,
                 httpContext.Request.Method,
                 httpContext.Request.Path,
-                exception);
+                null);
         }
 
         httpContext.Response.StatusCode = statusCode;
@@ -57,7 +58,9 @@ public sealed class GlobalExceptionHandler(
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
-            Exception = exception,
+            // The public response is intentionally independent of exception
+            // details; the trace ID is the safe support correlation key.
+            Exception = null,
             ProblemDetails = new ProblemDetails
             {
                 Status = statusCode,

@@ -1,3 +1,4 @@
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using LoadIx.Api.Configuration;
@@ -64,6 +65,23 @@ public static class AuthEndpoints
         IWebHostEnvironment environment,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Email)
+            || string.IsNullOrWhiteSpace(request.Password))
+        {
+            await auditWriter.WriteAsync(
+                "Authentication.Failed",
+                "Failed",
+                "User",
+                null,
+                null,
+                null,
+                false,
+                ClientIp(httpContext),
+                cancellationToken,
+                failureCode: "invalid_request");
+            return AuthenticationFailed();
+        }
+
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
         var candidates = await dbContext.Users
             .Where(user => user.NormalizedEmail == normalizedEmail)
@@ -154,6 +172,9 @@ public static class AuthEndpoints
         }
 
         var tokenHash = IdentityTokenService.HashToken(rawToken);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
         var session = await dbContext.RefreshSessions
             .Include(candidate => candidate.User)
             .SingleOrDefaultAsync(
@@ -162,7 +183,19 @@ public static class AuthEndpoints
         var now = timeProvider.GetUtcNow();
         if (session is null)
         {
+            await transaction.CommitAsync(cancellationToken);
             DeleteRefreshCookie(httpContext, environment);
+            await auditWriter.WriteAsync(
+                "Authentication.RefreshFailed",
+                "Failed",
+                "Session",
+                null,
+                null,
+                null,
+                false,
+                ClientIp(httpContext),
+                cancellationToken,
+                failureCode: "unknown_refresh_token");
             return AuthenticationFailed();
         }
 
@@ -179,6 +212,7 @@ public static class AuthEndpoints
                         now),
                     cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             DeleteRefreshCookie(httpContext, environment);
             await auditWriter.WriteAsync(
                 "Authentication.RefreshTokenReuse",
@@ -199,7 +233,19 @@ public static class AuthEndpoints
         {
             session.RevokedAtUtc ??= now;
             await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             DeleteRefreshCookie(httpContext, environment);
+            await auditWriter.WriteAsync(
+                "Authentication.RefreshFailed",
+                "Failed",
+                "Session",
+                session.Id.ToString(),
+                session.TenantId,
+                session.UserId,
+                false,
+                ClientIp(httpContext),
+                cancellationToken,
+                failureCode: "inactive_or_expired_session");
             return AuthenticationFailed();
         }
 
@@ -214,6 +260,7 @@ public static class AuthEndpoints
         session.ReplacedBySessionId = replacement.Entity.Id;
         dbContext.RefreshSessions.Add(replacement.Entity);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         var accessToken = await tokenService.IssueAccessTokenAsync(
             session.User,
             replacement.Entity.Id,
@@ -282,6 +329,23 @@ public static class AuthEndpoints
         IOptions<LoadIxOptions> loadIxOptions,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            await auditWriter.WriteAsync(
+                "Authentication.PasswordResetRequested",
+                "Accepted",
+                "User",
+                null,
+                null,
+                null,
+                false,
+                ClientIp(httpContext),
+                cancellationToken,
+                failureCode: "invalid_request");
+            return Results.Accepted(value: new GenericMessageResponse(
+                "If the account is eligible, password reset instructions will be sent."));
+        }
+
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
         var users = await dbContext.Users
             .Where(user => user.NormalizedEmail == normalizedEmail)
@@ -326,6 +390,13 @@ public static class AuthEndpoints
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Email)
+            || string.IsNullOrWhiteSpace(request.Token)
+            || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return InvalidToken();
+        }
+
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
         var users = await dbContext.Users
             .Where(user => user.NormalizedEmail == normalizedEmail)
@@ -373,6 +444,12 @@ public static class AuthEndpoints
         SecurityAuditWriter auditWriter,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Email)
+            || string.IsNullOrWhiteSpace(request.Token))
+        {
+            return InvalidToken();
+        }
+
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
         var users = await dbContext.Users
             .Where(user => user.NormalizedEmail == normalizedEmail)
@@ -413,6 +490,12 @@ public static class AuthEndpoints
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Token)
+            || string.IsNullOrWhiteSpace(request.Password))
+        {
+            return InvalidToken();
+        }
+
         var tokenHash = IdentityTokenService.HashToken(request.Token);
         var now = timeProvider.GetUtcNow();
         var invitation = await dbContext.UserInvitations.SingleOrDefaultAsync(
@@ -490,6 +573,12 @@ public static class AuthEndpoints
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword)
+            || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return AuthenticationFailed();
+        }
+
         var user = await userManager.FindByIdAsync(
             CurrentUserId(httpContext.User).ToString());
         if (user is null || !user.IsActive)
@@ -542,7 +631,9 @@ public static class AuthEndpoints
             .Select(claim => Guid.Parse(claim.Value))
             .ToArray();
         var roles = await dbContext.Roles
-            .Where(role => roleIds.Contains(role.Id))
+            .Where(role => roleIds.Contains(role.Id)
+                && user.TenantId.HasValue
+                && role.TenantId == user.TenantId.Value)
             .Select(role => new UserRoleSummary(role.Id, role.DisplayName))
             .ToListAsync(cancellationToken);
         return Results.Ok(new CurrentUserResponse(
@@ -672,22 +763,23 @@ public static class AuthEndpoints
         context.Response.Cookies.Append(
             RefreshCookieName(environment),
             token,
-            CookieOptions(environment, expiresAt));
+            CookieOptions(context, environment, expiresAt));
 
     private static void DeleteRefreshCookie(
         HttpContext context,
         IWebHostEnvironment environment) =>
         context.Response.Cookies.Delete(
             RefreshCookieName(environment),
-            CookieOptions(environment, DateTimeOffset.UnixEpoch));
+            CookieOptions(context, environment, DateTimeOffset.UnixEpoch));
 
     private static CookieOptions CookieOptions(
+        HttpContext context,
         IWebHostEnvironment environment,
         DateTimeOffset expiresAt) =>
         new()
         {
             HttpOnly = true,
-            Secure = !environment.IsDevelopment(),
+            Secure = !environment.IsDevelopment() || context.Request.IsHttps,
             SameSite = SameSiteMode.Strict,
             Path = "/",
             Expires = expiresAt,

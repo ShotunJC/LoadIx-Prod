@@ -3,6 +3,7 @@ using LoadIx.Application.Contracts;
 using LoadIx.Application.Documents;
 using LoadIx.Application.Edge;
 using LoadIx.Application.Finance;
+using LoadIx.Application.Governance;
 using LoadIx.Application.Instructions;
 using LoadIx.Application.MasterData;
 using LoadIx.Application.Notifications;
@@ -14,6 +15,7 @@ using LoadIx.Infrastructure.Contracts;
 using LoadIx.Infrastructure.Documents;
 using LoadIx.Infrastructure.Edge;
 using LoadIx.Infrastructure.Finance;
+using LoadIx.Infrastructure.Governance;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Instructions;
 using LoadIx.Infrastructure.MasterData;
@@ -40,6 +42,7 @@ public static class DependencyInjection
         services.AddDbContext<LoadIxDbContext>(options =>
             options.UseSqlServer(connectionString, sqlServer =>
                 sqlServer.MigrationsAssembly(typeof(LoadIxDbContext).Assembly.FullName)));
+        services.AddHttpContextAccessor();
         services.AddIdentityCore<ApplicationUser>(options =>
             {
                 options.SignIn.RequireConfirmedEmail = true;
@@ -78,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ISmsNotificationSender, LocalSmsNotificationSender>();
         services.AddScoped<IFinanceService, FinanceService>();
+        services.AddScoped<IDataGovernanceService, DataGovernanceService>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<ReportExportService>();
         services.AddScoped<IReportExportService>(serviceProvider =>

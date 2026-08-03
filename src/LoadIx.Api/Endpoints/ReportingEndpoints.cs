@@ -1,6 +1,7 @@
 using LoadIx.Application.Abstractions;
 using LoadIx.Application.Reporting;
 using LoadIx.Application.Security;
+using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Reporting;
 
 namespace LoadIx.Api.Endpoints;
@@ -64,6 +65,8 @@ public static class ReportingEndpoints
             string report,
             [AsParameters] ReportingQueryParameters query,
             IReportingService service,
+            ICurrentRequestContext requestContext,
+            SecurityAuditWriter auditWriter,
             CancellationToken cancellationToken) =>
         {
             if (query.TryGetDateError(out var error)) return error;
@@ -83,6 +86,23 @@ public static class ReportingEndpoints
             try
             {
                 var bytes = await service.ExportCsvAsync(report, query.ToFilter(), cancellationToken);
+                await auditWriter.WriteAsync(
+                    "Export.Report",
+                    "Succeeded",
+                    "Report",
+                    report.ToLowerInvariant(),
+                    requestContext.TenantId,
+                    requestContext.UserId,
+                    requestContext.IsSupportContext,
+                    null,
+                    cancellationToken,
+                    afterSummaryJson: AuditSummary.Serialize(new
+                    {
+                        delivery = "synchronous",
+                        byteCount = bytes.Length,
+                        page = query.Page,
+                        pageSize = query.PageSize,
+                    }));
                 return Results.File(bytes, "text/csv", $"loadix-{report.ToLowerInvariant()}.csv");
             }
             catch (ReportExportTooLargeException exception)
@@ -104,6 +124,7 @@ public static class ReportingEndpoints
             [AsParameters] ReportingQueryParameters query,
             IReportExportService queue,
             ICurrentRequestContext requestContext,
+            SecurityAuditWriter auditWriter,
             CancellationToken cancellationToken) =>
         {
             if (query.TryGetDateError(out var error)) return error;
@@ -115,6 +136,21 @@ public static class ReportingEndpoints
             }
 
             var job = await queue.EnqueueAsync(report, query.ToFilter(), tenantId, requestContext.UserId, cancellationToken);
+            await auditWriter.WriteAsync(
+                "Export.Report",
+                "Succeeded",
+                "ReportExportJob",
+                job.JobId.ToString(),
+                tenantId,
+                requestContext.UserId,
+                requestContext.IsSupportContext,
+                null,
+                cancellationToken,
+                afterSummaryJson: AuditSummary.Serialize(new
+                {
+                    report,
+                    delivery = "background",
+                }));
             return Results.Accepted($"/api/v1/reports/export-jobs/{job.JobId:D}", job);
         });
         group.MapGet("/export-jobs/{jobId:guid}", (
@@ -123,10 +159,12 @@ public static class ReportingEndpoints
             ICurrentRequestContext requestContext) => requestContext.TenantId is not { } tenantId
                 ? Results.NotFound()
                 : queue.GetJob(jobId, tenantId) is { } job ? Results.Ok(job) : Results.NotFound());
-        group.MapGet("/export-jobs/{jobId:guid}/download", (
+        group.MapGet("/export-jobs/{jobId:guid}/download", async (
             Guid jobId,
             IReportExportService queue,
-            ICurrentRequestContext requestContext) =>
+            ICurrentRequestContext requestContext,
+            SecurityAuditWriter auditWriter,
+            CancellationToken cancellationToken) =>
         {
             if (requestContext.TenantId is not { } tenantId || queue.GetJob(jobId, tenantId) is not { } job)
             {
@@ -134,9 +172,28 @@ public static class ReportingEndpoints
             }
 
             var content = queue.GetContent(jobId, tenantId);
-            return content is null
-                ? Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Export is not ready")
-                : Results.File(content, "text/csv", $"loadix-{job.Report.ToLowerInvariant()}.csv");
+            if (content is null)
+            {
+                return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Export is not ready");
+            }
+
+            await auditWriter.WriteAsync(
+                "Export.Report",
+                "Succeeded",
+                "ReportExportJob",
+                jobId.ToString(),
+                tenantId,
+                requestContext.UserId,
+                requestContext.IsSupportContext,
+                null,
+                cancellationToken,
+                afterSummaryJson: AuditSummary.Serialize(new
+                {
+                    report = job.Report,
+                    delivery = "download",
+                    byteCount = content.Length,
+                }));
+            return Results.File(content, "text/csv", $"loadix-{job.Report.ToLowerInvariant()}.csv");
         });
         return group;
     }

@@ -11,16 +11,16 @@ public sealed class OperationalOutboxDispatcher(
     TimeProvider timeProvider,
     ILogger<OperationalOutboxDispatcher> logger) : BackgroundService
 {
-    private static readonly Action<ILogger, Guid, Exception?> DeliveryFailed =
-        LoggerMessage.Define<Guid>(
+    private static readonly Action<ILogger, Guid, string, Exception?> DeliveryFailed =
+        LoggerMessage.Define<Guid, string>(
             LogLevel.Warning,
             new EventId(1, "OperationalEventDeliveryFailed"),
-            "Operational event {EventId} delivery failed");
-    private static readonly Action<ILogger, Exception?> DispatchCycleFailed =
-        LoggerMessage.Define(
+            "Operational event {EventId} delivery failed with {ExceptionType}");
+    private static readonly Action<ILogger, string, Exception?> DispatchCycleFailed =
+        LoggerMessage.Define<string>(
             LogLevel.Warning,
             new EventId(2, "OperationalDispatchCycleFailed"),
-            "Operational event dispatch cycle failed");
+            "Operational event dispatch cycle failed with {ExceptionType}");
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
@@ -32,7 +32,7 @@ public sealed class OperationalOutboxDispatcher(
             }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
-                DispatchCycleFailed(logger, exception);
+                DispatchCycleFailed(logger, exception.GetType().Name, null);
             }
         }
     }
@@ -66,8 +66,8 @@ public sealed class OperationalOutboxDispatcher(
             catch (Exception exception)
             {
                 message.Attempts++;
-                message.LastError = exception.Message[..Math.Min(exception.Message.Length, 1000)];
-                DeliveryFailed(logger, message.Id, exception);
+                message.LastError = "Operational event delivery failed.";
+                DeliveryFailed(logger, message.Id, exception.GetType().Name, null);
             }
         }
         if (messages.Count > 0) await db.SaveChangesAsync(cancellationToken);

@@ -25,9 +25,7 @@ public sealed class SqlServerHealthCheck(string connectionString) : IHealthCheck
         catch (Exception exception) when (
             exception is SqlException or InvalidOperationException)
         {
-            return HealthCheckResult.Unhealthy(
-                "SQL Server is not reachable.",
-                exception);
+            return HealthCheckResult.Unhealthy("SQL Server is not reachable.");
         }
     }
 }

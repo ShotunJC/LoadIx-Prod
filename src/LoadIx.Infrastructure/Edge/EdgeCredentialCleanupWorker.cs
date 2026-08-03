@@ -22,11 +22,11 @@ public sealed class EdgeCredentialCleanupWorker(
             new EventId(4202, "EdgeCredentialCleanupCompleted"),
             "Expired {CredentialCount} stale edge credential(s) during scheduled cleanup.");
 
-    private static readonly Action<ILogger, Exception?> CleanupFailed =
-        LoggerMessage.Define(
+    private static readonly Action<ILogger, string, Exception?> CleanupFailed =
+        LoggerMessage.Define<string>(
             LogLevel.Warning,
             new EventId(4203, "EdgeCredentialCleanupFailed"),
-            "Scheduled edge credential cleanup failed.");
+            "Scheduled edge credential cleanup failed with {ExceptionType}.");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -100,7 +100,7 @@ public sealed class EdgeCredentialCleanupWorker(
         }
         catch (Exception exception)
         {
-            CleanupFailed(logger, exception);
+            CleanupFailed(logger, exception.GetType().Name, null);
         }
     }
 }

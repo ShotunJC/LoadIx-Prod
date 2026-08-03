@@ -1,0 +1,65 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-scan:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore .NET dependencies
+        run: dotnet restore
+
+      - name: Scan .NET dependencies
+        run: dotnet list LoadIx.slnx package --vulnerable --include-transitive
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.13.1
+          cache: npm
+          cache-dependency-path: apps/loadix-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: apps/loadix-web
+        run: npm ci
+
+      - name: Scan frontend dependencies
+        working-directory: apps/loadix-web
+        run: npm audit --audit-level=high
+
+  container-scan:
+    name: Container vulnerability scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build API image
+        run: docker build --file deploy/api.Dockerfile --tag loadix-api:security .
+
+      - name: Scan API image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: loadix-api:security
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          vuln-type: os,library
+          version: v0.72.0

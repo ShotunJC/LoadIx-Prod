@@ -16,17 +16,17 @@ public sealed class NotificationDeliveryDispatcher(
 {
     private const int MaximumAttempts = 5;
 
-    private static readonly Action<ILogger, Guid, Exception?> DeliveryFailed =
-        LoggerMessage.Define<Guid>(
+    private static readonly Action<ILogger, Guid, string, Exception?> DeliveryFailed =
+        LoggerMessage.Define<Guid, string>(
             LogLevel.Warning,
             new EventId(1, "NotificationDeliveryFailed"),
-            "Notification delivery {DeliveryId} failed");
+            "Notification delivery {DeliveryId} failed with {ExceptionType}");
 
-    private static readonly Action<ILogger, Exception?> DispatchCycleFailed =
-        LoggerMessage.Define(
+    private static readonly Action<ILogger, string, Exception?> DispatchCycleFailed =
+        LoggerMessage.Define<string>(
             LogLevel.Warning,
             new EventId(2, "NotificationDispatchCycleFailed"),
-            "Notification delivery dispatch cycle failed");
+            "Notification delivery dispatch cycle failed with {ExceptionType}");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -39,7 +39,7 @@ public sealed class NotificationDeliveryDispatcher(
             }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
-                DispatchCycleFailed(logger, exception);
+                DispatchCycleFailed(logger, exception.GetType().Name, null);
             }
         }
     }
@@ -141,8 +141,8 @@ public sealed class NotificationDeliveryDispatcher(
         }
         catch (Exception exception)
         {
-            DeliveryFailed(logger, delivery.Id, exception);
-            return NotificationSendResult.Failed(exception.Message);
+            DeliveryFailed(logger, delivery.Id, exception.GetType().Name, null);
+            return NotificationSendResult.Failed("The notification provider failed.");
         }
     }
 

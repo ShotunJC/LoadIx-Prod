@@ -1,8 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using FluentAssertions;
 using LoadIx.Api.Endpoints;
+using LoadIx.Api.Security;
 using LoadIx.Application.Security;
 using LoadIx.Domain.Common;
 using LoadIx.Domain.Tenancy;
@@ -16,6 +20,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Tokens;
 
 namespace LoadIx.IntegrationTests.Api;
 
@@ -243,6 +248,49 @@ public sealed class AuthenticationEndpointTests(
     }
 
     [Fact]
+    public async Task DelegatedUserCannotModifyRoleWithGreaterAuthority()
+    {
+        var email = $"delegated-{Guid.NewGuid():N}@loadix.example.invalid";
+        await CreateTenantUserWithPermissionsAsync(
+            email,
+            "Delegated User 2026!",
+            [LoadIxPermissions.UserView, LoadIxPermissions.UserManage]);
+        var (factory, _) = CreateFactory();
+        Guid administratorRoleId;
+        string[] originalPermissions;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+            var administratorRole = await dbContext.Roles
+                .IgnoreQueryFilters()
+                .SingleAsync(role => role.DisplayName == "Tenant Administrator");
+            administratorRoleId = administratorRole.Id;
+            originalPermissions = administratorRole.GetPermissions().ToArray();
+        }
+
+        var client = factory.CreateClient();
+        var login = await LoginAsync(client, email, "Delegated User 2026!");
+        var payload = (await login.Content.ReadFromJsonAsync<AuthResponse>())!;
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", payload.AccessToken);
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/users/roles/{administratorRoleId}/permissions",
+            new UpdateRolePermissionsRequest(
+                [LoadIxPermissions.UserView, LoadIxPermissions.UserManage],
+                "Attempt to reduce administrator authority"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await using var verificationScope = factory.Services.CreateAsyncScope();
+        var verificationDb = verificationScope.ServiceProvider
+            .GetRequiredService<LoadIxDbContext>();
+        var unchangedRole = await verificationDb.Roles
+            .IgnoreQueryFilters()
+            .SingleAsync(role => role.Id == administratorRoleId);
+        unchangedRole.GetPermissions().Should().BeEquivalentTo(originalPermissions);
+    }
+
+    [Fact]
     public async Task NormalTenantUserCannotEnterAnotherTenantContext()
     {
         var secondTenantId = TenantId.New();
@@ -259,6 +307,9 @@ public sealed class AuthenticationEndpointTests(
         client.DefaultRequestHeaders.Add(
             "X-LoadIx-Support-Tenant",
             secondTenantId.Value.ToString());
+        client.DefaultRequestHeaders.Add(
+            "X-LoadIx-Support-Reason",
+            "Pilot support investigation");
 
         (await client.GetAsync("/api/v1/users")).StatusCode
             .Should().Be(HttpStatusCode.Forbidden);
@@ -280,6 +331,9 @@ public sealed class AuthenticationEndpointTests(
         client.DefaultRequestHeaders.Add(
             "X-LoadIx-Support-Tenant",
             secondTenantId.Value.ToString());
+        client.DefaultRequestHeaders.Add(
+            "X-LoadIx-Support-Reason",
+            "Pilot support investigation");
 
         var response = await client.GetAsync("/api/v1/users");
 
@@ -324,6 +378,44 @@ public sealed class AuthenticationEndpointTests(
             .Should().Be(HttpStatusCode.Unauthorized);
         (await LoginAsync(userClient, email, "Active User 2026!")).StatusCode
             .Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ExpiredAccessTokenIsRejectedAndAudited()
+    {
+        var (factory, _) = CreateFactory();
+        var client = factory.CreateClient();
+        var now = TimeProvider.System.GetUtcNow();
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+            "QqlwWau6fgTcPhzXxeKclRbIb7YJUNfC0L58wURHwDK"));
+        var expiredToken = new JwtSecurityToken(
+            issuer: "LoadIx.Api",
+            audience: "LoadIx.Web",
+            claims:
+            [
+                new Claim(
+                    JwtRegisteredClaimNames.Sub,
+                    DevelopmentSeedIds.ActorId.ToString()),
+            ],
+            notBefore: now.AddMinutes(-10).UtcDateTime,
+            expires: now.AddMinutes(-5).UtcDateTime,
+            signingCredentials: new SigningCredentials(
+                signingKey,
+                SecurityAlgorithms.HmacSha256));
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                new JwtSecurityTokenHandler().WriteToken(expiredToken));
+
+        (await client.GetAsync("/api/v1/auth/me")).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        (await dbContext.SecurityAuditEvents.AnyAsync(auditEvent =>
+            auditEvent.EventType == "Authentication.TokenRejected"
+            && auditEvent.FailureCode == "expired_token"))
+            .Should().BeTrue();
     }
 
     [Fact]
@@ -404,6 +496,44 @@ public sealed class AuthenticationEndpointTests(
         (await userManager.AddToRoleAsync(user, role.Name!)).Succeeded
             .Should().BeTrue();
         return user.Id;
+    }
+
+    private async Task CreateTenantUserWithPermissionsAsync(
+        string email,
+        string password,
+        IReadOnlyCollection<string> permissions)
+    {
+        var (factory, _) = CreateFactory();
+        await using var scope = factory.Services.CreateAsyncScope();
+        var userManager = scope.ServiceProvider
+            .GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider
+            .GetRequiredService<RoleManager<ApplicationRole>>();
+        var now = TimeProvider.System.GetUtcNow();
+        var role = new ApplicationRole
+        {
+            Id = Guid.NewGuid(),
+            TenantId = DevelopmentSeedIds.TenantId,
+            Name = $"{DevelopmentSeedIds.TenantId.Value:N}:delegated-{Guid.NewGuid():N}",
+            DisplayName = $"Delegated {Guid.NewGuid():N}",
+        };
+        role.SetPermissions(permissions);
+        (await roleManager.CreateAsync(role)).Succeeded.Should().BeTrue();
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            TenantId = DevelopmentSeedIds.TenantId,
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            DisplayName = "Delegated Integration Test User",
+            IsActive = true,
+            CreatedAtUtc = now,
+            ModifiedAtUtc = now,
+            SecurityStamp = Guid.NewGuid().ToString(),
+        };
+        (await userManager.CreateAsync(user, password)).Succeeded.Should().BeTrue();
+        (await userManager.AddToRoleAsync(user, role.Name!)).Succeeded.Should().BeTrue();
     }
 
     private async Task CreateTenantAsync(TenantId tenantId)

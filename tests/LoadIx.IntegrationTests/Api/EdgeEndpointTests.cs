@@ -60,6 +60,45 @@ public sealed class EdgeEndpointTests(
     }
 
     [Fact]
+    public async Task InvalidEdgeCredentialRequestsAreRateLimited()
+    {
+        using var factory = CreateFactory(edgePermitLimit: 1);
+        var client = factory.CreateClient();
+        var deviceId = Guid.NewGuid();
+        HttpResponseMessage? lastResponse = null;
+
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            using var request = DeviceRequest(
+                HttpMethod.Post,
+                "/api/v1/edge/heartbeat",
+                deviceId,
+                "invalid-device-secret",
+                $"rate-limit-{attempt}-{Guid.NewGuid():N}",
+                $"rate-limit-nonce-{attempt}-{Guid.NewGuid():N}",
+                new
+                {
+                    deviceTimestampUtc = DateTimeOffset.UtcNow,
+                    status = "Running",
+                });
+
+            lastResponse?.Dispose();
+            lastResponse = await client.SendAsync(request);
+        }
+
+        lastResponse.Should().NotBeNull();
+        using (var response = lastResponse!)
+        {
+            response.StatusCode.Should().Be(
+                HttpStatusCode.TooManyRequests);
+            response.Headers.GetValues("Retry-After")
+                .Single()
+                .Should()
+                .Be("60");
+        }
+    }
+
+    [Fact]
     public async Task DeviceAuthenticationReplayProtectionAndOfflineReplayAreEnforced()
     {
         var testRunId = Guid.NewGuid().ToString("N");
@@ -1128,12 +1167,19 @@ public sealed class EdgeEndpointTests(
         return new ForeignDevice(device.Id);
     }
 
-    private WebApplicationFactory<Program> CreateFactory() =>
+    private WebApplicationFactory<Program> CreateFactory(
+        int? edgePermitLimit = null) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("ConnectionStrings:Database", _connectionString);
             builder.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
+            if (edgePermitLimit is { } limit)
+            {
+                builder.UseSetting(
+                    "EdgeDevices:AuthenticatedRequestPermitLimit",
+                    limit.ToString(CultureInfo.InvariantCulture));
+            }
         });
 
     private sealed record BootstrapResponse(

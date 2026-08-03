@@ -93,11 +93,11 @@ jobs:
                 -f compose.demo.yaml \
                 build --pull --no-cache api web
 
-              echo "Starting infrastructure and application..."
+              echo "Force-redeploying the freshly rebuilt API and frontend..."
               docker compose \
                 -f compose.yaml \
                 -f compose.demo.yaml \
-                up -d --remove-orphans
+                up -d --force-recreate --remove-orphans api web caddy
 
               echo "Waiting for containers..."
               sleep 10
