@@ -1,8 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile
+      Include="$(MSBuildProjectDirectory)/**/*.cs"
+      Exclude="$(MSBuildProjectDirectory)/bin/**;$(MSBuildProjectDirectory)/obj/**" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LoadIx.Application\LoadIx.Application.csproj" />
