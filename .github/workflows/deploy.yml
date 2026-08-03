@@ -188,6 +188,44 @@ jobs:
                 caddy validate \
                 --config /etc/caddy/Caddyfile
 
+              echo "Checking the public HTTPS path..."
+              demo_domain="$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                exec -T caddy \
+                printenv DEMO_DOMAIN)"
+              for attempt in $(seq 1 30); do
+                public_status="$(curl \
+                  --output /dev/null \
+                  --silent \
+                  --show-error \
+                  --write-out '%{http_code}' \
+                  --connect-timeout 5 \
+                  --max-time 15 \
+                  "https://${demo_domain}/api/v1/system/info" || true)"
+
+                if [ "$public_status" = "200" ]; then
+                  echo "Public HTTPS endpoint is healthy."
+                  break
+                fi
+
+                if [ "$attempt" -eq 30 ]; then
+                  echo "Public HTTPS endpoint failed with status '${public_status:-connection failure}'."
+                  docker compose \
+                    -f compose.yaml \
+                    -f compose.demo.yaml \
+                    ps
+                  docker compose \
+                    -f compose.yaml \
+                    -f compose.demo.yaml \
+                    logs --tail=200 caddy web api
+                  exit 1
+                fi
+
+                echo "Public endpoint check attempt $attempt of 30 returned '${public_status:-connection failure}'..."
+                sleep 5
+              done
+
               docker image prune -f
 
               echo "LoadIx demo deployment completed successfully."
