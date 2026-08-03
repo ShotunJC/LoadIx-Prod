@@ -23,33 +23,35 @@ public sealed class LoadInstructionEndpointTests(
 {
     private const string AdministratorPassword = "LoadIx Demo Admin 2026!";
     private WebApplicationFactory<Program> _factory = null!;
+    private string _connectionString = string.Empty;
 
     public async Task InitializeAsync()
     {
-        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
-            database.ConnectionString)
-        {
-            InitialCatalog = $"LoadIx_Instructions_{Guid.NewGuid():N}",
-        };
+        var lease = await database.CreateDatabaseAsync("LoadIx_Instructions");
+        _connectionString = lease.ConnectionString;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
         {
             host.UseEnvironment("Development");
-            host.UseSetting("ConnectionStrings:Database", builder.ConnectionString);
+            host.UseSetting("ConnectionStrings:Database", _connectionString);
             host.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
         });
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
-        await dbContext.Database.MigrateAsync();
-        await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
-            .SeedAsync(CancellationToken.None);
-        await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
-            .SeedAsync(CancellationToken.None);
+        if (lease.RequiresInitialization)
+        {
+            await using var scope = _factory.Services.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+            await dbContext.Database.MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
+                .SeedAsync(CancellationToken.None);
+            await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
+                .SeedAsync(CancellationToken.None);
+            await database.CaptureTemplateAsync(_connectionString);
+        }
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
         _factory.Dispose();
-        return Task.CompletedTask;
+        await MsSqlDatabaseFixture.DeleteDatabaseAsync(_connectionString);
     }
 
     [Fact]

@@ -2491,6 +2491,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Status", "PlannedCollectionAtUtc", "Id");
 
+                    b.HasIndex("TenantId", "Status", "PlannedDeliveryAtUtc", "Id");
+
                     b.HasIndex("TenantId", "VehicleId", "PlannedCollectionAtUtc", "PlannedDeliveryAtUtc");
 
                     b.ToTable("Trips", "trips");
@@ -2582,6 +2584,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TripId");
+
+                    b.HasIndex("TenantId", "CapturedAtUtc", "TripId", "Id");
 
                     b.HasIndex("TenantId", "TripId", "CapturedAtUtc", "Id");
 
@@ -3382,6 +3386,10 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.Property<int>("Attempts")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("DeadLetteredAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
+
                     b.Property<DateTimeOffset?>("DispatchedAtUtc")
                         .HasPrecision(3)
                         .HasColumnType("datetimeoffset(3)");
@@ -3395,6 +3403,10 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.Property<string>("LastError")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetimeoffset(3)");
 
                     b.Property<DateTimeOffset>("OccurredAtUtc")
                         .HasPrecision(3)
@@ -3416,6 +3428,8 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                     b.HasIndex("DispatchedAtUtc", "OccurredAtUtc", "Id");
 
                     b.HasIndex("TenantId", "TripId", "OccurredAtUtc");
+
+                    b.HasIndex("DeadLetteredAtUtc", "DispatchedAtUtc", "NextAttemptAtUtc", "OccurredAtUtc", "Id");
 
                     b.ToTable("OperationalOutboxMessages", "operations");
                 });

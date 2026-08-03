@@ -205,56 +205,60 @@ public sealed class ContractService(
         var definitions = BuildDefinitions(model, renewIds: true);
         if (definitions.Result is not null) return definitions.Result;
 
-        await using var transaction =
-            await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        await dbContext.ContractRates
-            .Where(item => item.TransportContractId == contract.Id)
-            .ExecuteDeleteAsync(cancellationToken);
-        await dbContext.ContractCommodities
-            .Where(item => item.TransportContractId == contract.Id)
-            .ExecuteDeleteAsync(cancellationToken);
-        await dbContext.ContractRoutes
-            .Where(item => item.TransportContractId == contract.Id)
-            .ExecuteDeleteAsync(cancellationToken);
-        var trackedChildren = contract.Rates.Cast<object>()
-            .Concat(contract.Commodities)
-            .Concat(contract.Routes)
-            .ToArray();
-        foreach (var child in trackedChildren)
-        {
-            dbContext.Entry(child).State = EntityState.Detached;
-        }
+        return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await dbContext.Database.BeginTransactionAsync(cancellationToken);
+                await dbContext.ContractRates
+                    .Where(item => item.TransportContractId == contract.Id)
+                    .ExecuteDeleteAsync(cancellationToken);
+                await dbContext.ContractCommodities
+                    .Where(item => item.TransportContractId == contract.Id)
+                    .ExecuteDeleteAsync(cancellationToken);
+                await dbContext.ContractRoutes
+                    .Where(item => item.TransportContractId == contract.Id)
+                    .ExecuteDeleteAsync(cancellationToken);
+                var trackedChildren = contract.Rates.Cast<object>()
+                    .Concat(contract.Commodities)
+                    .Concat(contract.Routes)
+                    .ToArray();
+                foreach (var child in trackedChildren)
+                {
+                    dbContext.Entry(child).State = EntityState.Detached;
+                }
 
-        var result = contract.Update(
-            model.CustomerId,
-            model.ContractNumber,
-            model.Name,
-            model.StartDate,
-            model.EndDate,
-            model.DefaultCurrency,
-            model.PaymentTermsDays,
-            model.WeightTolerancePercent,
-            model.Notes,
-            definitions.Routes!,
-            model.CommodityIds,
-            definitions.Rates!);
-        if (result.IsFailure) return Validation<ContractDetail>(result.Error!);
-        dbContext.ChangeTracker.DetectChanges();
-        foreach (var child in trackedChildren)
-        {
-            dbContext.Entry(child).State = EntityState.Detached;
-        }
+                var result = contract.Update(
+                    model.CustomerId,
+                    model.ContractNumber,
+                    model.Name,
+                    model.StartDate,
+                    model.EndDate,
+                    model.DefaultCurrency,
+                    model.PaymentTermsDays,
+                    model.WeightTolerancePercent,
+                    model.Notes,
+                    definitions.Routes!,
+                    model.CommodityIds,
+                    definitions.Rates!);
+                if (result.IsFailure) return Validation<ContractDetail>(result.Error!);
+                dbContext.ChangeTracker.DetectChanges();
+                foreach (var child in trackedChildren)
+                {
+                    dbContext.Entry(child).State = EntityState.Detached;
+                }
 
-        dbContext.ContractRoutes.AddRange(contract.Routes);
-        dbContext.ContractRates.AddRange(contract.Rates);
-        dbContext.ContractCommodities.AddRange(contract.Commodities);
-        var saved = await SaveAsync(contract, "Updated", cancellationToken);
-        if (saved.IsSuccess)
-        {
-            await transaction.CommitAsync(cancellationToken);
-        }
+                dbContext.ContractRoutes.AddRange(contract.Routes);
+                dbContext.ContractRates.AddRange(contract.Rates);
+                dbContext.ContractCommodities.AddRange(contract.Commodities);
+                var saved = await SaveAsync(contract, "Updated", cancellationToken);
+                if (saved.IsSuccess)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
 
-        return saved;
+                return saved;
+            });
     }
 
     public Task<ContractResult<ContractDetail>> ActivateAsync(

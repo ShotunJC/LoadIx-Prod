@@ -151,6 +151,24 @@ dotnet ef migrations add DescriptiveMigrationName `
 Production deployments must run migrations as an explicit controlled step. The
 API does not mutate the production schema or seed data automatically on startup.
 
+## Performance workload and load testing
+
+Milestone 17 keeps the ordinary development seed small. To create the separate
+fictional workload of 10 tenants, 100 users, 1,000 drivers, 1,000 vehicles,
+10,000 load instructions, and 100,000 trips with related operational rows:
+
+```powershell
+$env:LOADIX_PERFORMANCE_SEED_PASSWORD = Read-Host "Performance seed password (12+ characters)"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\seed-performance.ps1
+```
+
+The command is accepted only in the Development environment and refuses to
+reseed an existing performance dataset. It is not part of normal API startup.
+After seeding, run `perf/k6/loadix.js` with the generated admin credentials and
+an assigned trip ID. The exact setup, Docker Desktop command, target thresholds,
+and the honest measurement record are in
+[docs/performance-results.md](docs/performance-results.md).
+
 ## Authentication security model
 
 LoadIx has no public registration endpoint. Tenant administrators create

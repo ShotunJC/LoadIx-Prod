@@ -28,26 +28,26 @@ public sealed class OperationsNotificationEndpointTests(
 
     public async Task InitializeAsync()
     {
-        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
-            database.ConnectionString)
-        {
-            InitialCatalog = $"LoadIx_Operations_{Guid.NewGuid():N}",
-        };
-        _connectionString = builder.ConnectionString;
+        var lease = await database.CreateDatabaseAsync("LoadIx_Operations");
+        _connectionString = lease.ConnectionString;
         var factory = CreateFactory();
-        await using var scope = factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
-        await db.Database.MigrateAsync();
-        await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
-            .SeedAsync(CancellationToken.None);
-        await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
-            .SeedAsync(CancellationToken.None);
+        if (lease.RequiresInitialization)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+            await db.Database.MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
+                .SeedAsync(CancellationToken.None);
+            await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
+                .SeedAsync(CancellationToken.None);
+            await database.CaptureTemplateAsync(_connectionString);
+        }
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
         foreach (var factory in _factories) factory.Dispose();
-        return Task.CompletedTask;
+        await MsSqlDatabaseFixture.DeleteDatabaseAsync(_connectionString);
     }
 
     [Fact]

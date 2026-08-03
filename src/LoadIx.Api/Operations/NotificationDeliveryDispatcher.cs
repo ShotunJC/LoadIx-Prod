@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using LoadIx.Application.Notifications;
 using LoadIx.Application.Security;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Notifications;
+using LoadIx.Infrastructure.Observability;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Resilience;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,17 +33,31 @@ public sealed class NotificationDeliveryDispatcher(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        try
         {
-            try
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                await DispatchAsync(stoppingToken);
+                var started = Stopwatch.GetTimestamp();
+                try
+                {
+                    await DispatchAsync(stoppingToken);
+                }
+                catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
+                {
+                    LoadIxTelemetry.RecordJobFailure("notification-dispatcher");
+                    DispatchCycleFailed(logger, exception.GetType().Name, null);
+                }
+                finally
+                {
+                    LoadIxTelemetry.RecordJobDuration(
+                        "notification-dispatcher",
+                        Stopwatch.GetElapsedTime(started));
+                }
             }
-            catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
-            {
-                DispatchCycleFailed(logger, exception.GetType().Name, null);
-            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
         }
     }
 
@@ -61,20 +78,56 @@ public sealed class NotificationDeliveryDispatcher(
             .Take(50)
             .ToListAsync(cancellationToken);
 
+        if (deliveries.Count == 0)
+        {
+            return;
+        }
+
+        var notificationIds = deliveries
+            .Select(delivery => delivery.NotificationId)
+            .Distinct()
+            .ToArray();
+        var messages = await db.NotificationMessages
+            .IgnoreQueryFilters()
+            .Where(message => notificationIds.Contains(message.Id))
+            .ToDictionaryAsync(message => message.Id, cancellationToken);
+        var recipientIds = messages.Values
+            .Select(message => message.RecipientUserId)
+            .Distinct()
+            .ToArray();
+        var users = await db.Users
+            .IgnoreQueryFilters()
+            .Where(user => recipientIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, cancellationToken);
+        var tenantIds = messages.Values.Select(message => message.TenantId).Distinct().ToArray();
+        var types = messages.Values.Select(message => message.Type).Distinct().ToArray();
+        var channels = deliveries.Select(delivery => delivery.Channel).Distinct().ToArray();
+        var templates = await db.TenantNotificationTemplates
+            .IgnoreQueryFilters()
+            .Where(template => tenantIds.Contains(template.TenantId)
+                && types.Contains(template.NotificationType)
+                && channels.Contains(template.Channel))
+            .ToDictionaryAsync(
+                template => (template.TenantId, template.NotificationType, template.Channel),
+                cancellationToken);
+
         foreach (var delivery in deliveries)
         {
-            var message = await db.NotificationMessages
-                .IgnoreQueryFilters()
-                .SingleAsync(item => item.Id == delivery.NotificationId, cancellationToken);
-            var user = await db.Users
-                .IgnoreQueryFilters()
-                .SingleOrDefaultAsync(item => item.Id == message.RecipientUserId, cancellationToken);
-            var template = await db.TenantNotificationTemplates
-                .IgnoreQueryFilters()
-                .SingleOrDefaultAsync(item => item.TenantId == message.TenantId
-                    && item.NotificationType == message.Type
-                    && item.Channel == delivery.Channel,
-                    cancellationToken);
+            if (!messages.TryGetValue(delivery.NotificationId, out var message))
+            {
+                ApplyResult(
+                    db,
+                    delivery,
+                    null,
+                    NotificationSendResult.Failed("The notification message is unavailable."),
+                    now);
+                continue;
+            }
+
+            users.TryGetValue(message.RecipientUserId, out var user);
+            templates.TryGetValue(
+                (message.TenantId, message.Type, delivery.Channel),
+                out var template);
 
             var subject = Render(template?.SubjectTemplate, message.Title, message);
             var body = Render(template?.BodyTemplate, message.Body, message);
@@ -90,10 +143,7 @@ public sealed class NotificationDeliveryDispatcher(
             ApplyResult(db, delivery, message, result, now);
         }
 
-        if (deliveries.Count > 0)
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<NotificationSendResult> TrySendAsync(
@@ -139,17 +189,24 @@ public sealed class NotificationDeliveryDispatcher(
                         $"Unsupported notification channel '{delivery.Channel}'.");
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             DeliveryFailed(logger, delivery.Id, exception.GetType().Name, null);
-            return NotificationSendResult.Failed("The notification provider failed.");
+            return NotificationSendResult.Failed(
+                "The notification provider failed.",
+                TransientOperationExecutor.IsTransient(exception)
+                    || exception is ProviderCircuitOpenException);
         }
     }
 
     private static void ApplyResult(
         LoadIxDbContext db,
         NotificationDelivery delivery,
-        NotificationMessage message,
+        NotificationMessage? message,
         NotificationSendResult result,
         DateTimeOffset now)
     {
@@ -160,14 +217,25 @@ public sealed class NotificationDeliveryDispatcher(
             delivery.Status = "Delivered";
             delivery.Failure = null;
             delivery.DeliveredAtUtc = now;
-            AddAuditEvent(db, delivery, message, "Delivered", now);
+            if (message is not null)
+            {
+                AddAuditEvent(db, delivery, message, "Delivered", now);
+            }
             return;
         }
 
+        LoadIxTelemetry.RecordNotificationFailure(delivery.Channel);
         delivery.Failure = result.Failure?[..Math.Min(result.Failure.Length, 1000)];
-        delivery.Status = delivery.Attempts >= MaximumAttempts ? "Failed" : "Pending";
-        delivery.NextAttemptAtUtc = now.AddMinutes(Math.Pow(2, delivery.Attempts));
-        AddAuditEvent(db, delivery, message, delivery.Status, now);
+        delivery.Status = !result.IsTransient || delivery.Attempts >= MaximumAttempts
+            ? "Failed"
+            : "Pending";
+        delivery.NextAttemptAtUtc = delivery.Status == "Pending"
+            ? now.AddSeconds(Math.Min(300, 2 << Math.Min(delivery.Attempts - 1, 7)))
+            : now;
+        if (message is not null)
+        {
+            AddAuditEvent(db, delivery, message, delivery.Status, now);
+        }
     }
 
     private static string Render(

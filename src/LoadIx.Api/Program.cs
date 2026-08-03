@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
@@ -7,6 +8,7 @@ using LoadIx.Api.Configuration;
 using LoadIx.Api.Endpoints;
 using LoadIx.Api.Errors;
 using LoadIx.Api.Health;
+using LoadIx.Api.Observability;
 using LoadIx.Api.Operations;
 using LoadIx.Api.Security;
 using LoadIx.Application;
@@ -39,6 +41,9 @@ const string apiVersion = "v1";
 const string webCorsPolicy = "LoadIxWeb";
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<HostOptions>(options =>
+    options.ShutdownTimeout = TimeSpan.FromSeconds(30));
 
 builder.Host.UseSerilog((context, services, loggerConfiguration) =>
     loggerConfiguration
@@ -412,7 +417,8 @@ builder.Services.AddProblemDetails(options =>
     {
         context.ProblemDetails.Extensions.TryAdd(
             "traceId",
-            context.HttpContext.TraceIdentifier);
+            Activity.Current?.TraceId.ToString()
+            ?? context.HttpContext.TraceIdentifier);
     };
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -484,11 +490,14 @@ builder.Services
     .ConfigureResource(resource => resource.AddService(loadIxOptions.ServiceName))
     .WithTracing(tracing => tracing
         .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation())
+        .AddHttpClientInstrumentation()
+        .AddSqlClientInstrumentation()
+        .AddSource(LoadIx.Infrastructure.Observability.LoadIxTelemetry.ActivitySourceName))
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
-        .AddRuntimeInstrumentation());
+        .AddRuntimeInstrumentation()
+        .AddMeter(LoadIx.Infrastructure.Observability.LoadIxTelemetry.MeterName));
 
 if (!string.IsNullOrWhiteSpace(
         builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
@@ -518,10 +527,33 @@ if (args.Contains("--seed-development", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--seed-performance", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "Performance seed data can only be applied in Development.");
+    }
+
+    var password = Environment.GetEnvironmentVariable(
+        "LOADIX_PERFORMANCE_SEED_PASSWORD");
+    if (string.IsNullOrWhiteSpace(password))
+    {
+        throw new InvalidOperationException(
+            "LOADIX_PERFORMANCE_SEED_PASSWORD must be set for the performance seed command.");
+    }
+
+    await using var scope = app.Services.CreateAsyncScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<PerformanceDataSeeder>();
+    await seeder.SeedAsync(password, CancellationToken.None);
+    return;
+}
+
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseSerilogRequestLogging();
+app.UseMiddleware<TraceCorrelationMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors(webCorsPolicy);
 app.UseRateLimiter();

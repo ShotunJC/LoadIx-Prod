@@ -16,7 +16,17 @@ internal sealed class OperationalOutboxConfiguration : IEntityTypeConfiguration<
         builder.Property(item => item.LastError).HasMaxLength(1000);
         builder.Property(item => item.OccurredAtUtc).HasPrecision(3);
         builder.Property(item => item.DispatchedAtUtc).HasPrecision(3);
+        builder.Property(item => item.NextAttemptAtUtc).HasPrecision(3);
+        builder.Property(item => item.DeadLetteredAtUtc).HasPrecision(3);
         builder.HasIndex(item => new { item.DispatchedAtUtc, item.OccurredAtUtc, item.Id });
+        builder.HasIndex(item => new
+        {
+            item.DeadLetteredAtUtc,
+            item.DispatchedAtUtc,
+            item.NextAttemptAtUtc,
+            item.OccurredAtUtc,
+            item.Id,
+        });
         builder.HasIndex(item => new { item.TenantId, item.TripId, item.OccurredAtUtc });
     }
 }

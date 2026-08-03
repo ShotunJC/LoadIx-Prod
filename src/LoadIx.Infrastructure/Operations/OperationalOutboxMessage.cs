@@ -12,6 +12,8 @@ public sealed class OperationalOutboxMessage
     public string Payload { get; set; } = string.Empty;
     public DateTimeOffset OccurredAtUtc { get; set; }
     public DateTimeOffset? DispatchedAtUtc { get; set; }
+    public DateTimeOffset? NextAttemptAtUtc { get; set; }
+    public DateTimeOffset? DeadLetteredAtUtc { get; set; }
     public int Attempts { get; set; }
     public string? LastError { get; set; }
 }

@@ -8,7 +8,6 @@ public sealed class SqlServerHealthCheck(string connectionString) : IHealthCheck
     private readonly string _healthConnectionString =
         new SqlConnectionStringBuilder(connectionString)
         {
-            InitialCatalog = "master",
             ConnectTimeout = 3,
         }.ConnectionString;
 
@@ -20,7 +19,11 @@ public sealed class SqlServerHealthCheck(string connectionString) : IHealthCheck
         {
             await using var connection = new SqlConnection(_healthConnectionString);
             await connection.OpenAsync(cancellationToken);
-            return HealthCheckResult.Healthy("SQL Server is reachable.");
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1";
+            command.CommandTimeout = 3;
+            await command.ExecuteScalarAsync(cancellationToken);
+            return HealthCheckResult.Healthy("LoadIx SQL database is reachable.");
         }
         catch (Exception exception) when (
             exception is SqlException or InvalidOperationException)

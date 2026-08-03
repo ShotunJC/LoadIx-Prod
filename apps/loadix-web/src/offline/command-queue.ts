@@ -55,7 +55,7 @@ export function createOfflineQueue(store: QueueStore, now = () => new Date()) {
       const current = await store.list()
       const timestamp = now().getTime()
       for (const command of current) {
-        if (command.state === 'conflict') continue
+        if (command.state === 'conflict' || command.state === 'failed') continue
         if (Date.parse(command.nextAttemptAt) > timestamp) continue
         if (timestamp - Date.parse(command.createdAt) > retentionMilliseconds) {
           await store.put({
@@ -76,27 +76,34 @@ export function createOfflineQueue(store: QueueStore, now = () => new Date()) {
             continue
           }
           const error = await response.text()
+          const retryable = isTransientStatus(response.status)
           await store.put({
             ...command,
             attempts: command.attempts + 1,
-            state: response.status === 409 ? 'conflict' : 'failed',
+            state:
+              response.status === 409
+                ? 'conflict'
+                : retryable
+                  ? 'pending'
+                  : 'failed',
             error: error || `The server returned ${String(response.status)}.`,
             nextAttemptAt: nextAttempt(
               command.attempts + 1,
               now(),
             ).toISOString(),
           })
-        } catch {
+        } catch (error) {
+          const transient = isTransientError(error)
           await store.put({
             ...command,
-            attempts: command.attempts + 1,
-            state: 'pending',
-            error:
-              'Waiting for a connection. The submission has not been lost.',
-            nextAttemptAt: nextAttempt(
-              command.attempts + 1,
-              now(),
-            ).toISOString(),
+            attempts: command.attempts + (transient ? 1 : 0),
+            state: transient ? 'pending' : 'failed',
+            error: transient
+              ? 'Waiting for a connection. The submission has not been lost.'
+              : 'The replay failed unexpectedly. Review and retry manually.',
+            nextAttemptAt: transient
+              ? nextAttempt(command.attempts + 1, now()).toISOString()
+              : command.nextAttemptAt,
           })
         }
       }
@@ -106,6 +113,19 @@ export function createOfflineQueue(store: QueueStore, now = () => new Date()) {
       await store.clear()
     },
   }
+}
+
+export function isTransientStatus(status: number) {
+  return status === 408 || status === 425 || status === 429 || status >= 500
+}
+
+function isTransientError(error: unknown) {
+  return (
+    error instanceof TypeError ||
+    (typeof DOMException !== 'undefined' &&
+      error instanceof DOMException &&
+      error.name === 'AbortError')
+  )
 }
 
 function nextAttempt(attempt: number, now: Date) {

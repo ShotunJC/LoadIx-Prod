@@ -16,6 +16,7 @@ import { getTrip, listTrips, type TripDetail } from '@/features/trips/trip-api'
 import {
   createIndexedDbQueueStore,
   createOfflineQueue,
+  isTransientStatus,
   type QueuedCommand,
 } from '@/offline/command-queue'
 
@@ -106,8 +107,9 @@ export function DriverPage() {
       await refreshQueue()
       return
     }
+    let response: Response
     try {
-      const response = await auth.request(url, {
+      response = await auth.request(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,16 +117,35 @@ export function DriverPage() {
         },
         body: JSON.stringify(body),
       })
-      if (!response.ok)
-        throw new Error('The server could not accept this update.')
-      await queryClient.invalidateQueries({ queryKey: ['driver-trips'] })
-      await queryClient.invalidateQueries({
-        queryKey: ['driver-trip', trip.id],
-      })
     } catch {
       await queue.enqueue(kind, { url, method: 'POST', body })
       await refreshQueue()
+      return
     }
+
+    if (!response.ok) {
+      if (response.status === 409) {
+        setLocationMessage(
+          'This trip changed elsewhere. Refresh it before retrying this update.',
+        )
+        await queryClient.invalidateQueries({
+          queryKey: ['driver-trip', trip.id],
+        })
+      } else if (isTransientStatus(response.status)) {
+        await queue.enqueue(kind, { url, method: 'POST', body })
+        await refreshQueue()
+      } else {
+        setLocationMessage(
+          'The server rejected this update. Review the trip and retry manually.',
+        )
+      }
+      return
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ['driver-trips'] })
+    await queryClient.invalidateQueries({
+      queryKey: ['driver-trip', trip.id],
+    })
   }
 
   const requestLocation = (trip: TripDetail) => {
