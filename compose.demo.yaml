@@ -18,11 +18,11 @@ services:
         Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
         User Id=${SQL_USER:-sa};Password=${SQL_PASSWORD:-};
         Encrypt=False;TrustServerCertificate=True
-      Dependencies__RabbitMqUsername: ${RABBITMQ_USERNAME:-}
+      Dependencies__RabbitMqUsername: ${RABBITMQ_USERNAME:-${RABBITMQ_USER:-}}
       Dependencies__RabbitMqPassword: ${RABBITMQ_PASSWORD:-}
       Documents__MalwareScanner: ${MALWARE_SCANNER:-Unconfigured}
-      Documents__AccessKey: ${MINIO_ACCESS_KEY:-}
-      Documents__SecretKey: ${MINIO_SECRET_KEY:-}
+      Documents__AccessKey: ${MINIO_ACCESS_KEY:-${MINIO_USER:-}}
+      Documents__SecretKey: ${MINIO_SECRET_KEY:-${MINIO_PASSWORD:-}}
       AccountEmail__Host: ${SMTP_HOST:-mail.crimsonskyit.co.za}
       AccountEmail__Port: ${SMTP_PORT:-587}
       AccountEmail__FromAddress: ${SMTP_FROM_ADDRESS:-accounts@crimsonskyit.co.za}
@@ -47,15 +47,15 @@ services:
 
   rabbitmq:
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-${RABBITMQ_USER:-}}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-}
     ports: !override
       - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
 
   minio:
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-${MINIO_USER:-}}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-${MINIO_PASSWORD:-}}
     ports: !override
       - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
