@@ -86,6 +86,7 @@ public static class DependencyInjection
         services.AddScoped<ILoadInstructionService, LoadInstructionService>();
         services.AddScoped<ITripService, TripService>();
         services.AddScoped<IDocumentService, DocumentService>();
+        services.AddSingleton<DocumentUploadCoordinator>();
         services.AddScoped<IMasterDataService, MasterDataService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ISmsNotificationSender, LocalSmsNotificationSender>();

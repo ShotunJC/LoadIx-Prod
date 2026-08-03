@@ -20,6 +20,7 @@ public sealed partial class DocumentService(
     IObjectStorage objectStorage,
     IMalwareScanner malwareScanner,
     SecurityAuditWriter auditWriter,
+    DocumentUploadCoordinator uploadCoordinator,
     TimeProvider timeProvider,
     IOptions<DocumentStorageOptions> options,
     ILogger<DocumentService> logger) : IDocumentService
@@ -168,6 +169,10 @@ public sealed partial class DocumentService(
             file.Bytes.Length,
             file.Checksum));
         var actorId = requestContext.UserId!.Value;
+        var tenantId = requestContext.TenantId!.Value;
+        await using var uploadLease = await uploadCoordinator.AcquireAsync(
+            $"{tenantId.Value:N}:{actorId:N}:{idempotencyKey}",
+            cancellationToken);
         var existingOperation = await dbContext.DocumentUploadOperations
             .AsNoTracking()
             .SingleOrDefaultAsync(operation =>
@@ -226,7 +231,6 @@ public sealed partial class DocumentService(
         }
 
         var documentId = Guid.NewGuid();
-        var tenantId = requestContext.TenantId!.Value;
         var extension = Path.GetExtension(file.DisplayFileName).ToLowerInvariant();
         var keyRoot =
             $"{tenantId.Value:N}/documents/{documentId:N}";

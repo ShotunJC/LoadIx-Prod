@@ -31,25 +31,25 @@ public sealed class TripEndpointTests(
 
     public async Task InitializeAsync()
     {
-        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
-            database.ConnectionString)
-        {
-            InitialCatalog = $"LoadIx_Trips_{Guid.NewGuid():N}",
-        };
-        _connectionString = builder.ConnectionString;
+        var lease = await database.CreateDatabaseAsync("LoadIx_Trips");
+        _connectionString = lease.ConnectionString;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
         {
             host.UseEnvironment("Development");
-            host.UseSetting("ConnectionStrings:Database", builder.ConnectionString);
+            host.UseSetting("ConnectionStrings:Database", _connectionString);
             host.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
         });
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
-        await context.Database.MigrateAsync();
-        await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
-            .SeedAsync(CancellationToken.None);
-        await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
-            .SeedAsync(CancellationToken.None);
+        if (lease.RequiresInitialization)
+        {
+            await using var scope = _factory.Services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+            await context.Database.MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
+                .SeedAsync(CancellationToken.None);
+            await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
+                .SeedAsync(CancellationToken.None);
+            await database.CaptureTemplateAsync(_connectionString);
+        }
     }
 
     public async Task DisposeAsync()

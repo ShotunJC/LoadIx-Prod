@@ -31,16 +31,12 @@ public sealed class DocumentEndpointTests(
 
     public async Task InitializeAsync()
     {
-        var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
-            database.ConnectionString)
-        {
-            InitialCatalog = $"LoadIx_Documents_{Guid.NewGuid():N}",
-        };
-        _connectionString = builder.ConnectionString;
+        var lease = await database.CreateDatabaseAsync("LoadIx_Documents");
+        _connectionString = lease.ConnectionString;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
         {
             host.UseEnvironment("Development");
-            host.UseSetting("ConnectionStrings:Database", builder.ConnectionString);
+            host.UseSetting("ConnectionStrings:Database", _connectionString);
             host.UseSetting("Documents:MaximumSizeMegabytes", "1");
             host.UseSetting("OTEL_EXPORTER_OTLP_ENDPOINT", string.Empty);
             host.ConfigureTestServices(services =>
@@ -51,13 +47,17 @@ public sealed class DocumentEndpointTests(
                 services.AddSingleton<IObjectStorage>(storage);
             });
         });
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
-        await context.Database.MigrateAsync();
-        await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
-            .SeedAsync(CancellationToken.None);
-        await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
-            .SeedAsync(CancellationToken.None);
+        if (lease.RequiresInitialization)
+        {
+            await using var scope = _factory.Services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+            await context.Database.MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
+                .SeedAsync(CancellationToken.None);
+            await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
+                .SeedAsync(CancellationToken.None);
+            await database.CaptureTemplateAsync(_connectionString);
+        }
     }
 
     public async Task DisposeAsync()
@@ -177,24 +177,22 @@ public sealed class DocumentEndpointTests(
         var driverId = await DriverIdAsync(client);
         var pdf = "%PDF-1.7\nConcurrent synthetic document\n%%EOF"u8.ToArray();
 
-        var responses = await Task.WhenAll(
+        var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
             UploadAsync(
                 client,
                 driverId,
                 "concurrent.pdf",
                 pdf,
                 "application/pdf",
-                "document-concurrent-retry"),
-            UploadAsync(
-                client,
-                driverId,
-                "concurrent.pdf",
-                pdf,
-                "application/pdf",
-                "document-concurrent-retry"));
+                "document-concurrent-retry")));
 
-        responses.Should().OnlyContain(response =>
-            response.StatusCode == HttpStatusCode.Created);
+        var failedResponses = await Task.WhenAll(responses
+            .Where(response => response.StatusCode != HttpStatusCode.Created)
+            .Select(async response =>
+                $"{(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}"));
+        failedResponses.Should().BeEmpty(
+            "identical concurrent uploads should converge; failures: {0}",
+            string.Join(" | ", failedResponses));
         var documents = await Task.WhenAll(responses.Select(response =>
             response.Content.ReadFromJsonAsync<DocumentItem>()));
         documents.Select(document => document!.Id).Distinct()

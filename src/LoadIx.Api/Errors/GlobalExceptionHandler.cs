@@ -51,7 +51,7 @@ public sealed class GlobalExceptionHandler(
                 exception.GetType().Name,
                 httpContext.Request.Method,
                 httpContext.Request.Path,
-                null);
+                exception);
         }
 
         httpContext.Response.StatusCode = statusCode;
