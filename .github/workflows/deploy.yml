@@ -93,11 +93,31 @@ jobs:
                 -f compose.demo.yaml \
                 build --pull --no-cache api web
 
+              expected_api_image="$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                images -q api)"
+              expected_web_image="$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                images -q web)"
+
               echo "Force-redeploying the freshly rebuilt API and frontend..."
               docker compose \
                 -f compose.yaml \
                 -f compose.demo.yaml \
                 up -d --force-recreate --remove-orphans api web caddy
+
+              running_api_image="$(docker inspect --format '{{.Image}}' "$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                ps -q api)")"
+              running_web_image="$(docker inspect --format '{{.Image}}' "$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                ps -q web)")"
+              test "$running_api_image" = "$expected_api_image"
+              test "$running_web_image" = "$expected_web_image"
 
               echo "Waiting for containers..."
               sleep 10
@@ -136,6 +156,22 @@ jobs:
                 echo "Health check attempt $attempt of 30..."
                 sleep 5
               done
+
+              echo "Checking that the deployed edge-device route is registered..."
+              edge_status="$(docker compose \
+                -f compose.yaml \
+                -f compose.demo.yaml \
+                exec -T api \
+                curl --output /dev/null --silent --write-out '%{http_code}' \
+                'http://localhost:8080/api/v1/edge-devices/?page=1&pageSize=1')"
+              if [ "$edge_status" != "401" ]; then
+                echo "Expected unauthenticated edge-device route to return 401; received $edge_status."
+                docker compose \
+                  -f compose.yaml \
+                  -f compose.demo.yaml \
+                  logs --tail=200 api
+                exit 1
+              fi
 
               echo "Checking Caddy..."
               docker compose \
