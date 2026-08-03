@@ -130,10 +130,10 @@ services:
           LoadIx.Domain \
           LoadIx.Infrastructure; do
           mkdir -p \
-            "src/$project/bin/Debug/net10.0" \
-            "src/$project/bin/Release/net10.0" \
-            "src/$project/obj/Debug/net10.0" \
-            "src/$project/obj/Release/net10.0"
+            "src/$$project/bin/Debug/net10.0" \
+            "src/$$project/bin/Release/net10.0" \
+            "src/$$project/obj/Debug/net10.0" \
+            "src/$$project/obj/Release/net10.0"
         done
 
         echo "Restoring project dependencies..."
@@ -201,10 +201,10 @@ services:
           LoadIx.Domain \
           LoadIx.Infrastructure; do
           mkdir -p \
-            "src/$project/bin/Debug/net10.0" \
-            "src/$project/bin/Release/net10.0" \
-            "src/$project/obj/Debug/net10.0" \
-            "src/$project/obj/Release/net10.0"
+            "src/$$project/bin/Debug/net10.0" \
+            "src/$$project/bin/Release/net10.0" \
+            "src/$$project/obj/Debug/net10.0" \
+            "src/$$project/obj/Release/net10.0"
         done
 
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
