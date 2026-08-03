@@ -231,8 +231,9 @@ jobs:
                   -f compose.yaml \
                   -f compose.demo.yaml \
                   exec -T api \
-                  curl --fail --silent \
-                  http://localhost:8080/health/ready \
+                  sh -c 'curl --fail --silent \
+                    --header "Host: $AllowedHosts" \
+                    http://localhost:8080/health/ready' \
                   > /dev/null; then
 
                   echo "LoadIx API is healthy."
@@ -259,8 +260,9 @@ jobs:
                 -f compose.yaml \
                 -f compose.demo.yaml \
                 exec -T api \
-                curl --output /dev/null --silent --write-out '%{http_code}' \
-                'http://localhost:8080/api/v1/edge-devices/?page=1&pageSize=1')"
+                sh -c 'curl --output /dev/null --silent --write-out "%{http_code}" \
+                  --header "Host: $AllowedHosts" \
+                  "http://localhost:8080/api/v1/edge-devices/?page=1&pageSize=1"')"
               if [ "$edge_status" != "401" ]; then
                 echo "Expected unauthenticated edge-device route to return 401; received $edge_status."
                 docker compose \

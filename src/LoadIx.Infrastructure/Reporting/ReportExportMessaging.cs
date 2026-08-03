@@ -183,20 +183,20 @@ public sealed class ReportExportService(
     {
         var now = timeProvider.GetUtcNow().ToUniversalTime();
         await db.ReportExportJobs.IgnoreQueryFilters()
-            .Where(item => item.TenantId.Value != Guid.Empty && item.Status == ReportExportJobStatus.Processing
+            .Where(item => item.Status == ReportExportJobStatus.Processing
                 && item.LeaseExpiresAtUtc < now && item.Attempts >= MaximumAttempts)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(item => item.Status, ReportExportJobStatus.Failed)
                 .SetProperty(item => item.Error, "Processing lease expired after the maximum retry count."), cancellationToken);
         await db.ReportExportJobs.IgnoreQueryFilters()
-            .Where(item => item.TenantId.Value != Guid.Empty && item.Status == ReportExportJobStatus.Processing
+            .Where(item => item.Status == ReportExportJobStatus.Processing
                 && item.LeaseExpiresAtUtc < now && item.Attempts < MaximumAttempts)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(item => item.Status, ReportExportJobStatus.Queued)
                 .SetProperty(item => item.Error, "Processing lease expired; the export was requeued."), cancellationToken);
 
         var jobs = await db.ReportExportJobs.IgnoreQueryFilters()
-            .Where(item => item.TenantId.Value != Guid.Empty && item.Status == ReportExportJobStatus.Queued
+            .Where(item => item.Status == ReportExportJobStatus.Queued
                 && (item.LastPublishedAtUtc == null || item.LastPublishedAtUtc < now.AddSeconds(-30))
                 && item.Attempts < MaximumAttempts)
             .OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id).Take(50).ToListAsync(cancellationToken);

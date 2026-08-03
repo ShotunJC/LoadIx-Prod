@@ -30,6 +30,12 @@ services:
       AccountEmail__Password: ${SMTP_PASSWORD:-}
       AccountEmail__EnableSsl: ${SMTP_ENABLE_SSL:-true}
     ports: !reset []
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --header 'Host: $${AllowedHosts}' http://localhost:8080/health/ready",
+        ]
 
   web:
     ports: !reset []
