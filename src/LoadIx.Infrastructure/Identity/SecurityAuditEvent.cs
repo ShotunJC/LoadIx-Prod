@@ -1,5 +1,5 @@
-using LoadIx.Domain.Common;
 using System.ComponentModel.DataAnnotations.Schema;
+using LoadIx.Domain.Common;
 
 namespace LoadIx.Infrastructure.Identity;
 

@@ -1,8 +1,8 @@
+using System.Diagnostics;
 using LoadIx.Domain.Common;
 using LoadIx.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace LoadIx.Infrastructure.Identity;
 

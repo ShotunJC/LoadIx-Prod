@@ -1,6 +1,6 @@
+using LoadIx.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using LoadIx.Infrastructure.Persistence.Configurations;
 
 namespace LoadIx.Infrastructure.Governance;
 

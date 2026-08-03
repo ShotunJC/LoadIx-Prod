@@ -12,9 +12,9 @@ using LoadIx.IntegrationTests.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Data.SqlClient;
 
 namespace LoadIx.IntegrationTests.Api;
 
