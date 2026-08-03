@@ -35,6 +35,8 @@ public static class UserAdminEndpoints
             .RequireRateLimiting("user-administration");
         users.MapPut("/{userId:guid}/roles", AssignRolesAsync)
             .RequireAuthorization(LoadIxPermissions.UserManage);
+        users.MapPut("/roles/{roleId:guid}/permissions", UpdateRolePermissionsAsync)
+            .RequireAuthorization(LoadIxPermissions.UserManage);
         users.MapPost("/{userId:guid}/deactivate", DeactivateUserAsync)
             .RequireAuthorization(LoadIxPermissions.UserManage);
         users.MapGet("/{userId:guid}/sessions", ListUserSessionsAsync)
@@ -66,7 +68,7 @@ public static class UserAdminEndpoints
                 dbContext.UserRoles
                     .Where(userRole => userRole.UserId == user.Id)
                     .Join(
-                        dbContext.Roles,
+                        dbContext.Roles.Where(role => role.TenantId == tenantId),
                         userRole => userRole.RoleId,
                         role => role.Id,
                         (_, role) => new UserRoleSummary(role.Id, role.DisplayName))
@@ -109,7 +111,7 @@ public static class UserAdminEndpoints
     {
         var tenantId = RequiredTenant(requestContext);
         var roles = await AuthorizedRolesAsync(
-            request.RoleIds,
+            request.RoleIds ?? [],
             tenantId,
             httpContext.User,
             dbContext,
@@ -252,11 +254,12 @@ public static class UserAdminEndpoints
         LoadIxDbContext dbContext,
         UserManager<ApplicationUser> userManager,
         SecurityAuditWriter auditWriter,
+        TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var tenantId = RequiredTenant(requestContext);
         var roles = await AuthorizedRolesAsync(
-            request.RoleIds,
+            request.RoleIds ?? [],
             tenantId,
             httpContext.User,
             dbContext,
@@ -274,6 +277,14 @@ public static class UserAdminEndpoints
             return Results.NotFound();
         }
 
+        var existingRoleIds = await dbContext.UserRoles
+            .Where(userRole => userRole.UserId == user.Id)
+            .Join(
+                dbContext.Roles.Where(role => role.TenantId == tenantId),
+                userRole => userRole.RoleId,
+                role => role.Id,
+                (_, role) => role.Id)
+            .ToArrayAsync(cancellationToken);
         var existingRoles = await userManager.GetRolesAsync(user);
         var removeResult = await userManager.RemoveFromRolesAsync(user, existingRoles);
         if (!removeResult.Succeeded)
@@ -289,8 +300,16 @@ public static class UserAdminEndpoints
             return IdentityFailure(addResult.Errors);
         }
 
+        await userManager.UpdateSecurityStampAsync(user);
+        var now = timeProvider.GetUtcNow();
+        await dbContext.RefreshSessions
+            .Where(session => session.UserId == user.Id && session.RevokedAtUtc == null)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(session => session.RevokedAtUtc, now),
+                cancellationToken);
+
         await auditWriter.WriteAsync(
-            "User.RolesAssigned",
+            "Authorization.RolesChanged",
             "Succeeded",
             "User",
             user.Id.ToString(),
@@ -298,7 +317,109 @@ public static class UserAdminEndpoints
             requestContext.UserId,
             requestContext.IsSupportContext,
             ClientIp(httpContext),
+            cancellationToken,
+            beforeSummaryJson: AuditSummary.Serialize(new
+            {
+                roleIds = existingRoleIds.Order().ToArray(),
+            }),
+            afterSummaryJson: AuditSummary.Serialize(new
+            {
+                roleIds = roles.Select(role => role.Id).Order().ToArray(),
+            }));
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> UpdateRolePermissionsAsync(
+        Guid roleId,
+        UpdateRolePermissionsRequest request,
+        HttpContext httpContext,
+        ICurrentRequestContext requestContext,
+        LoadIxDbContext dbContext,
+        UserManager<ApplicationUser> userManager,
+        SecurityAuditWriter auditWriter,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = RequiredTenant(requestContext);
+        var permissions = (request.Permissions ?? [])
+            .Where(permission => !string.IsNullOrWhiteSpace(permission))
+            .Select(permission => permission.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (permissions.Any(permission => !LoadIxPermissions.All.Contains(permission)))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                [nameof(request.Permissions)] = ["One or more permissions are invalid."],
+            });
+        }
+
+        if (!httpContext.User.HasClaim(
+                LoadIxClaimTypes.PlatformAdministrator,
+                bool.TrueString)
+            && permissions.Any(permission => !requestContext.HasPermission(permission)))
+        {
+            return AuthorityExceeded();
+        }
+
+        var role = await dbContext.Roles.SingleOrDefaultAsync(
+            candidate => candidate.Id == roleId && candidate.TenantId == tenantId,
             cancellationToken);
+        if (role is null)
+        {
+            return Results.NotFound();
+        }
+
+        var beforePermissions = role.GetPermissions().Order(StringComparer.Ordinal).ToArray();
+        if (!beforePermissions.ToHashSet(StringComparer.Ordinal).SetEquals(permissions)
+            && (string.IsNullOrWhiteSpace(request.Reason)
+                || request.Reason.Trim().Length > 500))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                [nameof(request.Reason)] =
+                ["A reason of no more than 500 characters is required when permissions change."],
+            });
+        }
+        role.SetPermissions(permissions);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var affectedUserIds = await dbContext.UserRoles
+            .Where(userRole => userRole.RoleId == role.Id)
+            .Select(userRole => userRole.UserId)
+            .ToArrayAsync(cancellationToken);
+        foreach (var affectedUserId in affectedUserIds)
+        {
+            var affectedUser = await dbContext.Users.SingleAsync(
+                user => user.Id == affectedUserId && user.TenantId == tenantId,
+                cancellationToken);
+            await userManager.UpdateSecurityStampAsync(affectedUser);
+        }
+
+        var now = timeProvider.GetUtcNow();
+        if (affectedUserIds.Length > 0)
+        {
+            await dbContext.RefreshSessions
+                .Where(session => affectedUserIds.Contains(session.UserId)
+                    && session.RevokedAtUtc == null)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(session => session.RevokedAtUtc, now),
+                    cancellationToken);
+        }
+
+        await auditWriter.WriteAsync(
+            "Authorization.PermissionsChanged",
+            "Succeeded",
+            "Role",
+            role.Id.ToString(),
+            tenantId,
+            requestContext.UserId,
+            requestContext.IsSupportContext,
+            ClientIp(httpContext),
+            cancellationToken,
+            beforeSummaryJson: AuditSummary.Serialize(new { permissions = beforePermissions }),
+            afterSummaryJson: AuditSummary.Serialize(new { permissions }),
+            reason: request.Reason);
         return Results.NoContent();
     }
 
@@ -431,6 +552,7 @@ public static class UserAdminEndpoints
         var events = await dbContext.SecurityAuditEvents
             .Where(auditEvent => auditEvent.TenantId == tenantId)
             .OrderByDescending(auditEvent => auditEvent.OccurredAtUtc)
+            .ThenByDescending(auditEvent => auditEvent.Id)
             .Take(200)
             .Select(auditEvent => new AuditEventResponse(
                 auditEvent.Id,
@@ -440,7 +562,12 @@ public static class UserAdminEndpoints
                 auditEvent.TargetId,
                 auditEvent.ActorUserId,
                 auditEvent.IsSupportContext,
-                auditEvent.OccurredAtUtc))
+                auditEvent.OccurredAtUtc,
+                auditEvent.CorrelationId,
+                auditEvent.RequestMetadataJson,
+                auditEvent.BeforeSummaryJson,
+                auditEvent.AfterSummaryJson,
+                auditEvent.Reason))
             .ToListAsync(cancellationToken);
         return Results.Ok(events);
     }
@@ -534,6 +661,10 @@ public sealed record InviteUserRequest(
 
 public sealed record AssignRolesRequest(IReadOnlyCollection<Guid> RoleIds);
 
+public sealed record UpdateRolePermissionsRequest(
+    IReadOnlyCollection<string> Permissions,
+    string? Reason = null);
+
 public sealed record UserSummaryResponse(
     Guid Id,
     string Email,
@@ -562,4 +693,9 @@ public sealed record AuditEventResponse(
     string? TargetId,
     Guid? ActorUserId,
     bool IsSupportContext,
-    DateTimeOffset OccurredAtUtc);
+    DateTimeOffset OccurredAtUtc,
+    string? CorrelationId,
+    string? RequestMetadataJson,
+    string? BeforeSummaryJson,
+    string? AfterSummaryJson,
+    string? Reason);

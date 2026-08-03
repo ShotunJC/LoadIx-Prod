@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -12,6 +13,7 @@ using LoadIx.Application;
 using LoadIx.Application.Reporting;
 using LoadIx.Application.Security;
 using LoadIx.Application.System;
+using LoadIx.Domain.Common;
 using LoadIx.Infrastructure;
 using LoadIx.Infrastructure.Documents;
 using LoadIx.Infrastructure.Edge;
@@ -21,6 +23,8 @@ using LoadIx.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -50,6 +54,10 @@ builder.Services
     .Validate(
         options => Uri.TryCreate(options.WebOrigin, UriKind.Absolute, out _),
         "LoadIx:WebOrigin must be an absolute URI.")
+    .Validate(
+        options => string.IsNullOrWhiteSpace(options.TrustedProxyIp)
+            || IPAddress.TryParse(options.TrustedProxyIp, out _),
+        "LoadIx:TrustedProxyIp must be a valid IP address when configured.")
     .ValidateOnStart();
 
 builder.Services
@@ -73,6 +81,10 @@ builder.Services
                 "development-only",
                 StringComparison.OrdinalIgnoreCase),
         "A deployment-specific authentication signing key is required outside Development.")
+    .Validate(
+        options => builder.Environment.IsDevelopment()
+            || options.AccessTokenMinutes <= 15,
+        "Access tokens must expire within 15 minutes outside Development.")
     .ValidateOnStart();
 builder.Services
     .AddOptions<AccountEmailOptions>()
@@ -140,6 +152,17 @@ builder.Services.AddApplication(new SystemInfoDescriptor(
     loadIxOptions.Version,
     apiVersion));
 builder.Services.AddInfrastructure(databaseConnectionString);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+    if (IPAddress.TryParse(loadIxOptions.TrustedProxyIp, out var trustedProxy))
+    {
+        options.KnownProxies.Add(trustedProxy);
+    }
+});
 builder.Services.AddScoped<IdentityTokenService>();
 builder.Services.AddScoped<TenantContextMiddleware>();
 builder.Services.AddSingleton<EdgeDeviceRateLimiter>();
@@ -195,23 +218,80 @@ builder.Services
 
                 var dbContext = context.HttpContext.RequestServices
                     .GetRequiredService<LoadIxDbContext>();
-                var now = TimeProvider.System.GetUtcNow();
-                var isValid = await dbContext.Users.AnyAsync(user =>
-                        user.Id == userId
-                        && user.IsActive
-                        && user.EmailConfirmed
-                        && user.SecurityStamp == securityStamp,
-                    context.HttpContext.RequestAborted)
+                var timeProvider = context.HttpContext.RequestServices
+                    .GetRequiredService<TimeProvider>();
+                var now = timeProvider.GetUtcNow();
+                var userState = await dbContext.Users
+                    .AsNoTracking()
+                    .Where(user => user.Id == userId)
+                    .Select(user => new
+                    {
+                        user.TenantId,
+                        user.IsActive,
+                        user.EmailConfirmed,
+                        user.SecurityStamp,
+                    })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                var claimedTenantId = context.Principal?.FindFirst(
+                    LoadIxClaimTypes.TenantId)?.Value;
+                var tenantMatches = userState is not null
+                    && ((userState.TenantId is null && claimedTenantId is null)
+                        || (userState.TenantId is { } userTenant
+                            && Guid.TryParse(claimedTenantId, out var claimedTenant)
+                            && userTenant == TenantId.From(claimedTenant)));
+                var isValid = userState is not null
+                    && userState.IsActive
+                    && userState.EmailConfirmed
+                    && userState.SecurityStamp == securityStamp
+                    && tenantMatches
                     && await dbContext.RefreshSessions.AnyAsync(session =>
                             session.Id == sessionId
                             && session.UserId == userId
+                            && session.TenantId == userState.TenantId
                             && session.RevokedAtUtc == null
                             && session.ExpiresAtUtc > now,
                         context.HttpContext.RequestAborted);
                 if (!isValid)
                 {
+                    context.HttpContext.Items["LoadIx.TokenAuditWritten"] = true;
+                    var auditWriter = context.HttpContext.RequestServices
+                        .GetRequiredService<SecurityAuditWriter>();
+                    await auditWriter.TryWriteAsync(
+                        "Authentication.TokenRejected",
+                        "Failed",
+                        "Session",
+                        sessionId.ToString(),
+                        userState?.TenantId,
+                        userId,
+                        false,
+                        context.HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        context.HttpContext.RequestAborted,
+                        failureCode: "inactive_or_mismatched_session");
                     context.Fail("The session is no longer active.");
                 }
+            },
+            OnAuthenticationFailed = async context =>
+            {
+                if (context.HttpContext.Items.ContainsKey("LoadIx.TokenAuditWritten"))
+                {
+                    return;
+                }
+
+                var auditWriter = context.HttpContext.RequestServices
+                    .GetRequiredService<SecurityAuditWriter>();
+                await auditWriter.TryWriteAsync(
+                    "Authentication.TokenRejected",
+                    "Failed",
+                    "Session",
+                    null,
+                    null,
+                    null,
+                    false,
+                    context.HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    context.HttpContext.RequestAborted,
+                    failureCode: context.Exception is SecurityTokenExpiredException
+                        ? "expired_token"
+                        : "token_validation_failed");
             },
         };
     })
@@ -244,6 +324,41 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+        httpContext =>
+        {
+            if (!httpContext.Request.Path.StartsWithSegments("/api/v1"))
+            {
+                return RateLimitPartition.GetNoLimiter<string>("non-api");
+            }
+
+            var subject = httpContext.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var partition = string.IsNullOrWhiteSpace(subject)
+                ? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"
+                : $"user:{subject}";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partition,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Environment.IsDevelopment() ? 500 : 120,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                });
+        });
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.Headers["Retry-After"] = "60";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "Too Many Requests",
+                Detail = "The request rate limit has been exceeded.",
+                Type = "https://httpstatuses.com/429",
+                Instance = context.HttpContext.Request.Path,
+            },
+            cancellationToken);
+    };
     options.AddPolicy("authentication", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -312,8 +427,19 @@ builder.Services.AddCors(options =>
         webCorsPolicy,
         policy => policy
             .WithOrigins(loadIxOptions.WebOrigin)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
+            .WithHeaders(
+                "Authorization",
+                "Content-Type",
+                "If-Match",
+                "Idempotency-Key",
+                "X-LoadIx-Client",
+                TenantContextMiddleware.SupportTenantHeader,
+                TenantContextMiddleware.SupportReasonHeader,
+                EdgeDeviceAuthenticationDefaults.DeviceIdHeader,
+                EdgeDeviceAuthenticationDefaults.SecretHeader,
+                EdgeDeviceAuthenticationDefaults.TimestampHeader,
+                EdgeDeviceAuthenticationDefaults.NonceHeader)
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             .AllowCredentials());
 });
 
@@ -392,15 +518,17 @@ if (args.Contains("--seed-development", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseSerilogRequestLogging();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors(webCorsPolicy);
 app.UseRateLimiter();
+app.UseMiddleware<EdgeDeviceRateLimitingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<TenantContextMiddleware>();
-app.UseMiddleware<EdgeDeviceRateLimitingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -433,6 +561,7 @@ versionedApi.MapOperationsEndpoints();
 versionedApi.MapNotificationEndpoints();
 versionedApi.MapFinanceEndpoints();
 versionedApi.MapReportingEndpoints();
+versionedApi.MapGovernanceEndpoints();
 versionedApi.MapEdgeEndpoints();
 app.MapHub<OperationsHub>("/hubs/operations");
 

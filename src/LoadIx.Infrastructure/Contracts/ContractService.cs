@@ -552,6 +552,7 @@ public sealed class ContractService(
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            var value = await MapAsync(contract, cancellationToken);
             await auditWriter.WriteAsync(
                 $"Contract.{action}",
                 "Succeeded",
@@ -561,9 +562,9 @@ public sealed class ContractService(
                 requestContext.UserId,
                 requestContext.IsSupportContext,
                 null,
-                cancellationToken);
-            return ContractResult<ContractDetail>.Success(
-                await MapAsync(contract, cancellationToken));
+                cancellationToken,
+                afterSummaryJson: AuditSummary.Serialize(value));
+            return ContractResult<ContractDetail>.Success(value);
         }
         catch (DbUpdateConcurrencyException)
         {

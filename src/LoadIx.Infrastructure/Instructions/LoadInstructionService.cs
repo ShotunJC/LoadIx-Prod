@@ -594,6 +594,7 @@ public sealed class LoadInstructionService(
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            var value = await MapAsync(instruction, cancellationToken);
             await auditWriter.WriteAsync(
                 $"LoadInstruction.{action}",
                 "Succeeded",
@@ -603,9 +604,9 @@ public sealed class LoadInstructionService(
                 requestContext.UserId,
                 requestContext.IsSupportContext,
                 null,
-                cancellationToken);
-            return InstructionResult<InstructionDetail>.Success(
-                await MapAsync(instruction, cancellationToken));
+                cancellationToken,
+                afterSummaryJson: AuditSummary.Serialize(value));
+            return InstructionResult<InstructionDetail>.Success(value);
         }
         catch (DbUpdateConcurrencyException)
         {

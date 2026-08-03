@@ -139,7 +139,8 @@ public sealed record TripWeighbridgeModel(
     string Version,
     decimal GrossWeight,
     decimal TareWeight,
-    string Reference);
+    string Reference,
+    string? Reason = null);
 
 public sealed record TripNoteModel(string Version, string Note);
 

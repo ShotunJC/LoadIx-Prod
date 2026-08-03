@@ -1,4 +1,5 @@
 using LoadIx.Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LoadIx.Infrastructure.Identity;
 
@@ -16,11 +17,32 @@ public sealed class SecurityAuditEvent
 
     public string EventType { get; set; } = string.Empty;
 
+    [NotMapped]
+    public string Action
+    {
+        get => EventType;
+        set => EventType = value;
+    }
+
     public string Outcome { get; set; } = string.Empty;
 
     public string TargetType { get; set; } = string.Empty;
 
+    [NotMapped]
+    public string EntityType
+    {
+        get => TargetType;
+        set => TargetType = value;
+    }
+
     public string? TargetId { get; set; }
+
+    [NotMapped]
+    public string? EntityIdentifier
+    {
+        get => TargetId;
+        set => TargetId = value;
+    }
 
     public bool IsSupportContext { get; set; }
 
@@ -37,4 +59,12 @@ public sealed class SecurityAuditEvent
     public string? NonceHash { get; set; }
 
     public string? IdempotencyKeyHash { get; set; }
+
+    public string? RequestMetadataJson { get; set; }
+
+    public string? BeforeSummaryJson { get; set; }
+
+    public string? AfterSummaryJson { get; set; }
+
+    public string? Reason { get; set; }
 }

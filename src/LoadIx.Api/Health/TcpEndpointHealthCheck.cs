@@ -23,8 +23,7 @@ public sealed class TcpEndpointHealthCheck(
             exception is SocketException or IOException or ArgumentException)
         {
             return HealthCheckResult.Unhealthy(
-                $"{dependencyName} is not reachable.",
-                exception);
+                $"{dependencyName} is not reachable.");
         }
     }
 }

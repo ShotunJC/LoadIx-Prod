@@ -112,7 +112,14 @@ public sealed class FinanceService(
         var approved = financials.Value!.Approve(requestContext.UserId!.Value, now, model.Reason);
         if (approved.IsFailure) return Validation<TripFinancialsDetail>(approved.Error!);
         AddApproval("TripFinancials", financials.Value.Id, "Approved", now, model.Reason);
-        return await SaveAndReturnAsync(financials.Value, "TripFinancials.Approved", "TripFinancials", financials.Value.Id, Map, cancellationToken);
+        return await SaveAndReturnAsync(
+            financials.Value,
+            "TripFinancials.Approved",
+            "TripFinancials",
+            financials.Value.Id,
+            Map,
+            cancellationToken,
+            model.Reason);
     }
 
     public async Task<FinanceResult<FinancePagedResponse<InvoiceReadyTrip>>> ListInvoiceReadyAsync(InvoiceReadyQuery query, CancellationToken cancellationToken)
@@ -201,10 +208,10 @@ public sealed class FinanceService(
     }
 
     public Task<FinanceResult<InvoiceBatchDetail>> ApproveInvoiceBatchAsync(Guid id, VersionedFinanceCommand model, CancellationToken cancellationToken) =>
-        BatchTransitionAsync(id, model.Version, "InvoiceBatch.Approved", (batch, now) => batch.Approve(requestContext.UserId!.Value, now), cancellationToken);
+        BatchTransitionAsync(id, model.Version, "InvoiceBatch.Approved", (batch, now) => batch.Approve(requestContext.UserId!.Value, now), model.Reason, cancellationToken);
 
     public Task<FinanceResult<InvoiceBatchDetail>> MarkInvoiceBatchExportedAsync(Guid id, VersionedFinanceCommand model, CancellationToken cancellationToken) =>
-        BatchTransitionAsync(id, model.Version, "InvoiceBatch.Exported", (batch, now) => batch.MarkExported(requestContext.UserId!.Value, now), cancellationToken);
+        BatchTransitionAsync(id, model.Version, "InvoiceBatch.Exported", (batch, now) => batch.MarkExported(requestContext.UserId!.Value, now), model.Reason, cancellationToken);
 
     public async Task<FinanceResult<byte[]>> ExportInvoiceBatchCsvAsync(Guid id, CancellationToken cancellationToken)
     {
@@ -214,16 +221,53 @@ public sealed class FinanceService(
         builder.AppendLine("BatchNumber,Customer,Contract,TripNumber,BillableTonnes,TaxExclusiveAmount,TaxTreatment,TaxAmount,Total,Currency");
         foreach (var line in batch.Value!.Lines)
             builder.AppendLine(string.Join(',', Escape(batch.Value.BatchNumber), Escape(batch.Value.CustomerName), Escape(batch.Value.ContractNumber), Escape(line.TripNumber), line.BillableTonnes.ToString(CultureInfo.InvariantCulture), line.TaxExclusiveAmount.ToString(CultureInfo.InvariantCulture), Escape(line.TaxTreatment), line.TaxAmount.ToString(CultureInfo.InvariantCulture), line.Total.ToString(CultureInfo.InvariantCulture), Escape(batch.Value.CurrencyCode)));
-        return FinanceResult<byte[]>.Success(Encoding.UTF8.GetBytes(builder.ToString()));
+        var content = Encoding.UTF8.GetBytes(builder.ToString());
+        await auditWriter.WriteAsync(
+            "Finance.Export",
+            "Succeeded",
+            "InvoiceBatch",
+            id.ToString(),
+            requestContext.TenantId,
+            requestContext.UserId,
+            requestContext.IsSupportContext,
+            null,
+            cancellationToken,
+            afterSummaryJson: AuditSummary.Serialize(new
+            {
+                format = "csv",
+                byteCount = content.Length,
+            }));
+        return FinanceResult<byte[]>.Success(content);
     }
 
     public async Task<FinanceResult<byte[]>> ExportInvoiceBatchPdfAsync(Guid id, CancellationToken cancellationToken)
     {
         var batch = await GetInvoiceBatchAsync(id, cancellationToken);
-        return !batch.IsSuccess ? FinanceResult<byte[]>.Fail(batch.Failure, batch.Code, batch.Message) : FinanceResult<byte[]>.Success(SimplePdf(batch.Value!));
+        if (!batch.IsSuccess)
+        {
+            return FinanceResult<byte[]>.Fail(batch.Failure, batch.Code, batch.Message);
+        }
+
+        var content = SimplePdf(batch.Value!);
+        await auditWriter.WriteAsync(
+            "Finance.Export",
+            "Succeeded",
+            "InvoiceBatch",
+            id.ToString(),
+            requestContext.TenantId,
+            requestContext.UserId,
+            requestContext.IsSupportContext,
+            null,
+            cancellationToken,
+            afterSummaryJson: AuditSummary.Serialize(new
+            {
+                format = "pdf",
+                byteCount = content.Length,
+            }));
+        return FinanceResult<byte[]>.Success(content);
     }
 
-    private async Task<FinanceResult<InvoiceBatchDetail>> BatchTransitionAsync(Guid id, string version, string action, Func<InvoiceBatch, DateTimeOffset, Result> transition, CancellationToken cancellationToken)
+    private async Task<FinanceResult<InvoiceBatchDetail>> BatchTransitionAsync(Guid id, string version, string action, Func<InvoiceBatch, DateTimeOffset, Result> transition, string? reason, CancellationToken cancellationToken)
     {
         var denied = Authorize<InvoiceBatchDetail>(LoadIxPermissions.FinanceManage);
         if (denied is not null) return denied;
@@ -233,8 +277,8 @@ public sealed class FinanceService(
         var now = timeProvider.GetUtcNow().ToUniversalTime();
         var result = transition(batch, now);
         if (result.IsFailure) return Validation<InvoiceBatchDetail>(result.Error!);
-        AddApproval("InvoiceBatch", batch.Id, action.Split('.').Last(), now, null);
-        return await SaveAndReturnAsync(batch, action, "InvoiceBatch", batch.Id, Map, cancellationToken);
+        AddApproval("InvoiceBatch", batch.Id, action.Split('.').Last(), now, reason);
+        return await SaveAndReturnAsync(batch, action, "InvoiceBatch", batch.Id, Map, cancellationToken, reason);
     }
 
     private async Task<FinanceResult<TripFinancials>> EnsureFinancialsAsync(Guid tripId, CancellationToken cancellationToken)
@@ -297,13 +341,25 @@ public sealed class FinanceService(
         if (approval.IsSuccess) dbContext.FinancialApprovals.Add(approval.Value);
     }
 
-    private async Task<FinanceResult<TModel>> SaveAndReturnAsync<TEntity, TModel>(TEntity entity, string eventType, string targetType, Guid targetId, Func<TEntity, TModel> map, CancellationToken cancellationToken)
+    private async Task<FinanceResult<TModel>> SaveAndReturnAsync<TEntity, TModel>(TEntity entity, string eventType, string targetType, Guid targetId, Func<TEntity, TModel> map, CancellationToken cancellationToken, string? reason = null)
     {
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
-            await auditWriter.WriteAsync($"Finance.{eventType}", "Succeeded", targetType, targetId.ToString(), requestContext.TenantId, requestContext.UserId, requestContext.IsSupportContext, null, cancellationToken);
-            return FinanceResult<TModel>.Success(map(entity));
+            var value = map(entity);
+            await auditWriter.WriteAsync(
+                $"Finance.{eventType}",
+                "Succeeded",
+                targetType,
+                targetId.ToString(),
+                requestContext.TenantId,
+                requestContext.UserId,
+                requestContext.IsSupportContext,
+                null,
+                cancellationToken,
+                afterSummaryJson: AuditSummary.Serialize(value),
+                reason: reason);
+            return FinanceResult<TModel>.Success(value);
         }
         catch (DbUpdateConcurrencyException)
         {

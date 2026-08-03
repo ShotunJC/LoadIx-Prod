@@ -25,7 +25,7 @@ RUN dotnet publish src/LoadIx.Api/LoadIx.Api.csproj \
     --output /app/publish \
     /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.3 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.10 AS final
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*

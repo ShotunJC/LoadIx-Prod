@@ -75,8 +75,8 @@ public sealed class ReportExportService(
     ILogger<ReportExportService> logger) : IReportExportService
 {
     private const int MaximumAttempts = 3;
-    private static readonly Action<ILogger, Guid, Exception?> PublishFailed =
-        LoggerMessage.Define<Guid>(LogLevel.Warning, new EventId(1501, "ReportExportPublishFailed"), "Report export job {JobId} could not be published");
+    private static readonly Action<ILogger, Guid, string, Exception?> PublishFailed =
+        LoggerMessage.Define<Guid, string>(LogLevel.Warning, new EventId(1501, "ReportExportPublishFailed"), "Report export job {JobId} could not be published with {ExceptionType}");
 
     public async Task<ReportExportJobResponse> EnqueueAsync(
         string report,
@@ -148,7 +148,7 @@ public sealed class ReportExportService(
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            PublishFailed(logger, job.Id, exception);
+            PublishFailed(logger, job.Id, exception.GetType().Name, null);
         }
     }
 }
@@ -162,10 +162,10 @@ public sealed class ReportExportWorker(
     private const int MaximumAttempts = 3;
     private const int MaximumBackgroundRows = 100_000;
     private const int BatchSize = 100;
-    private static readonly Action<ILogger, ulong, Exception?> ProcessingFailed =
-        LoggerMessage.Define<ulong>(LogLevel.Error, new EventId(1502, "ReportExportProcessingFailed"), "Report export delivery {DeliveryTag} failed");
-    private static readonly Action<ILogger, Exception?> ConnectionFailed =
-        LoggerMessage.Define(LogLevel.Warning, new EventId(1503, "ReportExportConnectionFailed"), "Report export worker connection failed; retrying");
+    private static readonly Action<ILogger, ulong, string, Exception?> ProcessingFailed =
+        LoggerMessage.Define<ulong, string>(LogLevel.Error, new EventId(1502, "ReportExportProcessingFailed"), "Report export delivery {DeliveryTag} failed with {ExceptionType}");
+    private static readonly Action<ILogger, string, Exception?> ConnectionFailed =
+        LoggerMessage.Define<string>(LogLevel.Warning, new EventId(1503, "ReportExportConnectionFailed"), "Report export worker connection failed with {ExceptionType}; retrying");
     private readonly RabbitMqOptions _options = options.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -176,7 +176,7 @@ public sealed class ReportExportWorker(
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
-                ConnectionFailed(logger, exception);
+                ConnectionFailed(logger, exception.GetType().Name, null);
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
         }
@@ -208,7 +208,7 @@ public sealed class ReportExportWorker(
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                ProcessingFailed(logger, args.DeliveryTag, exception);
+                ProcessingFailed(logger, args.DeliveryTag, exception.GetType().Name, null);
                 await channel.BasicNackAsync(args.DeliveryTag, false, requeue: false, cancellationToken);
             }
         };
@@ -316,8 +316,8 @@ public sealed class ReportExportRepublisher(
     IServiceScopeFactory scopeFactory,
     ILogger<ReportExportRepublisher> logger) : BackgroundService
 {
-    private static readonly Action<ILogger, Exception?> RepublishFailed =
-        LoggerMessage.Define(LogLevel.Warning, new EventId(1504, "ReportExportRepublishFailed"), "Report export republish cycle failed");
+    private static readonly Action<ILogger, string, Exception?> RepublishFailed =
+        LoggerMessage.Define<string>(LogLevel.Warning, new EventId(1504, "ReportExportRepublishFailed"), "Report export republish cycle failed with {ExceptionType}");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -331,7 +331,7 @@ public sealed class ReportExportRepublisher(
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                RepublishFailed(logger, exception);
+                RepublishFailed(logger, exception.GetType().Name, null);
             }
         }
     }

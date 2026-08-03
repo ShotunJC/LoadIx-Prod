@@ -362,6 +362,36 @@ acceptance/rejection.
 choice, queue retention/backpressure limits, hardware electrical safety review,
 and production certificate/identity management.
 
+## M16 - Audit, Compliance Controls, and Security Hardening
+
+**Outcome:** LoadIx has a reviewable security baseline for pilot preparation,
+with immutable audit evidence, stronger session and tenant controls, defensive
+HTTP/upload behavior, and explicit data-governance foundations.
+
+**Status:** Implemented and verified on 2026-08-03. This milestone provides
+technical foundations and does not claim legal compliance.
+
+**Deliverables:**
+
+- immutable, redacted audit events for authentication, authorization, support,
+  operational, document, finance, export, and edge-device actions;
+- session invalidation, refresh-token reuse detection, account lockout, tenant-
+  scoped authorization, support reasons, rate limiting, security headers, CORS,
+  trusted-proxy handling, and edge request throttling;
+- governance foundations for retention policy, personal-data inventory, bounded
+  tenant export, deactivation, anonymisation workflow, and support logging;
+- dependency/container scan workflow, refreshed API runtime image, deployment
+  safeguards, security regression tests, ADR-0016, and `docs/security-review.md`.
+
+**Key tests:** cross-tenant access, privilege escalation, object-ID tampering,
+revoked/deactivated authentication, malicious uploads, replay and duplicate
+submissions, mass assignment, edge rate limits, and audit-summary redaction.
+
+**Decision gates:** independent security/privacy review, managed secrets and
+malware scanner, distributed rate limiting/WAF, retention and legal-hold
+procedure, anonymisation scope, backup/object-store lifecycle, and pilot
+acceptance of remaining scan findings.
+
 ## Cross-Cutting Work in Every Milestone
 
 - schema migrations and realistic synthetic seed updates;

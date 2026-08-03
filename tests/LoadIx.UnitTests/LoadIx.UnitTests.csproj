@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\LoadIx.Application\LoadIx.Application.csproj" />
     <ProjectReference Include="..\..\src\LoadIx.Domain\LoadIx.Domain.csproj" />
+    <ProjectReference Include="..\..\src\LoadIx.Infrastructure\LoadIx.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\LoadIx.EdgeSimulator\LoadIx.EdgeSimulator.csproj" />
   </ItemGroup>
 

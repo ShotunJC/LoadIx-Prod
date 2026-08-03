@@ -413,6 +413,7 @@ public sealed class TripService(
         if (trip is null) return NotFound<TripDetail>();
         if (!ApplyVersion(trip, model.Version))
             return InvalidVersion<TripDetail>();
+        var previousStatus = trip.Status;
         var result = trip.ManualOverride(
             newStatus, Context(model.Reason, true));
         return result.IsFailure
@@ -422,7 +423,20 @@ public sealed class TripService(
                 "OverrideTrip",
                 idempotencyKey,
                 hash,
-                cancellationToken);
+                cancellationToken,
+                new TripAuditDetails
+                {
+                    AdditionalEventType = "Reconciliation.Override",
+                    BeforeSummaryJson = AuditSummary.Serialize(new
+                    {
+                        status = previousStatus.ToString(),
+                    }),
+                    AfterSummaryJson = AuditSummary.Serialize(new
+                    {
+                        status = newStatus.ToString(),
+                    }),
+                    Reason = model.Reason,
+                });
     }
 
     public async Task<TripResult<TripDetail>> RecordWeighbridgeAsync(
@@ -446,7 +460,8 @@ public sealed class TripService(
         var hash = Hash(
             model.GrossWeight,
             model.TareWeight,
-            model.Reference);
+            model.Reference,
+            model.Reason ?? string.Empty);
         var preflight = await PreflightAsync(
             id, command, idempotencyKey, hash, cancellationToken);
         if (preflight is not null) return preflight;
@@ -461,6 +476,47 @@ public sealed class TripService(
         }
         if (!ApplyVersion(trip, model.Version))
             return InvalidVersion<TripDetail>();
+        var before = source
+            ? new
+            {
+                grossWeight = trip.SourceGrossWeight,
+                tareWeight = trip.SourceTareWeight,
+                reference = trip.SourceWeighbridgeReference,
+            }
+            : new
+            {
+                grossWeight = trip.DestinationGrossWeight,
+                tareWeight = trip.DestinationTareWeight,
+                reference = trip.DestinationWeighbridgeReference,
+            };
+        var hasExistingMeasurement = before.grossWeight.HasValue
+            || before.tareWeight.HasValue
+            || !string.IsNullOrWhiteSpace(before.reference);
+        var isCorrection = hasExistingMeasurement
+            && (before.grossWeight != model.GrossWeight
+                || before.tareWeight != model.TareWeight
+                || !string.Equals(
+                    before.reference,
+                    model.Reference.Trim(),
+                    StringComparison.Ordinal));
+        if (isCorrection)
+        {
+            if (!requestContext.HasPermission(LoadIxPermissions.TripOverride))
+            {
+                return Forbidden<TripDetail>(
+                    "trip.weight_correction_permission_required",
+                    "Correcting a captured weight requires Trip.Override.");
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Reason)
+                || model.Reason.Trim().Length > 500)
+            {
+                return Fail<TripDetail>(
+                    TripFailure.Validation,
+                    "trip.weight_correction_reason_required",
+                    "A correction reason of no more than 500 characters is required.");
+            }
+        }
         var result = source
             ? trip.RecordSourceWeighbridge(
                 model.GrossWeight, model.TareWeight, model.Reference)
@@ -469,7 +525,32 @@ public sealed class TripService(
         return result.IsFailure
             ? Validation<TripDetail>(result.Error!)
             : await SaveCommandAsync(
-                trip, command, idempotencyKey, hash, cancellationToken);
+                trip,
+                command,
+                idempotencyKey,
+                hash,
+                cancellationToken,
+                new TripAuditDetails
+                {
+                    AdditionalEventType = isCorrection
+                        ? "Weight.Corrected"
+                        : "Weight.Recorded",
+                    BeforeSummaryJson = AuditSummary.Serialize(before),
+                    AfterSummaryJson = AuditSummary.Serialize(source
+                        ? new
+                        {
+                            grossWeight = trip.SourceGrossWeight,
+                            tareWeight = trip.SourceTareWeight,
+                            reference = trip.SourceWeighbridgeReference,
+                        }
+                        : new
+                        {
+                            grossWeight = trip.DestinationGrossWeight,
+                            tareWeight = trip.DestinationTareWeight,
+                            reference = trip.DestinationWeighbridgeReference,
+                        }),
+                    Reason = isCorrection ? model.Reason : null,
+                });
     }
 
     public async Task<TripResult<TripDetail>> AddNoteAsync(
@@ -754,7 +835,8 @@ public sealed class TripService(
         string command,
         string idempotencyKey,
         string hash,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TripAuditDetails? auditDetails = null)
     {
         dbContext.TripCommandOperations.Add(new TripCommandOperation
         {
@@ -767,13 +849,14 @@ public sealed class TripService(
             RequestHash = hash,
             CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
         });
-        return await SaveAsync(trip, command, cancellationToken);
+        return await SaveAsync(trip, command, cancellationToken, auditDetails);
     }
 
     private async Task<TripResult<TripDetail>> SaveAsync(
         Trip trip,
         string action,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TripAuditDetails? auditDetails = null)
     {
         dbContext.TripTransitions.AddRange(
             trip.Transitions.Where(item => item.TripId == Guid.Empty));
@@ -812,7 +895,65 @@ public sealed class TripService(
                 requestContext.UserId,
                 requestContext.IsSupportContext,
                 null,
-                cancellationToken);
+                cancellationToken,
+                beforeSummaryJson: auditDetails?.BeforeSummaryJson,
+                afterSummaryJson: auditDetails?.AfterSummaryJson
+                    ?? AuditSummary.Serialize(new
+                    {
+                        status = trip.Status.ToString(),
+                        driverId = trip.DriverId,
+                        vehicleId = trip.VehicleId,
+                        transition = trip.Transitions.LastOrDefault() is { } transition
+                            ? new
+                            {
+                                previousStatus = transition.PreviousStatus.ToString(),
+                                newStatus = transition.NewStatus.ToString(),
+                                transition.Reason,
+                                transition.IsManualOverride,
+                            }
+                            : null,
+                    }),
+                reason: auditDetails?.Reason);
+            var latestTransition = trip.Transitions.LastOrDefault();
+            if (latestTransition is not null)
+            {
+                await auditWriter.WriteAsync(
+                    "Trip.Transitioned",
+                    "Succeeded",
+                    "Trip",
+                    trip.Id.ToString(),
+                    requestContext.TenantId,
+                    requestContext.UserId,
+                    requestContext.IsSupportContext,
+                    null,
+                    cancellationToken,
+                    beforeSummaryJson: AuditSummary.Serialize(new
+                    {
+                        status = latestTransition.PreviousStatus.ToString(),
+                    }),
+                    afterSummaryJson: AuditSummary.Serialize(new
+                    {
+                        status = latestTransition.NewStatus.ToString(),
+                        isManualOverride = latestTransition.IsManualOverride,
+                    }),
+                    reason: latestTransition.Reason);
+            }
+            if (!string.IsNullOrWhiteSpace(auditDetails?.AdditionalEventType))
+            {
+                await auditWriter.WriteAsync(
+                    auditDetails.AdditionalEventType,
+                    "Succeeded",
+                    "Trip",
+                    trip.Id.ToString(),
+                    requestContext.TenantId,
+                    requestContext.UserId,
+                    requestContext.IsSupportContext,
+                    null,
+                    cancellationToken,
+                    beforeSummaryJson: auditDetails.BeforeSummaryJson,
+                    afterSummaryJson: auditDetails.AfterSummaryJson,
+                    reason: auditDetails.Reason);
+            }
             await transaction.CommitAsync(cancellationToken);
             return TripResult<TripDetail>.Success(
                 await MapAsync(trip, cancellationToken));
@@ -853,6 +994,17 @@ public sealed class TripService(
         _ when trip.Status == TripStatus.Completed => "trip.completed",
         _ => "trip.statusChanged",
     };
+
+    private sealed record TripAuditDetails
+    {
+        public string? AdditionalEventType { get; init; }
+
+        public string? BeforeSummaryJson { get; init; }
+
+        public string? AfterSummaryJson { get; init; }
+
+        public string? Reason { get; init; }
+    }
 
     private async Task QueueTripNotificationAsync(
         Trip trip,

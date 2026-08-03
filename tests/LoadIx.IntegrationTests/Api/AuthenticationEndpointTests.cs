@@ -1,8 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using FluentAssertions;
 using LoadIx.Api.Endpoints;
+using LoadIx.Api.Security;
 using LoadIx.Application.Security;
 using LoadIx.Domain.Common;
 using LoadIx.Domain.Tenancy;
@@ -16,6 +20,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Tokens;
 
 namespace LoadIx.IntegrationTests.Api;
 
@@ -259,6 +264,9 @@ public sealed class AuthenticationEndpointTests(
         client.DefaultRequestHeaders.Add(
             "X-LoadIx-Support-Tenant",
             secondTenantId.Value.ToString());
+        client.DefaultRequestHeaders.Add(
+            "X-LoadIx-Support-Reason",
+            "Pilot support investigation");
 
         (await client.GetAsync("/api/v1/users")).StatusCode
             .Should().Be(HttpStatusCode.Forbidden);
@@ -280,6 +288,9 @@ public sealed class AuthenticationEndpointTests(
         client.DefaultRequestHeaders.Add(
             "X-LoadIx-Support-Tenant",
             secondTenantId.Value.ToString());
+        client.DefaultRequestHeaders.Add(
+            "X-LoadIx-Support-Reason",
+            "Pilot support investigation");
 
         var response = await client.GetAsync("/api/v1/users");
 
@@ -324,6 +335,44 @@ public sealed class AuthenticationEndpointTests(
             .Should().Be(HttpStatusCode.Unauthorized);
         (await LoginAsync(userClient, email, "Active User 2026!")).StatusCode
             .Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ExpiredAccessTokenIsRejectedAndAudited()
+    {
+        var (factory, _) = CreateFactory();
+        var client = factory.CreateClient();
+        var now = TimeProvider.System.GetUtcNow();
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
+            "QqlwWau6fgTcPhzXxeKclRbIb7YJUNfC0L58wURHwDK"));
+        var expiredToken = new JwtSecurityToken(
+            issuer: "LoadIx.Api",
+            audience: "LoadIx.Web",
+            claims:
+            [
+                new Claim(
+                    JwtRegisteredClaimNames.Sub,
+                    DevelopmentSeedIds.ActorId.ToString()),
+            ],
+            notBefore: now.AddMinutes(-10).UtcDateTime,
+            expires: now.AddMinutes(-5).UtcDateTime,
+            signingCredentials: new SigningCredentials(
+                signingKey,
+                SecurityAlgorithms.HmacSha256));
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                new JwtSecurityTokenHandler().WriteToken(expiredToken));
+
+        (await client.GetAsync("/api/v1/auth/me")).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+        (await dbContext.SecurityAuditEvents.AnyAsync(auditEvent =>
+            auditEvent.EventType == "Authentication.TokenRejected"
+            && auditEvent.FailureCode == "expired_token"))
+            .Should().BeTrue();
     }
 
     [Fact]

@@ -14,4 +14,10 @@ public sealed class LoadIxOptions
 
     [Required]
     public string WebOrigin { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Optional single trusted reverse-proxy address. Forwarded headers are
+    /// ignored unless this is explicitly configured.
+    /// </summary>
+    public string? TrustedProxyIp { get; init; }
 }

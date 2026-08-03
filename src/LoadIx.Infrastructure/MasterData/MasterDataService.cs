@@ -135,6 +135,7 @@ public sealed partial class MasterDataService(
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            var value = valueFactory();
             await auditWriter.WriteAsync(
                 $"MasterData.{action}",
                 "Succeeded",
@@ -144,8 +145,9 @@ public sealed partial class MasterDataService(
                 requestContext.UserId,
                 requestContext.IsSupportContext,
                 null,
-                cancellationToken);
-            return MasterDataResult<T>.Success(valueFactory());
+                cancellationToken,
+                afterSummaryJson: AuditSummary.Serialize(value));
+            return MasterDataResult<T>.Success(value);
         }
         catch (DbUpdateConcurrencyException)
         {

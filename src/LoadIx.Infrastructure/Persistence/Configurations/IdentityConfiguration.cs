@@ -134,6 +134,17 @@ internal sealed class SecurityAuditEventConfiguration
         builder.Property(auditEvent => auditEvent.IdempotencyKeyHash)
             .HasMaxLength(64)
             .IsUnicode(false);
+        builder.Property(auditEvent => auditEvent.RequestMetadataJson)
+            .HasColumnType("nvarchar(4000)")
+            .HasMaxLength(4_000);
+        builder.Property(auditEvent => auditEvent.BeforeSummaryJson)
+            .HasColumnType("nvarchar(4000)")
+            .HasMaxLength(4_000);
+        builder.Property(auditEvent => auditEvent.AfterSummaryJson)
+            .HasColumnType("nvarchar(4000)")
+            .HasMaxLength(4_000);
+        builder.Property(auditEvent => auditEvent.Reason)
+            .HasMaxLength(500);
         builder.HasIndex(auditEvent => new
         {
             auditEvent.TenantId,

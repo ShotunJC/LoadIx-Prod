@@ -162,7 +162,9 @@ public sealed record InvoiceBatchDetail(
     IReadOnlyList<InvoiceBatchLineModel> Lines,
     string Version);
 
-public sealed record VersionedFinanceCommand(string Version);
+public sealed record VersionedFinanceCommand(
+    string Version,
+    string? Reason = null);
 
 public enum FinanceFailure
 {

@@ -11,6 +11,7 @@ using LoadIx.Domain.Locations;
 using LoadIx.Domain.Tenancy;
 using LoadIx.Domain.Trips;
 using LoadIx.Infrastructure.Documents;
+using LoadIx.Infrastructure.Governance;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Instructions;
 using LoadIx.Infrastructure.Notifications;
@@ -131,6 +132,12 @@ public sealed class LoadIxDbContext(
 
     public DbSet<DeviceHeartbeat> DeviceHeartbeats =>
         Set<DeviceHeartbeat>();
+
+    public DbSet<TenantRetentionPolicy> TenantRetentionPolicies =>
+        Set<TenantRetentionPolicy>();
+
+    public DbSet<AnonymisationRequest> AnonymisationRequests =>
+        Set<AnonymisationRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -253,6 +260,12 @@ public sealed class LoadIxDbContext(
         builder.Entity<DeviceHeartbeat>()
             .HasQueryFilter(entity =>
                 requestContext.TenantId == entity.TenantId);
+        builder.Entity<TenantRetentionPolicy>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
+        builder.Entity<AnonymisationRequest>()
+            .HasQueryFilter(entity =>
+                requestContext.TenantId == entity.TenantId);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -278,6 +291,13 @@ public sealed class LoadIxDbContext(
             if (entry.State is EntityState.Detached or EntityState.Unchanged)
             {
                 continue;
+            }
+
+            if (entry.Entity is SecurityAuditEvent
+                && entry.State is EntityState.Modified or EntityState.Deleted)
+            {
+                throw new InvalidOperationException(
+                    "Security audit events are immutable and cannot be updated or deleted.");
             }
 
             if (entry.Entity is ITenantOwned tenantOwned)
