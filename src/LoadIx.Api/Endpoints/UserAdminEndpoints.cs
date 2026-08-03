@@ -354,14 +354,6 @@ public static class UserAdminEndpoints
             });
         }
 
-        if (!httpContext.User.HasClaim(
-                LoadIxClaimTypes.PlatformAdministrator,
-                bool.TrueString)
-            && permissions.Any(permission => !requestContext.HasPermission(permission)))
-        {
-            return AuthorityExceeded();
-        }
-
         var role = await dbContext.Roles.SingleOrDefaultAsync(
             candidate => candidate.Id == roleId && candidate.TenantId == tenantId,
             cancellationToken);
@@ -371,6 +363,15 @@ public static class UserAdminEndpoints
         }
 
         var beforePermissions = role.GetPermissions().Order(StringComparer.Ordinal).ToArray();
+        if (!httpContext.User.HasClaim(
+                LoadIxClaimTypes.PlatformAdministrator,
+                bool.TrueString)
+            && beforePermissions.Concat(permissions)
+                .Any(permission => !requestContext.HasPermission(permission)))
+        {
+            return AuthorityExceeded();
+        }
+
         if (!beforePermissions.ToHashSet(StringComparer.Ordinal).SetEquals(permissions)
             && (string.IsNullOrWhiteSpace(request.Reason)
                 || request.Reason.Trim().Length > 500))

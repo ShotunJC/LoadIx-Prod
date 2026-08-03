@@ -248,6 +248,49 @@ public sealed class AuthenticationEndpointTests(
     }
 
     [Fact]
+    public async Task DelegatedUserCannotModifyRoleWithGreaterAuthority()
+    {
+        var email = $"delegated-{Guid.NewGuid():N}@loadix.example.invalid";
+        await CreateTenantUserWithPermissionsAsync(
+            email,
+            "Delegated User 2026!",
+            [LoadIxPermissions.UserView, LoadIxPermissions.UserManage]);
+        var (factory, _) = CreateFactory();
+        Guid administratorRoleId;
+        string[] originalPermissions;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<LoadIxDbContext>();
+            var administratorRole = await dbContext.Roles
+                .IgnoreQueryFilters()
+                .SingleAsync(role => role.DisplayName == "Tenant Administrator");
+            administratorRoleId = administratorRole.Id;
+            originalPermissions = administratorRole.GetPermissions().ToArray();
+        }
+
+        var client = factory.CreateClient();
+        var login = await LoginAsync(client, email, "Delegated User 2026!");
+        var payload = (await login.Content.ReadFromJsonAsync<AuthResponse>())!;
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", payload.AccessToken);
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/users/roles/{administratorRoleId}/permissions",
+            new UpdateRolePermissionsRequest(
+                [LoadIxPermissions.UserView, LoadIxPermissions.UserManage],
+                "Attempt to reduce administrator authority"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await using var verificationScope = factory.Services.CreateAsyncScope();
+        var verificationDb = verificationScope.ServiceProvider
+            .GetRequiredService<LoadIxDbContext>();
+        var unchangedRole = await verificationDb.Roles
+            .IgnoreQueryFilters()
+            .SingleAsync(role => role.Id == administratorRoleId);
+        unchangedRole.GetPermissions().Should().BeEquivalentTo(originalPermissions);
+    }
+
+    [Fact]
     public async Task NormalTenantUserCannotEnterAnotherTenantContext()
     {
         var secondTenantId = TenantId.New();
@@ -453,6 +496,44 @@ public sealed class AuthenticationEndpointTests(
         (await userManager.AddToRoleAsync(user, role.Name!)).Succeeded
             .Should().BeTrue();
         return user.Id;
+    }
+
+    private async Task CreateTenantUserWithPermissionsAsync(
+        string email,
+        string password,
+        IReadOnlyCollection<string> permissions)
+    {
+        var (factory, _) = CreateFactory();
+        await using var scope = factory.Services.CreateAsyncScope();
+        var userManager = scope.ServiceProvider
+            .GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider
+            .GetRequiredService<RoleManager<ApplicationRole>>();
+        var now = TimeProvider.System.GetUtcNow();
+        var role = new ApplicationRole
+        {
+            Id = Guid.NewGuid(),
+            TenantId = DevelopmentSeedIds.TenantId,
+            Name = $"{DevelopmentSeedIds.TenantId.Value:N}:delegated-{Guid.NewGuid():N}",
+            DisplayName = $"Delegated {Guid.NewGuid():N}",
+        };
+        role.SetPermissions(permissions);
+        (await roleManager.CreateAsync(role)).Succeeded.Should().BeTrue();
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            TenantId = DevelopmentSeedIds.TenantId,
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            DisplayName = "Delegated Integration Test User",
+            IsActive = true,
+            CreatedAtUtc = now,
+            ModifiedAtUtc = now,
+            SecurityStamp = Guid.NewGuid().ToString(),
+        };
+        (await userManager.CreateAsync(user, password)).Succeeded.Should().BeTrue();
+        (await userManager.AddToRoleAsync(user, role.Name!)).Succeeded.Should().BeTrue();
     }
 
     private async Task CreateTenantAsync(TenantId tenantId)

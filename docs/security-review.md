@@ -64,7 +64,7 @@ The regression suite now exercises the following controls:
 | Required scenario | Coverage |
 | --- | --- |
 | Cross-tenant access | `TenantPersistenceTests`, `MasterDataEndpointTests`, `ContractEndpointTests`, `LoadInstructionEndpointTests`, `TripEndpointTests`, `FinanceEndpointTests`, `DocumentEndpointTests`, and `EdgeEndpointTests` attempt reads/writes with another tenant's IDs. |
-| Privilege escalation and support access | `AuthenticationEndpointTests.InvitationAssignsRoleAndPolicyRejectsGreaterAuthority`, `NormalTenantUserCannotEnterAnotherTenantContext`, and `PlatformAdministratorSupportContextIsVisibleAndAudited`. Role/permission application checks are also covered by the user-admin route and policy tests. |
+| Privilege escalation and support access | `AuthenticationEndpointTests.InvitationAssignsRoleAndPolicyRejectsGreaterAuthority`, `DelegatedUserCannotModifyRoleWithGreaterAuthority`, `NormalTenantUserCannotEnterAnotherTenantContext`, and `PlatformAdministratorSupportContextIsVisibleAndAudited`. Role/permission application checks are also covered by the user-admin route and policy tests. |
 | Object-ID tampering | Document, trip, contract, master-data, finance, load-instruction, and edge tests use guessed or foreign identifiers and assert denial or not-found behavior. |
 | Expired/revoked authentication | `AuthenticationEndpointTests.ExpiredAccessTokenIsRejectedAndAudited`, revoked refresh-session reuse, deactivated-user access-token rejection, security-stamp/session invalidation, and token-validation failure paths are covered by authentication and edge tests. |
 | Malicious uploads | `DocumentEndpointTests.RejectsInvalidSignaturesExcessiveFilesAndKeyReuse` covers invalid signatures, excessive files, and unsafe key reuse; successful uploads are streamed through the quarantine/scanner boundary. |
@@ -80,7 +80,7 @@ Executed during this review:
 - `dotnet build --no-restore --configuration Release --warnaserror` - passed;
 - `dotnet test tests/LoadIx.UnitTests/LoadIx.UnitTests.csproj --no-build --configuration Release` - 58 passed;
 - architecture tests - 5 passed;
-- `dotnet test tests/LoadIx.IntegrationTests/LoadIx.IntegrationTests.csproj --no-build --configuration Release` - 55 passed;
+- `dotnet test tests/LoadIx.IntegrationTests/LoadIx.IntegrationTests.csproj --no-build --configuration Release` - 56 passed;
 - `npm.cmd ci`, lint, typecheck, test, and build - passed; npm reported 0 vulnerabilities;
 - `dotnet list LoadIx.slnx package --vulnerable --include-transitive` - no vulnerable packages reported;
 - Docker Scout scan of the refreshed `loadix-api:security` image - 0 critical, 0 high, 3 medium, and 5 low findings; remaining findings are base-image/OS packages without a currently available fix in the scanned image;
