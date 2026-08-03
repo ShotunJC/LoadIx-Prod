@@ -6,6 +6,7 @@
 .vs/
 TestResults/
 coverage/
+.tmp-publish/
 
 # Node
 **/node_modules/
