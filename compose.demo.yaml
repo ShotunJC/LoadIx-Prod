@@ -34,7 +34,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl --fail --header 'Host: $${AllowedHosts}' http://localhost:8080/health/ready",
+          "curl --fail --header \"Host: $${AllowedHosts}\" http://localhost:8080/health/ready",
         ]
 
   web:
