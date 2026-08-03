@@ -142,32 +142,33 @@ public sealed class TripService(
                 "Trip sort field is invalid.");
         }
 
-        var rows = await trips
+        var pageQuery = trips
             .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(item => new
+            .Take(query.PageSize);
+        var rows = await (
+            from trip in pageQuery
+            join instruction in dbContext.LoadInstructions.AsNoTracking()
+                on trip.LoadInstructionId equals instruction.Id
+            join customer in dbContext.Customers.AsNoTracking()
+                on trip.CustomerId equals customer.Id
+            join commodity in dbContext.Commodities.AsNoTracking()
+                on trip.CommodityId equals commodity.Id
+            join driverCandidate in dbContext.Drivers.AsNoTracking()
+                on trip.DriverId equals (Guid?)driverCandidate.Id into driverJoin
+            from driver in driverJoin.DefaultIfEmpty()
+            join vehicleCandidate in dbContext.Vehicles.AsNoTracking()
+                on trip.VehicleId equals (Guid?)vehicleCandidate.Id into vehicleJoin
+            from vehicle in vehicleJoin.DefaultIfEmpty()
+            select new
             {
-                Trip = item,
-                InstructionNumber = dbContext.LoadInstructions
-                    .Where(value => value.Id == item.LoadInstructionId)
-                    .Select(value => value.InstructionNumber)
-                    .Single(),
-                CustomerName = dbContext.Customers
-                    .Where(value => value.Id == item.CustomerId)
-                    .Select(value => value.TradingName)
-                    .Single(),
-                CommodityName = dbContext.Commodities
-                    .Where(value => value.Id == item.CommodityId)
-                    .Select(value => value.Name)
-                    .Single(),
-                DriverName = dbContext.Drivers
-                    .Where(value => value.Id == item.DriverId)
-                    .Select(value => value.FirstName + " " + value.LastName)
-                    .SingleOrDefault(),
-                VehicleReference = dbContext.Vehicles
-                    .Where(value => value.Id == item.VehicleId)
-                    .Select(value => value.FleetNumber)
-                    .SingleOrDefault(),
+                Trip = trip,
+                InstructionNumber = instruction.InstructionNumber,
+                CustomerName = customer.TradingName,
+                CommodityName = commodity.Name,
+                DriverName = driver == null
+                    ? null
+                    : driver.FirstName + " " + driver.LastName,
+                VehicleReference = vehicle == null ? null : vehicle.FleetNumber,
             })
             .ToListAsync(cancellationToken);
         var items = rows.Select(row => new TripListItem(
@@ -881,103 +882,107 @@ public sealed class TripService(
             OccurredAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
         });
         await QueueTripNotificationAsync(trip, action, cancellationToken);
-        await using var transaction =
-            await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await auditWriter.WriteAsync(
-                $"Trip.{action}",
-                "Succeeded",
-                "Trip",
-                trip.Id.ToString(),
-                requestContext.TenantId,
-                requestContext.UserId,
-                requestContext.IsSupportContext,
-                null,
-                cancellationToken,
-                beforeSummaryJson: auditDetails?.BeforeSummaryJson,
-                afterSummaryJson: auditDetails?.AfterSummaryJson
-                    ?? AuditSummary.Serialize(new
-                    {
-                        status = trip.Status.ToString(),
-                        driverId = trip.DriverId,
-                        vehicleId = trip.VehicleId,
-                        transition = trip.Transitions.LastOrDefault() is { } transition
-                            ? new
+        return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await dbContext.Database.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    await auditWriter.WriteAsync(
+                        $"Trip.{action}",
+                        "Succeeded",
+                        "Trip",
+                        trip.Id.ToString(),
+                        requestContext.TenantId,
+                        requestContext.UserId,
+                        requestContext.IsSupportContext,
+                        null,
+                        cancellationToken,
+                        beforeSummaryJson: auditDetails?.BeforeSummaryJson,
+                        afterSummaryJson: auditDetails?.AfterSummaryJson
+                            ?? AuditSummary.Serialize(new
                             {
-                                previousStatus = transition.PreviousStatus.ToString(),
-                                newStatus = transition.NewStatus.ToString(),
-                                transition.Reason,
-                                transition.IsManualOverride,
-                            }
-                            : null,
-                    }),
-                reason: auditDetails?.Reason);
-            var latestTransition = trip.Transitions.LastOrDefault();
-            if (latestTransition is not null)
-            {
-                await auditWriter.WriteAsync(
-                    "Trip.Transitioned",
-                    "Succeeded",
-                    "Trip",
-                    trip.Id.ToString(),
-                    requestContext.TenantId,
-                    requestContext.UserId,
-                    requestContext.IsSupportContext,
-                    null,
-                    cancellationToken,
-                    beforeSummaryJson: AuditSummary.Serialize(new
+                                status = trip.Status.ToString(),
+                                driverId = trip.DriverId,
+                                vehicleId = trip.VehicleId,
+                                transition = trip.Transitions.LastOrDefault() is { } transition
+                                    ? new
+                                    {
+                                        previousStatus = transition.PreviousStatus.ToString(),
+                                        newStatus = transition.NewStatus.ToString(),
+                                        transition.Reason,
+                                        transition.IsManualOverride,
+                                    }
+                                    : null,
+                            }),
+                        reason: auditDetails?.Reason);
+                    var latestTransition = trip.Transitions.LastOrDefault();
+                    if (latestTransition is not null)
                     {
-                        status = latestTransition.PreviousStatus.ToString(),
-                    }),
-                    afterSummaryJson: AuditSummary.Serialize(new
+                        await auditWriter.WriteAsync(
+                            "Trip.Transitioned",
+                            "Succeeded",
+                            "Trip",
+                            trip.Id.ToString(),
+                            requestContext.TenantId,
+                            requestContext.UserId,
+                            requestContext.IsSupportContext,
+                            null,
+                            cancellationToken,
+                            beforeSummaryJson: AuditSummary.Serialize(new
+                            {
+                                status = latestTransition.PreviousStatus.ToString(),
+                            }),
+                            afterSummaryJson: AuditSummary.Serialize(new
+                            {
+                                status = latestTransition.NewStatus.ToString(),
+                                isManualOverride = latestTransition.IsManualOverride,
+                            }),
+                            reason: latestTransition.Reason);
+                    }
+                    if (!string.IsNullOrWhiteSpace(auditDetails?.AdditionalEventType))
                     {
-                        status = latestTransition.NewStatus.ToString(),
-                        isManualOverride = latestTransition.IsManualOverride,
-                    }),
-                    reason: latestTransition.Reason);
-            }
-            if (!string.IsNullOrWhiteSpace(auditDetails?.AdditionalEventType))
-            {
-                await auditWriter.WriteAsync(
-                    auditDetails.AdditionalEventType,
-                    "Succeeded",
-                    "Trip",
-                    trip.Id.ToString(),
-                    requestContext.TenantId,
-                    requestContext.UserId,
-                    requestContext.IsSupportContext,
-                    null,
-                    cancellationToken,
-                    beforeSummaryJson: auditDetails.BeforeSummaryJson,
-                    afterSummaryJson: auditDetails.AfterSummaryJson,
-                    reason: auditDetails.Reason);
-            }
-            await transaction.CommitAsync(cancellationToken);
-            return TripResult<TripDetail>.Success(
-                await MapAsync(trip, cancellationToken));
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            return Fail<TripDetail>(
-                TripFailure.Conflict,
-                "concurrency.conflict",
-                "The trip changed after it was loaded. Refresh and try again.");
-        }
-        catch (DbUpdateException exception) when (
-            exception.InnerException?.Message.Contains(
-                "duplicate", StringComparison.OrdinalIgnoreCase) == true
-            || exception.InnerException?.Message.Contains(
-                "UNIQUE", StringComparison.OrdinalIgnoreCase) == true)
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            return Fail<TripDetail>(
-                TripFailure.Conflict,
-                "trip.duplicate",
-                "The trip number or idempotency key already exists.");
-        }
+                        await auditWriter.WriteAsync(
+                            auditDetails.AdditionalEventType,
+                            "Succeeded",
+                            "Trip",
+                            trip.Id.ToString(),
+                            requestContext.TenantId,
+                            requestContext.UserId,
+                            requestContext.IsSupportContext,
+                            null,
+                            cancellationToken,
+                            beforeSummaryJson: auditDetails.BeforeSummaryJson,
+                            afterSummaryJson: auditDetails.AfterSummaryJson,
+                            reason: auditDetails.Reason);
+                    }
+                    await transaction.CommitAsync(cancellationToken);
+                    return TripResult<TripDetail>.Success(
+                        await MapAsync(trip, cancellationToken));
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return Fail<TripDetail>(
+                        TripFailure.Conflict,
+                        "concurrency.conflict",
+                        "The trip changed after it was loaded. Refresh and try again.");
+                }
+                catch (DbUpdateException exception) when (
+                    exception.InnerException?.Message.Contains(
+                        "duplicate", StringComparison.OrdinalIgnoreCase) == true
+                    || exception.InnerException?.Message.Contains(
+                        "UNIQUE", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return Fail<TripDetail>(
+                        TripFailure.Conflict,
+                        "trip.duplicate",
+                        "The trip number or idempotency key already exists.");
+                }
+            });
     }
 
     private static string EventTypeFor(string action, Trip trip) => action switch

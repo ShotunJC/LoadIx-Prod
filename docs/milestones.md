@@ -392,6 +392,46 @@ malware scanner, distributed rate limiting/WAF, retention and legal-hold
 procedure, anonymisation scope, backup/object-store lifecycle, and pilot
 acceptance of remaining scan findings.
 
+## M17 — Performance, Reliability, and Production Readiness
+
+**Outcome:** LoadIx has bounded operational reads, explicit retry/dead-letter
+behavior, production-oriented telemetry, and a repeatable realistic pilot
+workload without inflating normal development startup.
+
+**Status:** Implementation complete on 2026-08-03. A generated-workload k6 run
+and representative query-plan review are recorded in
+`docs/performance-results.md`; failure drills and deployment-scale capacity
+remain pilot decision gates.
+
+**Deliverables:**
+
+- SQL Server connection resiliency, transient-only provider retries with
+  exponential backoff and circuit breakers for broker, object storage, and SMTP;
+- scheduled operational-outbox retries with bounded attempts and dead-letter
+  state, durable report-export dead-letter routing, background-job retry logging,
+  graceful host shutdown, and dependency health checks;
+- N+1 removal and bounded/status/date-indexed operations-board, location, trip,
+  and report query paths, with EF migration artifacts;
+- structured trace correlation, SQL/OpenTelemetry instrumentation, request and
+  workload metrics, notification/job failure counters, queue-depth gauges,
+  active-trip counts, and edge-device online counts;
+- SignalR reconnect behavior and offline mobile replay classification for
+  transient versus permanent failures;
+- an explicit generated workload command for 10 tenants, 100 users, 1,000
+  drivers, 1,000 vehicles, 10,000 load instructions, and 100,000 trips with
+  related operational measurements/events;
+- maintainable k6 coverage for login, trip list, operations board, status
+  transition, location update, weighbridge submission, SignalR, and report
+  request, plus reproducible environment/result documentation.
+
+**Key tests:** paginated-memory/query-plan review, transient/permanent retry
+classification, outbox and report dead-letter behavior, offline replay states,
+SignalR reconnect, stale-version conflict handling, generated-data counts, and
+the documented k6 threshold run.
+
+**Decision gates:** production telemetry backend and alerts, multi-replica worker
+claim/lease strategy, export artifact storage, and measured pilot capacity.
+
 ## Cross-Cutting Work in Every Milestone
 
 - schema migrations and realistic synthetic seed updates;

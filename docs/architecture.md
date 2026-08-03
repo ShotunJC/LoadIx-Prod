@@ -445,6 +445,7 @@ system rather than used as an unstyled admin template.
 | ADR-043 | Report CSV exports are capped synchronously and large jobs are persisted then dispatched through durable RabbitMQ messages | Accepted | Protects API latency, survives API restarts, and lets a worker retry/report failures without coupling HTTP requests to generation |
 | ADR-044 | Reporting accepts date-only filters, resolves exclusive UTC boundaries on the server, and processes export jobs in bounded pages | Accepted | A selected calendar date belongs to the tenant timezone, including DST days; SQL count/order/page operations must not be replaced by an in-memory cap |
 | ADR-045 | Edge agents submit structured, tenant/site-bound readings through per-device credentials and replay-safe commands | Accepted | Keeps hardware protocol parsing at the edge while providing hashed secret rotation, revocation, offline replay, audit evidence, and idempotent ingestion |
+| ADR-046 | Performance and reliability controls use bounded reads, transient-only provider retries, circuit breakers, dead letters, explicit workload seeding, and k6 evidence | Accepted | Protects pilot latency and recovery behavior while keeping performance claims tied to a reproducible generated workload and recorded run |
 
 ### Milestone 14 reporting semantics
 
@@ -546,6 +547,30 @@ weighbridge, command, raw/stable reading, heartbeat, and ticket links use
 restrictive deletes, and audit history is not cascade-deleted. Application
 binding checks remain because SQL Server composite constraints do not express
 all site/device business rules.
+
+### Milestone 17 performance and reliability boundary
+
+SQL Server uses bounded transient connection retries. Broker, MinIO-compatible
+object storage, SMTP, and other provider operations use a shared transport-only
+retry policy with exponential backoff and jitter plus process-local circuit
+breakers. Permanent validation, authentication, authorization, and business
+failures are not retried. Operational outbox messages record their next attempt
+and dead-letter state; report exports use a durable RabbitMQ dead-letter queue and
+bounded background retries.
+
+Operational board and latest-location reads filter to active/recent work before
+projection and apply deterministic ordering and a hard result limit. Trip and
+report list paths retain SQL-side count/skip/take behavior. The performance seed
+is an explicit command that bulk-loads fictional tenant data and is never called
+by normal development startup. The k6 scenarios and target thresholds live under
+perf/k6; the results document records the exact environment and distinguishes
+verified implementation behavior from measurements that have not been run.
+
+OpenTelemetry includes ASP.NET Core, HTTP, SQL client, runtime, and LoadIx
+activities/meters. Structured request logs receive a trace correlation header;
+custom metrics cover active trips, online edge devices, notification depth,
+outbox depth/dead letters, report queue depth, background failures, notification
+failures, and request/job timing.
 
 ### Justified changes to the proposed architecture
 

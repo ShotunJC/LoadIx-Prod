@@ -313,21 +313,25 @@ public sealed partial class DocumentService(
                     created.Error.Description);
             }
 
-            await using var transaction =
-                await dbContext.Database.BeginTransactionAsync(cancellationToken);
-            dbContext.Documents.Add(created.Value);
-            dbContext.DocumentUploadOperations.Add(NewOperation(
-                documentId,
-                actorId,
-                idempotencyKey,
-                requestHash));
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await AuditAsync(
-                "Document.Uploaded",
-                "Succeeded",
-                documentId,
-                cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
+                async () =>
+                {
+                    await using var transaction =
+                        await dbContext.Database.BeginTransactionAsync(cancellationToken);
+                    dbContext.Documents.Add(created.Value);
+                    dbContext.DocumentUploadOperations.Add(NewOperation(
+                        documentId,
+                        actorId,
+                        idempotencyKey,
+                        requestHash));
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    await AuditAsync(
+                        "Document.Uploaded",
+                        "Succeeded",
+                        documentId,
+                        cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                });
             storedKeys.Clear();
             return DocumentResults.Success(ToItem(
                 created.Value,

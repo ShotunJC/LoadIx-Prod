@@ -7,6 +7,10 @@ namespace LoadIx.Api.Endpoints;
 
 public static class OperationsEndpoints
 {
+    private const int DefaultBoardLimit = 250;
+    private const int MaximumBoardLimit = 5_000;
+    private const int MaximumLocationRows = 5_000;
+
     public static RouteGroupBuilder MapOperationsEndpoints(this RouteGroupBuilder api)
     {
         var group = api.MapGroup("/operations").WithTags("Operations control tower")
@@ -20,6 +24,7 @@ public static class OperationsEndpoints
             Guid? commodityId,
             bool? delayedOnly,
             bool? exceptionOnly,
+            int? limit,
             LoadIxDbContext db,
             TimeProvider time,
             CancellationToken cancellationToken) =>
@@ -66,56 +71,106 @@ public static class OperationsEndpoints
                     db.Drivers.Any(driver => driver.Id == trip.DriverId && driver.BranchId == branchId)
                     || db.Vehicles.Any(vehicle => vehicle.Id == trip.VehicleId && vehicle.BranchId == branchId));
             }
+            if (delayedOnly == true)
+            {
+                query = query.Where(trip =>
+                    trip.PlannedDeliveryAtUtc < now
+                    && trip.Status != TripStatus.Completed
+                    && trip.Status != TripStatus.Cancelled
+                    && trip.Status != TripStatus.Rejected);
+            }
+            if (exceptionOnly == true)
+            {
+                query = query.Where(trip =>
+                    trip.Status == TripStatus.ReconciliationRequired
+                    || trip.Status == TripStatus.Rejected);
+            }
 
-            var rows = await query
-                .OrderBy(trip => trip.PlannedCollectionAtUtc)
-                .ThenBy(trip => trip.Id)
-                .Select(trip => new OperationsBoardItem(
+            var take = Math.Clamp(limit ?? DefaultBoardLimit, 1, MaximumBoardLimit);
+            var rows = await (
+                from trip in query
+                join customer in db.Customers.AsNoTracking()
+                    on trip.CustomerId equals customer.Id
+                join commodity in db.Commodities.AsNoTracking()
+                    on trip.CommodityId equals commodity.Id
+                join driverCandidate in db.Drivers.AsNoTracking()
+                    on trip.DriverId equals (Guid?)driverCandidate.Id into driverJoin
+                from driver in driverJoin.DefaultIfEmpty()
+                join vehicleCandidate in db.Vehicles.AsNoTracking()
+                    on trip.VehicleId equals (Guid?)vehicleCandidate.Id into vehicleJoin
+                from vehicle in vehicleJoin.DefaultIfEmpty()
+                let assignedBranchId = driver != null
+                    ? (Guid?)driver.BranchId
+                    : vehicle != null
+                        ? (Guid?)vehicle.BranchId
+                        : null
+                join branchCandidate in db.Branches.AsNoTracking()
+                    on assignedBranchId equals (Guid?)branchCandidate.Id into branchJoin
+                from branch in branchJoin.DefaultIfEmpty()
+                orderby trip.PlannedCollectionAtUtc, trip.Id
+                select new OperationsBoardItem(
                     trip.Id,
                     trip.TripNumber,
                     trip.CustomerId,
-                    db.Customers.Where(customer => customer.Id == trip.CustomerId)
-                        .Select(customer => customer.TradingName).Single(),
+                    customer.TradingName,
                     trip.CommodityId,
-                    db.Commodities.Where(commodity => commodity.Id == trip.CommodityId)
-                        .Select(commodity => commodity.Name).Single(),
+                    commodity.Name,
                     trip.RouteReference,
                     trip.DriverId,
-                    db.Drivers.Where(driver => driver.Id == trip.DriverId)
-                        .Select(driver => driver.DisplayName).SingleOrDefault(),
+                    driver == null ? null : driver.FirstName + " " + driver.LastName,
                     trip.VehicleId,
-                    db.Vehicles.Where(vehicle => vehicle.Id == trip.VehicleId)
-                        .Select(vehicle => vehicle.FleetNumber).SingleOrDefault(),
-                    db.Branches.Where(branch =>
-                            db.Drivers.Any(driver => driver.Id == trip.DriverId && driver.BranchId == branch.Id)
-                            || db.Vehicles.Any(vehicle => vehicle.Id == trip.VehicleId && vehicle.BranchId == branch.Id))
-                        .Select(branch => (Guid?)branch.Id).FirstOrDefault(),
-                    db.Branches.Where(branch =>
-                            db.Drivers.Any(driver => driver.Id == trip.DriverId && driver.BranchId == branch.Id)
-                            || db.Vehicles.Any(vehicle => vehicle.Id == trip.VehicleId && vehicle.BranchId == branch.Id))
-                        .Select(branch => branch.Name).FirstOrDefault(),
+                    vehicle == null ? null : vehicle.FleetNumber,
+                    branch == null ? null : (Guid?)branch.Id,
+                    branch == null ? null : branch.Name,
                     trip.Status.ToString(),
                     trip.PlannedCollectionAtUtc,
                     trip.PlannedDeliveryAtUtc,
-                    trip.Status == TripStatus.ReconciliationRequired || trip.Status == TripStatus.Rejected,
+                    trip.Status == TripStatus.ReconciliationRequired
+                        || trip.Status == TripStatus.Rejected,
                     trip.PlannedDeliveryAtUtc < now
                         && trip.Status != TripStatus.Completed
                         && trip.Status != TripStatus.Cancelled
                         && trip.Status != TripStatus.Rejected,
                     trip.CompletedAtUtc))
-                .Take(250)
+                .Take(take)
                 .ToListAsync(cancellationToken);
-            if (delayedOnly == true) rows = rows.Where(item => item.IsDelayed).ToList();
-            if (exceptionOnly == true) rows = rows.Where(item => item.HasException).ToList();
             return Results.Ok(new OperationsBoardResponse(rows, now));
         });
-        group.MapGet("/locations", async (LoadIxDbContext db, CancellationToken cancellationToken) =>
+        group.MapGet("/locations", async (
+            LoadIxDbContext db,
+            TimeProvider time,
+            CancellationToken cancellationToken) =>
         {
+            var now = time.GetUtcNow().ToUniversalTime();
+            var completedTodayStart = new DateTimeOffset(
+                now.UtcDateTime.Date,
+                TimeSpan.Zero);
+            var activeStatuses = new[]
+            {
+                TripStatus.Planned,
+                TripStatus.Assigned,
+                TripStatus.Dispatched,
+                TripStatus.AtCollection,
+                TripStatus.Loading,
+                TripStatus.CollectionComplete,
+                TripStatus.InTransit,
+                TripStatus.AtDelivery,
+                TripStatus.Unloading,
+                TripStatus.DeliveryComplete,
+                TripStatus.ReconciliationRequired,
+            };
+            var visibleTrips = db.Trips.AsNoTracking()
+                .Where(trip => activeStatuses.Contains(trip.Status)
+                    || (trip.Status == TripStatus.Completed
+                        && trip.CompletedAtUtc >= completedTodayStart
+                        && trip.CompletedAtUtc < completedTodayStart.AddDays(1)));
             var latest = await db.TripLocationUpdates.AsNoTracking()
+                .Where(update => visibleTrips.Select(trip => trip.Id)
+                    .Contains(update.TripId))
                 .GroupBy(update => update.TripId)
                 .Select(grouping => grouping.OrderByDescending(update => update.CapturedAtUtc)
                     .ThenByDescending(update => update.Id).First())
-                .Join(db.Trips.AsNoTracking(), update => update.TripId, trip => trip.Id,
+                .Join(visibleTrips, update => update.TripId, trip => trip.Id,
                     (update, trip) => new
                     {
                         tripId = trip.Id,
@@ -126,6 +181,9 @@ public static class OperationsEndpoints
                         accuracyMetres = update.AccuracyMetres,
                         capturedAtUtc = update.CapturedAtUtc,
                     })
+                .OrderByDescending(item => item.capturedAtUtc)
+                .ThenBy(item => item.tripId)
+                .Take(MaximumLocationRows)
                 .ToListAsync(cancellationToken);
             return Results.Ok(latest);
         });

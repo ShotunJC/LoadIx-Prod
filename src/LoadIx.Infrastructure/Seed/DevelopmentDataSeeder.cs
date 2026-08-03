@@ -14,7 +14,12 @@ public sealed class DevelopmentDataSeeder(
     LoadIxDbContext dbContext,
     CurrentRequestContext requestContext)
 {
-    public async Task SeedAsync(CancellationToken cancellationToken)
+    public Task SeedAsync(CancellationToken cancellationToken) =>
+        dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
+            () => SeedWithinTransactionAsync(cancellationToken));
+
+    private async Task SeedWithinTransactionAsync(
+        CancellationToken cancellationToken)
     {
         await using var transaction =
             await dbContext.Database.BeginTransactionAsync(cancellationToken);

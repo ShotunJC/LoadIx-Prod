@@ -22,13 +22,16 @@ public sealed record SmsNotificationMessage(
 public sealed record NotificationSendResult(
     bool Succeeded,
     string? ProviderCorrelationId,
-    string? Failure)
+    string? Failure,
+    bool IsTransient = false)
 {
     public static NotificationSendResult Success(string providerCorrelationId) =>
         new(true, providerCorrelationId, null);
 
-    public static NotificationSendResult Failed(string failure) =>
-        new(false, null, failure);
+    public static NotificationSendResult Failed(
+        string failure,
+        bool isTransient = false) =>
+        new(false, null, failure, isTransient);
 }
 
 public interface ISmsNotificationSender

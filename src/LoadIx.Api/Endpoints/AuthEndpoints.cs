@@ -172,118 +172,122 @@ public static class AuthEndpoints
         }
 
         var tokenHash = IdentityTokenService.HashToken(rawToken);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable,
-            cancellationToken);
-        var session = await dbContext.RefreshSessions
-            .Include(candidate => candidate.User)
-            .SingleOrDefaultAsync(
-                candidate => candidate.TokenHash == tokenHash,
-                cancellationToken);
-        var now = timeProvider.GetUtcNow();
-        if (session is null)
-        {
-            await transaction.CommitAsync(cancellationToken);
-            DeleteRefreshCookie(httpContext, environment);
-            await auditWriter.WriteAsync(
-                "Authentication.RefreshFailed",
-                "Failed",
-                "Session",
-                null,
-                null,
-                null,
-                false,
-                ClientIp(httpContext),
-                cancellationToken,
-                failureCode: "unknown_refresh_token");
-            return AuthenticationFailed();
-        }
-
-        if (session.RevokedAtUtc.HasValue)
-        {
-            session.ReuseDetectedAtUtc = now;
-            await dbContext.RefreshSessions
-                .Where(candidate =>
-                    candidate.FamilyId == session.FamilyId
-                    && candidate.RevokedAtUtc == null)
-                .ExecuteUpdateAsync(
-                    setters => setters.SetProperty(
-                        candidate => candidate.RevokedAtUtc,
-                        now),
+        return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
+            async () =>
+            {
+                await using var transaction = await dbContext.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable,
                     cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            DeleteRefreshCookie(httpContext, environment);
-            await auditWriter.WriteAsync(
-                "Authentication.RefreshTokenReuse",
-                "Blocked",
-                "SessionFamily",
-                session.FamilyId.ToString(),
-                session.TenantId,
-                session.UserId,
-                false,
-                ClientIp(httpContext),
-                cancellationToken);
-            return AuthenticationFailed();
-        }
+                var session = await dbContext.RefreshSessions
+                    .Include(candidate => candidate.User)
+                    .SingleOrDefaultAsync(
+                        candidate => candidate.TokenHash == tokenHash,
+                        cancellationToken);
+                var now = timeProvider.GetUtcNow();
+                if (session is null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                    DeleteRefreshCookie(httpContext, environment);
+                    await auditWriter.WriteAsync(
+                        "Authentication.RefreshFailed",
+                        "Failed",
+                        "Session",
+                        null,
+                        null,
+                        null,
+                        false,
+                        ClientIp(httpContext),
+                        cancellationToken,
+                        failureCode: "unknown_refresh_token");
+                    return AuthenticationFailed();
+                }
 
-        if (!session.IsActive(now)
-            || !session.User.IsActive
-            || !session.User.EmailConfirmed)
-        {
-            session.RevokedAtUtc ??= now;
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            DeleteRefreshCookie(httpContext, environment);
-            await auditWriter.WriteAsync(
-                "Authentication.RefreshFailed",
-                "Failed",
-                "Session",
-                session.Id.ToString(),
-                session.TenantId,
-                session.UserId,
-                false,
-                ClientIp(httpContext),
-                cancellationToken,
-                failureCode: "inactive_or_expired_session");
-            return AuthenticationFailed();
-        }
+                if (session.RevokedAtUtc.HasValue)
+                {
+                    session.ReuseDetectedAtUtc = now;
+                    await dbContext.RefreshSessions
+                        .Where(candidate =>
+                            candidate.FamilyId == session.FamilyId
+                            && candidate.RevokedAtUtc == null)
+                        .ExecuteUpdateAsync(
+                            setters => setters.SetProperty(
+                                candidate => candidate.RevokedAtUtc,
+                                now),
+                            cancellationToken);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    DeleteRefreshCookie(httpContext, environment);
+                    await auditWriter.WriteAsync(
+                        "Authentication.RefreshTokenReuse",
+                        "Blocked",
+                        "SessionFamily",
+                        session.FamilyId.ToString(),
+                        session.TenantId,
+                        session.UserId,
+                        false,
+                        ClientIp(httpContext),
+                        cancellationToken);
+                    return AuthenticationFailed();
+                }
 
-        var replacement = CreateSession(
-            session.User,
-            tokenService.CreateRefreshToken(),
-            httpContext,
-            authenticationOptions.Value,
-            timeProvider,
-            session.FamilyId);
-        session.RevokedAtUtc = now;
-        session.ReplacedBySessionId = replacement.Entity.Id;
-        dbContext.RefreshSessions.Add(replacement.Entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        var accessToken = await tokenService.IssueAccessTokenAsync(
-            session.User,
-            replacement.Entity.Id,
-            cancellationToken);
-        WriteRefreshCookie(
-            httpContext,
-            replacement.Secret.RawToken,
-            replacement.Entity.ExpiresAtUtc,
-            environment);
-        await auditWriter.WriteAsync(
-            "Authentication.Refresh",
-            "Succeeded",
-            "Session",
-            replacement.Entity.Id.ToString(),
-            session.TenantId,
-            session.UserId,
-            false,
-            ClientIp(httpContext),
-            cancellationToken);
-        return Results.Ok(ToResponse(
-            session.User,
-            accessToken,
-            replacement.Entity.Id));
+                if (!session.IsActive(now)
+                    || !session.User.IsActive
+                    || !session.User.EmailConfirmed)
+                {
+                    session.RevokedAtUtc ??= now;
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    DeleteRefreshCookie(httpContext, environment);
+                    await auditWriter.WriteAsync(
+                        "Authentication.RefreshFailed",
+                        "Failed",
+                        "Session",
+                        session.Id.ToString(),
+                        session.TenantId,
+                        session.UserId,
+                        false,
+                        ClientIp(httpContext),
+                        cancellationToken,
+                        failureCode: "inactive_or_expired_session");
+                    return AuthenticationFailed();
+                }
+
+                var replacement = CreateSession(
+                    session.User,
+                    tokenService.CreateRefreshToken(),
+                    httpContext,
+                    authenticationOptions.Value,
+                    timeProvider,
+                    session.FamilyId);
+                session.RevokedAtUtc = now;
+                session.ReplacedBySessionId = replacement.Entity.Id;
+                dbContext.RefreshSessions.Add(replacement.Entity);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                var accessToken = await tokenService.IssueAccessTokenAsync(
+                    session.User,
+                    replacement.Entity.Id,
+                    cancellationToken);
+                WriteRefreshCookie(
+                    httpContext,
+                    replacement.Secret.RawToken,
+                    replacement.Entity.ExpiresAtUtc,
+                    environment);
+                await auditWriter.WriteAsync(
+                    "Authentication.Refresh",
+                    "Succeeded",
+                    "Session",
+                    replacement.Entity.Id.ToString(),
+                    session.TenantId,
+                    session.UserId,
+                    false,
+                    ClientIp(httpContext),
+                    cancellationToken);
+                return Results.Ok(ToResponse(
+                    session.User,
+                    accessToken,
+                    replacement.Entity.Id));
+            });
     }
 
     private static async Task<IResult> LogoutAsync(

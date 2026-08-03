@@ -62,4 +62,57 @@ describe('driver offline command queue', () => {
     expect(stored.state).toBe('conflict')
     expect(stored.error).toContain('Changed elsewhere')
   })
+
+  it('does not replay permanent server failures automatically', async () => {
+    const store = memoryStore()
+    const queue = createOfflineQueue(store)
+    const command = await queue.enqueue('trip note', {
+      url: '/api/v1/trips/trip-1/notes',
+      method: 'POST',
+      body: { version: 'version', note: 'invalid' },
+    })
+    let executions = 0
+
+    await queue.flush(() => {
+      executions += 1
+      return Promise.resolve(new Response('Validation failed', { status: 400 }))
+    })
+    await queue.flush(() => {
+      executions += 1
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    })
+
+    const [stored] = await store.list()
+    if (!stored) throw new Error('The permanent failure was not retained.')
+    expect(stored.id).toBe(command.id)
+    expect(stored.state).toBe('failed')
+    expect(stored.error).toContain('Validation failed')
+    expect(executions).toBe(1)
+  })
+
+  it('does not retry unexpected replay errors', async () => {
+    const store = memoryStore()
+    const queue = createOfflineQueue(store)
+    await queue.enqueue('trip note', {
+      url: '/api/v1/trips/trip-1/notes',
+      method: 'POST',
+      body: { version: 'version', note: 'valid' },
+    })
+    let executions = 0
+
+    await queue.flush(() => {
+      executions += 1
+      return Promise.reject(new Error('unexpected code failure'))
+    })
+    await queue.flush(() => {
+      executions += 1
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    })
+
+    const [stored] = await store.list()
+    if (!stored) throw new Error('The unexpected failure was not retained.')
+    expect(stored.state).toBe('failed')
+    expect(stored.attempts).toBe(0)
+    expect(executions).toBe(1)
+  })
 })

@@ -22,6 +22,7 @@ using LoadIx.Infrastructure.MasterData;
 using LoadIx.Infrastructure.Notifications;
 using LoadIx.Infrastructure.Persistence;
 using LoadIx.Infrastructure.Reporting;
+using LoadIx.Infrastructure.Resilience;
 using LoadIx.Infrastructure.Seed;
 using LoadIx.Infrastructure.Tenancy;
 using LoadIx.Infrastructure.Trips;
@@ -41,7 +42,14 @@ public static class DependencyInjection
     {
         services.AddDbContext<LoadIxDbContext>(options =>
             options.UseSqlServer(connectionString, sqlServer =>
-                sqlServer.MigrationsAssembly(typeof(LoadIxDbContext).Assembly.FullName)));
+                sqlServer
+                    .MigrationsAssembly(typeof(LoadIxDbContext).Assembly.FullName)
+                    .EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null)));
+        services.AddSingleton<ProviderCircuitBreaker>();
+        services.AddSingleton<TransientOperationExecutor>();
         services.AddHttpContextAccessor();
         services.AddIdentityCore<ApplicationUser>(options =>
             {
@@ -65,6 +73,7 @@ public static class DependencyInjection
             serviceProvider => serviceProvider.GetRequiredService<CurrentRequestContext>());
         services.AddScoped<DevelopmentDataSeeder>();
         services.AddScoped<DevelopmentIdentitySeeder>();
+        services.AddScoped<PerformanceDataSeeder>();
         services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
         services.AddScoped<SecurityAuditWriter>();
         services.AddScoped<CurrentEdgeDeviceRequestContext>();
@@ -89,6 +98,7 @@ public static class DependencyInjection
         services.AddSingleton<IReportExportPublisher, RabbitMqReportExportPublisher>();
         services.AddHostedService<ReportExportWorker>();
         services.AddHostedService<ReportExportRepublisher>();
+        services.AddHostedService<Observability.OperationalMetricsCollector>();
         services.AddSingleton<IMinioClient>(serviceProvider =>
         {
             var options = serviceProvider

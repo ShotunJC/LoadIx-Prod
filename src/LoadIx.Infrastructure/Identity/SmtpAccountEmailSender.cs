@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using LoadIx.Application.Security;
+using LoadIx.Infrastructure.Resilience;
 using Microsoft.Extensions.Options;
 
 namespace LoadIx.Infrastructure.Identity;
@@ -23,7 +24,8 @@ public sealed class AccountEmailOptions
 }
 
 public sealed class SmtpAccountEmailSender(
-    IOptions<AccountEmailOptions> options) : IAccountEmailSender
+    IOptions<AccountEmailOptions> options,
+    TransientOperationExecutor operations) : IAccountEmailSender
 {
     private readonly AccountEmailOptions _options = options.Value;
 
@@ -64,17 +66,23 @@ public sealed class SmtpAccountEmailSender(
         string body,
         CancellationToken cancellationToken)
     {
-        using var message = new MailMessage(_options.FromAddress, email, subject, body);
-        using var client = new SmtpClient(_options.Host, _options.Port)
-        {
-            DeliveryMethod = SmtpDeliveryMethod.Network,
-            UseDefaultCredentials = false,
-            Credentials = string.IsNullOrWhiteSpace(_options.Username)
-                ? CredentialCache.DefaultNetworkCredentials
-                : new NetworkCredential(_options.Username, _options.Password),
-            EnableSsl = _options.EnableSsl,
-        };
+        await operations.ExecuteAsync(
+            "smtp",
+            async token =>
+            {
+                using var message = new MailMessage(_options.FromAddress, email, subject, body);
+                using var client = new SmtpClient(_options.Host, _options.Port)
+                {
+                    DeliveryMethod = SmtpDeliveryMethod.Network,
+                    UseDefaultCredentials = false,
+                    Credentials = string.IsNullOrWhiteSpace(_options.Username)
+                        ? CredentialCache.DefaultNetworkCredentials
+                        : new NetworkCredential(_options.Username, _options.Password),
+                    EnableSsl = _options.EnableSsl,
+                };
 
-        await client.SendMailAsync(message, cancellationToken);
+                await client.SendMailAsync(message, token);
+            },
+            cancellationToken);
     }
 }

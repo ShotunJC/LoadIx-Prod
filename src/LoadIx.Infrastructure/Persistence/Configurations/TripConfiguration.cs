@@ -97,6 +97,13 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
         builder.HasIndex(entity => new
         {
             entity.TenantId,
+            entity.Status,
+            entity.PlannedDeliveryAtUtc,
+            entity.Id,
+        });
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
             entity.PlannedDeliveryAtUtc,
             entity.Id,
         });
@@ -263,6 +270,13 @@ internal sealed class TripLocationUpdateConfiguration :
             entity.TenantId,
             entity.TripId,
             entity.CapturedAtUtc,
+            entity.Id,
+        });
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
+            entity.CapturedAtUtc,
+            entity.TripId,
             entity.Id,
         });
         builder.HasOne<Trip>().WithMany()

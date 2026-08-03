@@ -128,12 +128,14 @@ export function OperationsPage() {
       setConnected(true)
       void refresh()
     })
+    connection.onreconnecting(() => {
+      setConnected(false)
+    })
     connection.onclose(() => {
       setConnected(false)
     })
     let disposed = false
-    const start = connection
-      .start()
+    const start = startConnection(connection, () => disposed)
       .then(() => {
         if (!disposed) setConnected(true)
       })
@@ -240,6 +242,26 @@ export function OperationsPage() {
       </div>
     </section>
   )
+}
+
+async function startConnection(
+  connection: ReturnType<HubConnectionBuilder['build']>,
+  isDisposed: () => boolean,
+) {
+  let attempt = 0
+  while (!isDisposed()) {
+    try {
+      await connection.start()
+      return
+    } catch {
+      attempt += 1
+      const delayMilliseconds = Math.min(
+        30_000,
+        1_000 * 2 ** Math.min(attempt, 5),
+      )
+      await new Promise((resolve) => setTimeout(resolve, delayMilliseconds))
+    }
+  }
 }
 
 function FilterBar({

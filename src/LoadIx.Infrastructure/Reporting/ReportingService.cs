@@ -422,6 +422,14 @@ public sealed class ReportingService(
     private IQueryable<ReportFact> BuildTripFacts(ReportingFilter filter, ReportDateMode dateMode, UtcRange? range)
     {
         var now = timeProvider.GetUtcNow().ToUniversalTime();
+        var costTotals = db.CostEntries
+            .AsNoTracking()
+            .GroupBy(cost => cost.TripFinancialsId)
+            .Select(group => new
+            {
+                TripFinancialsId = group.Key,
+                Total = group.Sum(cost => cost.Amount),
+            });
         var query =
             from trip in db.Trips.AsNoTracking()
             join customer in db.Customers.AsNoTracking() on trip.CustomerId equals customer.Id
@@ -433,6 +441,10 @@ public sealed class ReportingService(
             from vehicle in vehicleJoin.DefaultIfEmpty()
             join financial in db.TripFinancials.AsNoTracking() on trip.Id equals financial.TripId into financialJoin
             from financial in financialJoin.DefaultIfEmpty()
+            join costTotalCandidate in costTotals
+                on financial == null ? Guid.Empty : financial.Id
+                equals costTotalCandidate.TripFinancialsId into costJoin
+            from costTotal in costJoin.DefaultIfEmpty()
             select new ReportFact
             {
                 TripId = trip.Id,
@@ -458,7 +470,7 @@ public sealed class ReportingService(
                 PlannedDeliveryAtUtc = trip.PlannedDeliveryAtUtc,
                 CompletedAtUtc = trip.CompletedAtUtc,
                 Revenue = financial == null ? 0m : financial.TaxExclusiveAmount,
-                TotalCost = financial == null ? 0m : db.CostEntries.Where(cost => cost.TripFinancialsId == financial.Id).Sum(cost => (decimal?)cost.Amount) ?? 0m,
+                TotalCost = costTotal == null ? 0m : costTotal.Total,
                 HasFinancials = financial != null,
                 TolerancePercent = contract.WeightTolerancePercent,
                 DeliveredTonnes = trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
@@ -467,7 +479,7 @@ public sealed class ReportingService(
                         ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) / 1000m : trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault())
                         : null,
                 GrossMargin = financial == null ? 0m : financial.TaxExclusiveAmount
-                    - (db.CostEntries.Where(cost => cost.TripFinancialsId == financial.Id).Sum(cost => (decimal?)cost.Amount) ?? 0m),
+                    - (costTotal == null ? 0m : costTotal.Total),
                 OutsideTolerance = trip.PlannedQuantity > 0m
                     && ((trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue)
                         || (trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue))

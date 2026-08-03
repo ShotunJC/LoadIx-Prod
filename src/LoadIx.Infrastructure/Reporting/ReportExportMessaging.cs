@@ -2,7 +2,9 @@ using System.Text;
 using System.Text.Json;
 using LoadIx.Application.Reporting;
 using LoadIx.Domain.Common;
+using LoadIx.Infrastructure.Observability;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Resilience;
 using LoadIx.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,8 +21,16 @@ public interface IReportExportPublisher
     Task PublishAsync(Guid jobId, TenantId tenantId, CancellationToken cancellationToken);
 }
 
+internal static class ReportExportRetryPolicy
+{
+    public static bool IsRetryable(Exception exception) =>
+        exception is ProviderCircuitOpenException
+            || TransientOperationExecutor.IsTransient(exception);
+}
+
 public sealed class RabbitMqReportExportPublisher(
-    IOptions<RabbitMqOptions> options) : IReportExportPublisher, IAsyncDisposable
+    IOptions<RabbitMqOptions> options,
+    TransientOperationExecutor operations) : IReportExportPublisher, IAsyncDisposable
 {
     private readonly RabbitMqOptions _options = options.Value;
     private IConnection? _connection;
@@ -28,14 +38,33 @@ public sealed class RabbitMqReportExportPublisher(
 
     public async Task PublishAsync(Guid jobId, TenantId tenantId, CancellationToken cancellationToken)
     {
-        var channel = await GetChannelAsync(cancellationToken);
-        var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new ExportMessage(jobId, tenantId.Value)));
-        await channel.BasicPublishAsync(
-            exchange: string.Empty,
-            routingKey: _options.ReportExportQueueName,
-            mandatory: false,
-            basicProperties: new BasicProperties { Persistent = true, ContentType = "application/json" },
-            body: body,
+        await operations.ExecuteAsync(
+            "rabbitmq",
+            async token =>
+            {
+                var channel = await GetChannelAsync(token);
+                var body = Encoding.UTF8.GetBytes(
+                    JsonSerializer.Serialize(new ExportMessage(jobId, tenantId.Value)));
+                try
+                {
+                    await channel.BasicPublishAsync(
+                        exchange: string.Empty,
+                        routingKey: _options.ReportExportQueueName,
+                        mandatory: false,
+                        basicProperties: new BasicProperties
+                        {
+                            Persistent = true,
+                            ContentType = "application/json",
+                        },
+                        body: body,
+                        token);
+                }
+                catch
+                {
+                    await InvalidateChannelAsync();
+                    throw;
+                }
+            },
             cancellationToken);
     }
 
@@ -52,18 +81,54 @@ public sealed class RabbitMqReportExportPublisher(
         };
         _connection = await factory.CreateConnectionAsync(cancellationToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
-        await DeclareQueueAsync(_channel, _options.ReportExportQueueName, cancellationToken);
+        await DeclareQueuesAsync(_channel, _options, cancellationToken);
         return _channel;
+    }
+
+    private async Task InvalidateChannelAsync()
+    {
+        if (_channel is not null)
+        {
+            await _channel.DisposeAsync();
+            _channel = null;
+        }
+
+        if (_connection is not null)
+        {
+            await _connection.DisposeAsync();
+            _connection = null;
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_channel is not null) await _channel.DisposeAsync();
-        if (_connection is not null) await _connection.DisposeAsync();
+        await InvalidateChannelAsync();
     }
 
-    internal static Task DeclareQueueAsync(IChannel channel, string queueName, CancellationToken cancellationToken) =>
-        channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, cancellationToken: cancellationToken);
+    internal static async Task DeclareQueuesAsync(
+        IChannel channel,
+        RabbitMqOptions options,
+        CancellationToken cancellationToken)
+    {
+        await channel.QueueDeclareAsync(
+            options.ReportExportDeadLetterQueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            cancellationToken: cancellationToken);
+        var arguments = new Dictionary<string, object?>
+        {
+            ["x-dead-letter-exchange"] = string.Empty,
+            ["x-dead-letter-routing-key"] = options.ReportExportDeadLetterQueueName,
+        };
+        await channel.QueueDeclareAsync(
+            options.ReportExportQueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: arguments,
+            cancellationToken: cancellationToken);
+    }
 
     private sealed record ExportMessage(Guid JobId, Guid TenantId);
 }
@@ -148,9 +213,18 @@ public sealed class ReportExportService(
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            LoadIxTelemetry.RecordJobFailure("report-export-publisher");
+            job.LastPublishedAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
+            if (!ReportExportRetryPolicy.IsRetryable(exception))
+            {
+                job.Status = ReportExportJobStatus.Failed;
+                job.Error = "The export message provider rejected the job.";
+            }
+            await db.SaveChangesAsync(cancellationToken);
             PublishFailed(logger, job.Id, exception.GetType().Name, null);
         }
     }
+
 }
 
 public sealed class ReportExportWorker(
@@ -170,14 +244,18 @@ public sealed class ReportExportWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var connectionFailures = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
             try { await ConsumeAsync(stoppingToken); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception)
             {
+                LoadIxTelemetry.RecordJobFailure("report-export-worker");
                 ConnectionFailed(logger, exception.GetType().Name, null);
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                var delaySeconds = Math.Min(60, 5 * (1 << Math.Min(connectionFailures, 4)));
+                connectionFailures++;
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
             }
         }
     }
@@ -194,7 +272,7 @@ public sealed class ReportExportWorker(
         };
         await using var connection = await factory.CreateConnectionAsync(cancellationToken);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
-        await RabbitMqReportExportPublisher.DeclareQueueAsync(channel, _options.ReportExportQueueName, cancellationToken);
+        await RabbitMqReportExportPublisher.DeclareQueuesAsync(channel, _options, cancellationToken);
         await channel.BasicQosAsync(0, 1, false, cancellationToken);
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, args) =>
@@ -208,6 +286,7 @@ public sealed class ReportExportWorker(
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
+                LoadIxTelemetry.RecordJobFailure("report-export-worker");
                 ProcessingFailed(logger, args.DeliveryTag, exception.GetType().Name, null);
                 await channel.BasicNackAsync(args.DeliveryTag, false, requeue: false, cancellationToken);
             }
@@ -286,10 +365,15 @@ public sealed class ReportExportWorker(
         {
             var job = await db.ReportExportJobs.IgnoreQueryFilters()
                 .SingleAsync(item => item.Id == message.JobId && item.TenantId == tenantId, cancellationToken);
-            job.Status = job.Attempts >= MaximumAttempts ? ReportExportJobStatus.Failed : ReportExportJobStatus.Queued;
-            job.Error = job.Attempts >= MaximumAttempts
-                ? "Export generation failed after the maximum retry count."
-                : "Export generation failed and will be retried.";
+            var retryable = ReportExportRetryPolicy.IsRetryable(exception);
+            job.Status = retryable && job.Attempts < MaximumAttempts
+                ? ReportExportJobStatus.Queued
+                : ReportExportJobStatus.Failed;
+            job.Error = !retryable
+                ? "Export generation failed with a permanent error."
+                : job.Status == ReportExportJobStatus.Failed
+                    ? "Export generation failed after the maximum retry count."
+                    : "Export generation failed and will be retried.";
             job.LastHeartbeatAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
             job.LeaseExpiresAtUtc = null;
             await db.SaveChangesAsync(cancellationToken);

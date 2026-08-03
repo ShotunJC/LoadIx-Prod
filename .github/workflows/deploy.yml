@@ -55,6 +55,7 @@ jobs:
               cd /root/LoadIx
 
               echo "Fetching latest master branch..."
+              git pull
               git fetch origin master
               if [ "$(git config --bool core.sparseCheckout || echo false)" = "true" ]; then
                 echo "Disabling sparse checkout so Docker receives the complete source tree..."
@@ -63,9 +64,15 @@ jobs:
               git checkout master
               git reset --hard origin/master
 
-              echo "Checking out required API source files..."
-              test -s src/LoadIx.Infrastructure/DependencyInjection.cs
-              test -s src/LoadIx.Infrastructure/Edge/EdgeDeviceService.cs
+              echo "Verifying the complete source tree is materialized..."
+              tracked_cs_count="$(git ls-files 'src/**/*.cs' | wc -l)"
+              present_cs_count="$(find src -type f -name '*.cs' \
+                -not -path '*/bin/*' \
+                -not -path '*/obj/*' | wc -l)"
+              if [ "$present_cs_count" -ne "$tracked_cs_count" ]; then
+                echo "Incomplete checkout: found $present_cs_count of $tracked_cs_count tracked C# files."
+                exit 1
+              fi
 
               echo "Validating Docker Compose configuration..."
               docker compose \

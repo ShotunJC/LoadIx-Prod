@@ -322,22 +322,31 @@ public sealed class LoadInstructionService(
         dbContext.GeneratedTrips.AddRange(
             instruction.Trips.Where(trip => ids.Contains(trip.Id)));
 
-        await using var transaction =
-            await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        dbContext.TripGenerationOperations.Add(new TripGenerationOperation
-        {
-            Id = Guid.NewGuid(),
-            TenantId = requestContext.TenantId!.Value,
-            LoadInstructionId = instruction.Id,
-            IdempotencyKey = idempotencyKey,
-            RequestHash = hash,
-            CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
-        });
-        var saved = await SaveAsync(
-            instruction, "TripsGenerated", cancellationToken);
+        var saved = await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
+            async () =>
+            {
+                await using var transaction =
+                    await dbContext.Database.BeginTransactionAsync(cancellationToken);
+                dbContext.TripGenerationOperations.Add(new TripGenerationOperation
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = requestContext.TenantId!.Value,
+                    LoadInstructionId = instruction.Id,
+                    IdempotencyKey = idempotencyKey,
+                    RequestHash = hash,
+                    CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
+                });
+                var saved = await SaveAsync(
+                    instruction, "TripsGenerated", cancellationToken);
+                if (saved.IsSuccess)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+
+                return saved;
+            });
         if (saved.IsSuccess)
         {
-            await transaction.CommitAsync(cancellationToken);
             var promotionFailure = await PromoteTripsAsync(
                 instruction, cancellationToken);
             if (promotionFailure is not null) return promotionFailure;

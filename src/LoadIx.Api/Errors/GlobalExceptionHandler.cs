@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,8 @@ public sealed class GlobalExceptionHandler(
         }
 
         httpContext.Response.StatusCode = statusCode;
+        var traceId = Activity.Current?.TraceId.ToString()
+            ?? httpContext.TraceIdentifier;
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
@@ -69,7 +72,7 @@ public sealed class GlobalExceptionHandler(
                 Extensions =
                 {
                     ["code"] = code,
-                    ["traceId"] = httpContext.TraceIdentifier,
+                    ["traceId"] = traceId,
                 },
             },
         });
