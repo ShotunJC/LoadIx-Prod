@@ -123,12 +123,18 @@ services:
 
         trap cleanup_build_outputs EXIT
         cleanup_build_outputs
-        mkdir -p \
-          src/LoadIx.Api/bin/Debug \
-          src/LoadIx.Application/bin/Debug \
-          src/LoadIx.Contracts/bin/Debug \
-          src/LoadIx.Domain/bin/Debug \
-          src/LoadIx.Infrastructure/bin/Debug
+        for project in \
+          LoadIx.Api \
+          LoadIx.Application \
+          LoadIx.Contracts \
+          LoadIx.Domain \
+          LoadIx.Infrastructure; do
+          mkdir -p \
+            "src/$project/bin/Debug/net10.0" \
+            "src/$project/bin/Release/net10.0" \
+            "src/$project/obj/Debug/net10.0" \
+            "src/$project/obj/Release/net10.0"
+        done
 
         echo "Restoring project dependencies..."
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
@@ -188,12 +194,18 @@ services:
 
         trap cleanup_build_outputs EXIT
         cleanup_build_outputs
-        mkdir -p \
-          src/LoadIx.Api/bin/Debug \
-          src/LoadIx.Application/bin/Debug \
-          src/LoadIx.Contracts/bin/Debug \
-          src/LoadIx.Domain/bin/Debug \
-          src/LoadIx.Infrastructure/bin/Debug
+        for project in \
+          LoadIx.Api \
+          LoadIx.Application \
+          LoadIx.Contracts \
+          LoadIx.Domain \
+          LoadIx.Infrastructure; do
+          mkdir -p \
+            "src/$project/bin/Debug/net10.0" \
+            "src/$project/bin/Release/net10.0" \
+            "src/$project/obj/Debug/net10.0" \
+            "src/$project/obj/Release/net10.0"
+        done
 
         dotnet restore src/LoadIx.Api/LoadIx.Api.csproj
 
