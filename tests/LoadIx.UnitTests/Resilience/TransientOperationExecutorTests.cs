@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http;
+using System.Net.Mail;
 using FluentAssertions;
 using LoadIx.Infrastructure.Resilience;
 using LoadIx.Infrastructure.Seed;
@@ -15,6 +17,43 @@ public sealed class TransientOperationExecutorTests
         TransientOperationExecutor.IsTransient(new IOException()).Should().BeTrue();
         TransientOperationExecutor.IsTransient(new InvalidOperationException()).Should().BeFalse();
         TransientOperationExecutor.IsTransient(new ProviderCircuitOpenException("smtp"))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void HttpRetriesAreLimitedToTimeoutThrottlingAndServerFailures()
+    {
+        TransientOperationExecutor.IsTransient(
+            new HttpRequestException("timeout", null, HttpStatusCode.RequestTimeout))
+            .Should().BeTrue();
+        TransientOperationExecutor.IsTransient(
+            new HttpRequestException("throttled", null, HttpStatusCode.TooManyRequests))
+            .Should().BeTrue();
+        TransientOperationExecutor.IsTransient(
+            new HttpRequestException("unavailable", null, HttpStatusCode.ServiceUnavailable))
+            .Should().BeTrue();
+        TransientOperationExecutor.IsTransient(
+            new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized))
+            .Should().BeFalse();
+        TransientOperationExecutor.IsTransient(
+            new HttpRequestException("missing", null, HttpStatusCode.NotFound))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void SmtpRetriesAreLimitedToTemporaryDeliveryFailures()
+    {
+        TransientOperationExecutor.IsTransient(
+            new SmtpException(SmtpStatusCode.ServiceNotAvailable))
+            .Should().BeTrue();
+        TransientOperationExecutor.IsTransient(
+            new SmtpException(SmtpStatusCode.MailboxBusy))
+            .Should().BeTrue();
+        TransientOperationExecutor.IsTransient(
+            new SmtpException(SmtpStatusCode.MailboxUnavailable))
+            .Should().BeFalse();
+        TransientOperationExecutor.IsTransient(
+            new SmtpException(SmtpStatusCode.ClientNotPermitted))
             .Should().BeFalse();
     }
 

@@ -182,12 +182,27 @@ public sealed class TransientOperationExecutor(
                 return false;
             }
 
+            if (current is HttpRequestException httpRequestException)
+            {
+                return httpRequestException.StatusCode is null
+                    || httpRequestException.StatusCode == HttpStatusCode.RequestTimeout
+                    || httpRequestException.StatusCode == HttpStatusCode.TooManyRequests
+                    || (int)httpRequestException.StatusCode >= 500;
+            }
+
+            if (current is SmtpException smtpException)
+            {
+                return smtpException.StatusCode is SmtpStatusCode.GeneralFailure
+                    or SmtpStatusCode.ServiceNotAvailable
+                    or SmtpStatusCode.MailboxBusy
+                    or SmtpStatusCode.LocalErrorInProcessing
+                    or SmtpStatusCode.InsufficientStorage;
+            }
+
             if (current is TimeoutException
                 or TaskCanceledException
                 or SocketException
-                or IOException
-                or HttpRequestException
-                or SmtpException)
+                or IOException)
             {
                 return true;
             }
@@ -196,7 +211,7 @@ public sealed class TransientOperationExecutor(
             // transport errors are not part of the shared abstraction, so use
             // their stable type names here without coupling the policy to
             // provider internals.
-            if (current.GetType().Name is "MinioException"
+            if (current.GetType().Name is "ConnectionException"
                 or "BrokerUnreachableException"
                 or "ConnectFailureException")
             {

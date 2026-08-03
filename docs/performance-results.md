@@ -91,11 +91,11 @@ The targets are:
 
 | Scenario | Target | Result |
 | --- | ---: | --- |
-| normal read API (trip list, board, report request) | p95 < 500 ms | Measured local run: 86.64 ms, 97.99 ms, 124.28 ms |
-| normal command API (status, location, weighbridge) | p95 < 800 ms | Measured local run: 75.83 ms, 68.76 ms, 72.15 ms |
+| normal read API (trip list and board) | p95 < 500 ms | Measured local run: 86.64 ms and 97.99 ms |
+| normal command API (status, location, weighbridge) | p95 < 800 ms | Measured local run: 75.83 ms, 68.76 ms, and 72.15 ms |
 | operations board initial load | < 3 s | Measured local run: 97.99 ms at a 250-row response limit |
 | paginated API memory behavior | SQL Skip/Take, no full-table materialization | Verified in code and reviewed against the generated database plan |
-| large report export | background execution | Implemented; end-to-end worker run not measured |
+| large report export | background execution | Implemented; enqueue and end-to-end worker latency must be remeasured with the corrected k6 scenario |
 
 ### Measured local k6 run — 2026-08-03
 
@@ -114,7 +114,7 @@ profile only; they are not a production capacity claim.
 | status transition | 75.83 ms |
 | location update | 68.76 ms |
 | weighbridge submission | 72.15 ms |
-| report request | 124.28 ms |
+| synchronous report read (legacy scenario) | 124.28 ms |
 | SignalR session | 1.01 s |
 
 The final Docker command was:
@@ -176,6 +176,12 @@ plans need a populated cost/financial workload before deployment sizing.
 This is a local evidence record, not a production capacity guarantee. A pilot
 gate still requires failure/recovery drills and a run under the intended
 deployment topology.
+
+The recorded run predates the corrected background-report and SignalR protocol
+checks now present in `perf/k6/loadix.js`. Its 124.28 ms report value measured a
+synchronous trip-register read and must not be used as evidence for background
+export enqueue latency. Rerun k6 before pilot sign-off and append the unedited
+summary; do not overwrite the historical measurement.
 
 ## Query-plan and failure checks
 

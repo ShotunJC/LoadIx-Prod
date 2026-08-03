@@ -1,12 +1,14 @@
 import http from "k6/http";
 import { check, fail, sleep } from "k6";
 import ws from "k6/ws";
+import { Rate } from "k6/metrics";
 
 const baseUrl = (__ENV.BASE_URL || "http://localhost:8080").replace(/\/$/, "");
 const hostHeader = __ENV.HOST_HEADER;
 const email = __ENV.PERF_EMAIL;
 const password = __ENV.PERF_PASSWORD;
 const commandTripId = __ENV.PERF_TRIP_ID;
+const signalRHandshakeSuccess = new Rate("signalr_handshake_success");
 
 export const options = {
   discardResponseBodies: false,
@@ -85,12 +87,13 @@ export const options = {
   thresholds: {
     "http_req_duration{endpoint:login}": ["p(95)<500"],
     "http_req_duration{endpoint:trip-list}": ["p(95)<500"],
-    "http_req_duration{endpoint:operations-board}": ["p(95)<3000"],
+    "http_req_duration{endpoint:operations-board}": ["p(95)<500", "max<3000"],
     "http_req_duration{endpoint:status-transition}": ["p(95)<800"],
     "http_req_duration{endpoint:location-update}": ["p(95)<800"],
     "http_req_duration{endpoint:weighbridge-submission}": ["p(95)<800"],
     "http_req_duration{endpoint:report-request}": ["p(95)<800"],
     "ws_session_duration{endpoint:signalr}": ["p(95)<3000"],
+    signalr_handshake_success: ["rate==1"],
   },
 };
 
@@ -200,20 +203,32 @@ export function signalRScenario(data) {
     tags: { endpoint: "signalr" },
     headers: hostHeader ? { Host: hostHeader } : undefined,
   }, (socket) => {
+    let handshakeCompleted = false;
     socket.on("open", () => {
       socket.send('{"protocol":"json","version":1}\u001e');
     });
-    socket.setTimeout(() => socket.close(), 1000);
+    socket.on("message", (message) => {
+      if (!handshakeCompleted && String(message).includes("{}\u001e")) {
+        handshakeCompleted = true;
+        signalRHandshakeSuccess.add(true);
+        socket.close();
+      }
+    });
+    socket.setTimeout(() => {
+      if (!handshakeCompleted) signalRHandshakeSuccess.add(false);
+      socket.close();
+    }, 1000);
   });
   check(result, { "SignalR handshake accepts a WebSocket": (item) => item.status === 101 });
 }
 
 export function reportRequestScenario(data) {
-  const response = http.get(
-    `${baseUrl}/api/v1/reports/trip-register?page=1&pageSize=50`,
-    requestParams(data.token, "report-request"),
+  const response = http.post(
+    `${baseUrl}/api/v1/reports/trip-register/export-jobs`,
+    null,
+    commandParams(data.token, "report-request", `report-${__VU}-${__ITER}`),
   );
-  check(response, { "report request returns 200": (item) => item.status === 200 });
+  check(response, { "report export is queued": (item) => item.status === 202 });
 }
 
 function login() {
