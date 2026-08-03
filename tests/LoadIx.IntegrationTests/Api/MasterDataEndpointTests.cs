@@ -50,10 +50,10 @@ public sealed class MasterDataEndpointTests(
             .SeedAsync(CancellationToken.None);
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
         _factory.Dispose();
-        return Task.CompletedTask;
+        await MsSqlDatabaseFixture.DeleteDatabaseAsync(_connectionString);
     }
 
     [Fact]

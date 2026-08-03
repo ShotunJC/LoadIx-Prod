@@ -23,6 +23,7 @@ public sealed class LoadInstructionEndpointTests(
 {
     private const string AdministratorPassword = "LoadIx Demo Admin 2026!";
     private WebApplicationFactory<Program> _factory = null!;
+    private string _connectionString = string.Empty;
 
     public async Task InitializeAsync()
     {
@@ -31,6 +32,7 @@ public sealed class LoadInstructionEndpointTests(
         {
             InitialCatalog = $"LoadIx_Instructions_{Guid.NewGuid():N}",
         };
+        _connectionString = builder.ConnectionString;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
         {
             host.UseEnvironment("Development");
@@ -46,10 +48,10 @@ public sealed class LoadInstructionEndpointTests(
             .SeedAsync(CancellationToken.None);
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
         _factory.Dispose();
-        return Task.CompletedTask;
+        await MsSqlDatabaseFixture.DeleteDatabaseAsync(_connectionString);
     }
 
     [Fact]

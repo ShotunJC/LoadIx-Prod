@@ -52,14 +52,14 @@ public sealed class AuthenticationEndpointTests(
             .SeedAsync(CancellationToken.None);
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
         foreach (var factory in _factories)
         {
             factory.Dispose();
         }
 
-        return Task.CompletedTask;
+        await MsSqlDatabaseFixture.DeleteDatabaseAsync(_connectionString);
     }
 
     [Fact]
