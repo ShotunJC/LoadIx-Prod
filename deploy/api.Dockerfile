@@ -19,17 +19,21 @@ RUN mkdir -p src/LoadIx.Api/bin/Debug \
     src/LoadIx.Contracts/bin/Debug \
     src/LoadIx.Domain/bin/Debug \
     src/LoadIx.Infrastructure/bin/Debug
-RUN { \
-      printf '<Project><ItemGroup>\n'; \
-      find /source/src/LoadIx.Infrastructure -type f -name '*.cs' \
-        -not -path '*/bin/*' -not -path '*/obj/*' \
-        | sort \
-        | while IFS= read -r source; do \
-            printf '  <Compile Include="%s" />\n' "$source"; \
-          done; \
-      printf '</ItemGroup></Project>\n'; \
-    } > /tmp/LoadIx.Infrastructure.CompileItems.props
-RUN LoadIxCompileManifest=/tmp/LoadIx.Infrastructure.CompileItems.props \
+RUN for project in LoadIx.Api LoadIx.Infrastructure; do \
+      manifest="/tmp/$project.CompileItems.props"; \
+      { \
+        printf '<Project><ItemGroup>\n'; \
+        find "/source/src/$project" -type f -name '*.cs' \
+          -not -path '*/bin/*' -not -path '*/obj/*' \
+          | sort \
+          | while IFS= read -r source; do \
+              printf '  <Compile Include="%s" />\n' "$source"; \
+            done; \
+        printf '</ItemGroup></Project>\n'; \
+      } > "$manifest"; \
+    done
+RUN LoadIxApiCompileManifest=/tmp/LoadIx.Api.CompileItems.props \
+    LoadIxInfrastructureCompileManifest=/tmp/LoadIx.Infrastructure.CompileItems.props \
     dotnet publish src/LoadIx.Api/LoadIx.Api.csproj \
     --configuration Release \
     --no-restore \

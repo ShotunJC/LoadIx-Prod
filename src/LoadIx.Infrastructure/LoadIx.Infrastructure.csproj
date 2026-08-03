@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <EnableDefaultCompileItems Condition="'$(LoadIxCompileManifest)' != ''">false</EnableDefaultCompileItems>
+    <EnableDefaultCompileItems Condition="'$(LoadIxInfrastructureCompileManifest)' != ''">false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <Import
-    Project="$(LoadIxCompileManifest)"
-    Condition="'$(LoadIxCompileManifest)' != '' and Exists('$(LoadIxCompileManifest)')" />
+    Project="$(LoadIxInfrastructureCompileManifest)"
+    Condition="'$(LoadIxInfrastructureCompileManifest)' != '' and Exists('$(LoadIxInfrastructureCompileManifest)')" />
 
   <ItemGroup>
     <ProjectReference Include="..\LoadIx.Application\LoadIx.Application.csproj" />
