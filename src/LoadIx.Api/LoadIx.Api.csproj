@@ -12,7 +12,7 @@
     Project="$(LoadIxApiCompileManifest)"
     Condition="'$(LoadIxApiCompileManifest)' != '' and Exists('$(LoadIxApiCompileManifest)')" />
 
-  <ItemGroup Condition="'$(LoadIxApiCompileManifest)' != ''">
+  <ItemGroup Condition="'$(LoadIxApiCompileManifest)' != '' and '$(LoadIxApiIncludeConfigurationFiles)' != 'false'">
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

@@ -23,6 +23,7 @@ using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
 using LoadIx.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -35,6 +36,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using LoadIxDataProtectionOptions = LoadIx.Api.Configuration.DataProtectionOptions;
 using SchemeOptions = Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions;
 
 const string apiVersion = "v1";
@@ -60,6 +62,14 @@ builder.Services
         options => Uri.TryCreate(options.WebOrigin, UriKind.Absolute, out _),
         "LoadIx:WebOrigin must be an absolute URI.")
     .Validate(
+        options => builder.Environment.IsDevelopment()
+            || Uri.TryCreate(
+                options.WebOrigin,
+                UriKind.Absolute,
+                out var origin)
+                && origin.Scheme == Uri.UriSchemeHttps,
+        "LoadIx:WebOrigin must use HTTPS outside Development.")
+    .Validate(
         options => string.IsNullOrWhiteSpace(options.TrustedProxyIp)
             || IPAddress.TryParse(options.TrustedProxyIp, out _),
         "LoadIx:TrustedProxyIp must be a valid IP address when configured.")
@@ -74,6 +84,9 @@ builder.Services
     .AddOptions<RabbitMqOptions>()
     .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
     .ValidateDataAnnotations()
+    .Validate(
+        options => builder.Environment.IsDevelopment() || options.RabbitMqUseSsl,
+        "RabbitMQ TLS is required outside Development.")
     .ValidateOnStart();
 
 builder.Services
@@ -100,7 +113,8 @@ builder.Services
             && Uri.CheckHostName(options.FromAddress.Split('@').Last())
                 != UriHostNameType.Unknown
             && string.IsNullOrWhiteSpace(options.Username)
-                == string.IsNullOrWhiteSpace(options.Password),
+                == string.IsNullOrWhiteSpace(options.Password)
+            && (builder.Environment.IsDevelopment() || options.EnableSsl),
         "Account email configuration is invalid.")
     .ValidateOnStart();
 builder.Services
@@ -114,6 +128,12 @@ builder.Services
             StringComparison.OrdinalIgnoreCase),
         "Documents:Provider must be S3Compatible.")
     .Validate(
+        options => !string.IsNullOrWhiteSpace(options.Endpoint)
+            && !string.IsNullOrWhiteSpace(options.AccessKey)
+            && !string.IsNullOrWhiteSpace(options.SecretKey)
+            && (builder.Environment.IsDevelopment() || options.UseSsl),
+        "Document storage credentials and endpoint are invalid for the selected provider.")
+    .Validate(
         options => builder.Environment.IsDevelopment()
             || !string.Equals(
                 options.MalwareScanner,
@@ -125,6 +145,28 @@ builder.Services
     .AddOptions<EdgeDeviceOptions>()
     .Bind(builder.Configuration.GetSection(EdgeDeviceOptions.SectionName))
     .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services
+    .AddOptions<LoadIxDataProtectionOptions>()
+    .Bind(builder.Configuration.GetSection(LoadIxDataProtectionOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(
+        options => string.Equals(
+            options.Provider,
+            "FileSystem",
+            StringComparison.OrdinalIgnoreCase),
+        "DataProtection:Provider must be FileSystem.")
+    .Validate(
+        options => builder.Environment.IsDevelopment()
+            || Path.IsPathFullyQualified(options.KeyRingPath),
+        "Data Protection key storage configuration is invalid.")
+    .Validate(
+        options => builder.Environment.IsDevelopment()
+            || string.Equals(
+                options.Provider,
+                "FileSystem",
+                StringComparison.OrdinalIgnoreCase),
+        "Persistent filesystem Data Protection is required outside Development.")
     .ValidateOnStart();
 
 var documentOptions = builder.Configuration
@@ -139,6 +181,12 @@ var loadIxOptions = builder.Configuration
     .GetRequiredSection(LoadIxOptions.SectionName)
     .Get<LoadIxOptions>()
     ?? throw new InvalidOperationException("LoadIx configuration is required.");
+
+var dataProtectionOptions = builder.Configuration
+    .GetRequiredSection(LoadIxDataProtectionOptions.SectionName)
+    .Get<LoadIxDataProtectionOptions>()
+    ?? throw new InvalidOperationException(
+        "Data Protection configuration is required.");
 
 var dependencyOptions = builder.Configuration
     .GetRequiredSection(DependencyOptions.SectionName)
@@ -156,10 +204,20 @@ builder.Services.AddApplication(new SystemInfoDescriptor(
     loadIxOptions.ServiceName,
     loadIxOptions.Version,
     apiVersion));
-builder.Services.AddInfrastructure(databaseConnectionString);
+builder.Services.AddInfrastructure(
+    databaseConnectionString,
+    loadIxOptions.RunBackgroundWorkers);
+
+var dataProtection = builder.Services
+    .AddDataProtection()
+    .SetApplicationName(dataProtectionOptions.ApplicationName);
+Directory.CreateDirectory(dataProtectionOptions.KeyRingPath);
+dataProtection.PersistKeysToFileSystem(
+    new DirectoryInfo(dataProtectionOptions.KeyRingPath));
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedHost
         | ForwardedHeaders.XForwardedProto;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
@@ -424,8 +482,11 @@ builder.Services.AddProblemDetails(options =>
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi(apiVersion);
 builder.Services.AddSignalR();
-builder.Services.AddHostedService<OperationalOutboxDispatcher>();
-builder.Services.AddHostedService<NotificationDeliveryDispatcher>();
+if (loadIxOptions.RunBackgroundWorkers)
+{
+    builder.Services.AddHostedService<OperationalOutboxDispatcher>();
+    builder.Services.AddHostedService<NotificationDeliveryDispatcher>();
+}
 
 builder.Services.AddCors(options =>
 {
@@ -471,18 +532,18 @@ builder.Services
             dependencyOptions.RabbitMqPort),
         tags: ["ready"])
     .AddCheck(
-        "minio",
+        "object-storage",
         new TcpEndpointHealthCheck(
-            "MinIO",
-            dependencyOptions.MinioHost,
-            dependencyOptions.MinioPort),
+            "Object storage",
+            dependencyOptions.ObjectStorageHost,
+            dependencyOptions.ObjectStoragePort),
         tags: ["ready"])
     .AddCheck(
-        "mailpit",
+        "smtp",
         new TcpEndpointHealthCheck(
-            "Mailpit",
-            dependencyOptions.MailpitHost,
-            dependencyOptions.MailpitPort),
+            "SMTP",
+            dependencyOptions.SmtpHost,
+            dependencyOptions.SmtpPort),
         tags: ["ready"]);
 
 builder.Services

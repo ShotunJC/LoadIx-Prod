@@ -432,6 +432,43 @@ the documented k6 threshold run.
 **Decision gates:** production telemetry backend and alerts, multi-replica worker
 claim/lease strategy, export artifact storage, and measured pilot capacity.
 
+## M18 - Pilot Deployment Foundation
+
+**Outcome:** LoadIx has production-oriented containers, an explicit
+dedicated-server/VPS pilot topology, protected CI/CD deployment and rollback
+workflows, persistent MinIO/S3 object and Data Protection storage, a separate
+worker, explicit database migrations, health probes, smoke tests, and
+operational pilot documentation.
+
+**Status:** Implementation complete on 2026-08-04. No server or cloud account is
+deployed by this milestone; operators must provision and approve the protected
+dedicated-server environment before running the manual deployment workflow.
+
+**Deliverables:**
+
+- non-root, multi-stage API, web, worker, and migration images;
+- Docker Compose/Caddy dedicated-server guidance with GHCR publication, private
+  service networking, RabbitMQ messaging, MinIO/S3 object storage, SQL/Redis,
+  and provider-portable application seams;
+- production and development configuration separation, persistent host-backed
+  Data Protection keys, secure secret references, TLS/reverse-proxy guidance,
+  health probes, conservative autoscaling, and separate worker deployment;
+- explicit EF migration job and database migration runbook;
+- GitHub Actions CI, dependency/container scans, immutable image publication,
+  protected pilot deployment, post-deployment smoke test, and manual rollback;
+- pilot, configuration, backup/restore, rollback, incident-response, and daily
+  runbook documentation, including the go-live checklist.
+
+**Key checks:** release build/tests, frontend lint/typecheck/test/build,
+`docker compose config`, Docker image builds/scans where available, migration
+image review, and automated HTTPS smoke tests after a protected deployment.
+
+**Decision gates:** approved dedicated-server hardening/firewall and access
+design, protected secret/env-file process, production malware scanner,
+RabbitMQ/SMTP/SMS/map providers, MinIO/S3 retention and backup design,
+backup/restore rehearsal, incident contacts, privacy/DPA review, and pilot
+capacity evidence.
+
 ## Cross-Cutting Work in Every Milestone
 
 - schema migrations and realistic synthetic seed updates;

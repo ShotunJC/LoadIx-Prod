@@ -6,13 +6,15 @@ name: loadix-demo
 services:
   api:
     environment:
-      # The public overlay must run with production safeguards enabled. Supply
-      # deployment secrets explicitly; an empty signing key or scanner keeps
-      # the API from starting rather than silently using local defaults.
-      ASPNETCORE_ENVIRONMENT: Production
+      # This legacy overlay is a synthetic demonstration only. It intentionally
+      # retains Development behavior and must never carry pilot/customer data.
+      ASPNETCORE_ENVIRONMENT: Development
       AllowedHosts: ${DEMO_DOMAIN:-crimsonskyit.co.za}
       LoadIx__WebOrigin: https://${DEMO_DOMAIN:-crimsonskyit.co.za}
+      LoadIx__RunBackgroundWorkers: "true"
       LoadIx__TrustedProxyIp: ${TRUSTED_PROXY_IP:-}
+      DataProtection__Provider: FileSystem
+      DataProtection__KeyRingPath: /home/app/.aspnet/DataProtection-Keys
       Authentication__SigningKey: ${JWT_SIGNING_KEY:-}
       ConnectionStrings__Database: >-
         Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
@@ -20,7 +22,14 @@ services:
         Encrypt=False;TrustServerCertificate=True
       Dependencies__RabbitMqUsername: ${RABBITMQ_USERNAME:?RABBITMQ_USERNAME is required}
       Dependencies__RabbitMqPassword: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      Dependencies__RabbitMqUseSsl: ${RABBITMQ_USE_SSL:-false}
+      Dependencies__RabbitMqServerName: ${RABBITMQ_SERVER_NAME:-rabbitmq}
+      Dependencies__ObjectStorageHost: minio
+      Dependencies__ObjectStoragePort: 9000
+      Dependencies__SmtpHost: ${SMTP_HOST:-mail.crimsonskyit.co.za}
+      Dependencies__SmtpPort: ${SMTP_PORT:-587}
       Documents__MalwareScanner: ${MALWARE_SCANNER:-Unconfigured}
+      Documents__Provider: S3Compatible
       Documents__AccessKey: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
       Documents__SecretKey: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
       AccountEmail__Host: ${SMTP_HOST:-mail.crimsonskyit.co.za}
@@ -34,7 +43,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl --fail --header \"Host: $${AllowedHosts}\" http://localhost:8080/health/ready",
+          'curl --fail --header "Host: $${AllowedHosts}" http://localhost:8080/health/ready',
         ]
 
   web:

@@ -1,0 +1,125 @@
+name: Roll back LoadIx pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Known-good immutable application image tag
+        required: true
+        type: string
+      base_url:
+        description: HTTPS pilot URL used by the smoke test
+        required: true
+        type: string
+
+concurrency:
+  group: loadix-pilot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    name: Restore the known-good application release
+    runs-on: ubuntu-24.04
+    environment: pilot
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      SMOKE_BASE_URL: ${{ inputs.base_url }}
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_PORT: ${{ vars.VPS_PORT }}
+      VPS_USER: ${{ vars.VPS_USER }}
+      VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+      VPS_ENV_FILE: ${{ vars.VPS_ENV_FILE }}
+      VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate rollback inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]] || {
+            echo 'image_tag must be a 40-character lowercase Git commit SHA.' >&2
+            exit 1
+          }
+          [[ "$SMOKE_BASE_URL" == https://* ]] || {
+            echo 'base_url must use HTTPS.' >&2
+            exit 1
+          }
+          [[ "$VPS_HOST" =~ ^[A-Za-z0-9._-]+$ ]] || { echo 'Invalid VPS_HOST.' >&2; exit 1; }
+          [[ "$VPS_USER" =~ ^[A-Za-z0-9._-]+$ ]] || { echo 'Invalid VPS_USER.' >&2; exit 1; }
+          [[ "$VPS_DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]] || { echo 'Invalid VPS_DEPLOY_PATH.' >&2; exit 1; }
+          [[ "$VPS_ENV_FILE" =~ ^/[A-Za-z0-9._/-]+$ ]] || { echo 'Invalid VPS_ENV_FILE.' >&2; exit 1; }
+          [[ "$GHCR_USERNAME" =~ ^[A-Za-z0-9._-]+$ ]] || { echo 'Invalid GHCR_USERNAME.' >&2; exit 1; }
+          test -n "$VPS_KNOWN_HOSTS" || { echo 'VPS_KNOWN_HOSTS is required.' >&2; exit 1; }
+          test -n "$VPS_SSH_KEY" || { echo 'VPS_SSH_KEY is required.' >&2; exit 1; }
+          test -n "$GHCR_TOKEN" || { echo 'GHCR_TOKEN is required.' >&2; exit 1; }
+
+      - name: Configure SSH using the protected host key
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/loadix-deploy-key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/loadix-deploy-key" "$HOME/.ssh/known_hosts"
+
+      - name: Verify the rollback checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/loadix-deploy-key" \
+            -p "${VPS_PORT:-22}" \
+            "$VPS_USER@$VPS_HOST" \
+            bash -s -- "$IMAGE_TAG" "$VPS_DEPLOY_PATH" <<'REMOTE'
+          set -Eeuo pipefail
+          image_tag="$1"
+          deploy_path="$2"
+          cd "$deploy_path"
+          git fetch --force origin "$image_tag"
+          git checkout --detach "$image_tag"
+          test -f compose.pilot.yaml
+          REMOTE
+
+      - name: Authenticate the dedicated server to GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$GHCR_TOKEN" | ssh \
+            -i "$HOME/.ssh/loadix-deploy-key" \
+            -p "${VPS_PORT:-22}" \
+            "$VPS_USER@$VPS_HOST" \
+            "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin"
+
+      - name: Restore the previous application release
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/loadix-deploy-key" \
+            -p "${VPS_PORT:-22}" \
+            "$VPS_USER@$VPS_HOST" \
+            bash -s -- "$IMAGE_TAG" "$VPS_DEPLOY_PATH" "$VPS_ENV_FILE" <<'REMOTE'
+          set -Eeuo pipefail
+          image_tag="$1"
+          deploy_path="$2"
+          environment_file="$3"
+          cd "$deploy_path"
+          LOADIX_ENV_FILE="$environment_file" sh scripts/rollback-pilot.sh "$image_tag"
+          REMOTE
+
+      - name: Remove the temporary registry login
+        if: always()
+        shell: bash
+        run: |
+          ssh -i "$HOME/.ssh/loadix-deploy-key" \
+            -p "${VPS_PORT:-22}" \
+            "$VPS_USER@$VPS_HOST" \
+            docker logout ghcr.io || true
+
+      - name: Run rollback smoke test
+        run: bash scripts/smoke-test.sh "$SMOKE_BASE_URL"

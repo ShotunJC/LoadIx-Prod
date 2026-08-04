@@ -16,6 +16,13 @@ public sealed class LoadIxOptions
     public string WebOrigin { get; init; } = string.Empty;
 
     /// <summary>
+    /// API hosts keep this enabled for local development. In the pilot, set it
+    /// only on the dedicated worker host so horizontally scaled API replicas do
+    /// not compete for background work.
+    /// </summary>
+    public bool RunBackgroundWorkers { get; init; } = true;
+
+    /// <summary>
     /// Optional single trusted reverse-proxy address. Forwarded headers are
     /// ignored unless this is explicitly configured.
     /// </summary>

@@ -18,6 +18,7 @@ apps/loadix-web/test-results/
 .env
 .env.*
 !.env.example
+!.env.pilot.example
 **/appsettings.Local.json
 *.pfx
 *.p12

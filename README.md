@@ -70,17 +70,17 @@ through the deployment secret store outside local development.
 
 ### Local URLs
 
-| Service | URL |
-| --- | --- |
-| LoadIx web | <http://localhost:5173> |
-| API | <http://localhost:8080> |
-| API liveness | <http://localhost:8080/health/live> |
-| API readiness | <http://localhost:8080/health/ready> |
-| System information | <http://localhost:8080/api/v1/system/info> |
-| OpenAPI (development only) | <http://localhost:8080/openapi/v1.json> |
-| RabbitMQ management | <http://localhost:15672> |
-| MinIO console | <http://localhost:9001> |
-| Mailpit | <http://localhost:8025> |
+| Service                    | URL                                        |
+| -------------------------- | ------------------------------------------ |
+| LoadIx web                 | <http://localhost:5173>                    |
+| API                        | <http://localhost:8080>                    |
+| API liveness               | <http://localhost:8080/health/live>        |
+| API readiness              | <http://localhost:8080/health/ready>       |
+| System information         | <http://localhost:8080/api/v1/system/info> |
+| OpenAPI (development only) | <http://localhost:8080/openapi/v1.json>    |
+| RabbitMQ management        | <http://localhost:15672>                   |
+| MinIO console              | <http://localhost:9001>                    |
+| Mailpit                    | <http://localhost:8025>                    |
 
 RabbitMQ and MinIO use the local values in `.env`. Mailpit captures development
 email and never relays it externally.
@@ -385,7 +385,7 @@ outside the Development environment. A production deployment must register and
 configure an approved `IMalwareScanner` adapter, then set
 `Documents__MalwareScanner` accordingly; uploads fail closed while that provider
 is unavailable. The `IObjectStorage` port keeps business logic independent from
-MinIO and can be implemented for an S3-compatible provider or Azure Blob.
+MinIO and can be implemented for another S3-compatible provider.
 
 Apply the document schema migration with the normal migration command:
 
@@ -525,13 +525,30 @@ Then use <https://localhost:8081>. Do not commit development certificates or
 private keys. If the web client is also served over HTTPS, update
 `LoadIx__WebOrigin` to the exact trusted origin.
 
-## Demo VPS deployment with Docker
+## Dedicated-server pilot deployment
 
-For a temporary demonstration server, use the public overlay. It places Caddy
+The production-oriented pilot target is the existing VPS/dedicated-server
+path. Read [docs/deployment/pilot.md](docs/deployment/pilot.md) for the
+Docker Compose/Caddy topology, prerequisites, pilot checklist, storage and
+RabbitMQ guidance, health probes, backups, restore, rollback, and incident
+procedures. The protected GitHub Actions workflows publish immutable images to
+GHCR, run the migration image over SSH, deploy the Compose release, and execute
+the post-deployment HTTPS smoke test. They do not contain cloud credentials.
+
+The pilot uses RabbitMQ for messaging and MinIO or another S3-compatible
+provider for documents. Azure Service Bus and Azure Blob are not required.
+Configure the protected `container-registry` and `pilot` GitHub environments
+only after server hardening, secret storage, backup policy, incident contacts,
+and pilot approvals are complete.
+
+## Demo VPS deployment with Docker (legacy demonstration only)
+
+For a temporary, synthetic-data demonstration server, use the public overlay. It places Caddy
 in front of the web container, obtains a certificate for the configured domain,
 and keeps SQL Server, Redis, RabbitMQ, MinIO, and Mailpit off the public network.
 This overlay retains the Development environment and synthetic seed accounts;
-do not use it for customer or production data.
+do not use it for customer, pilot, or production data. The supported
+Milestone 18 deployment target is `compose.pilot.yaml`.
 
 On an Ubuntu VPS with Docker Compose v2:
 
@@ -603,9 +620,10 @@ or inspect them only from the VPS. Keep regular backups of the named volumes.
 src/       .NET API, application, domain, infrastructure, and contracts
 tests/     unit, integration, and architecture tests
 apps/      React web application and Playwright tests
-deploy/    API/web Dockerfiles and Nginx configuration
+deploy/    production Dockerfiles, Nginx/Caddy configuration, and server templates
+compose.pilot.yaml  dedicated-server pilot application stack
 scripts/   local startup, shutdown, and migration helpers
-docs/      product, architecture, glossary, workflow, and milestone guidance
+docs/      product, architecture, glossary, workflow, milestone, and deployment guidance
 ```
 
 Read [AGENTS.md](AGENTS.md) and the documents under [docs](docs) before making
