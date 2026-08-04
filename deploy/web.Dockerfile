@@ -8,7 +8,7 @@ ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.29.5-alpine AS final
+FROM nginxinc/nginx-unprivileged:1.31.3-alpine3.24 AS final
 ARG API_UPSTREAM=api:8080
 ARG API_HOST=api
 COPY deploy/nginx.conf.template /tmp/nginx.conf.template

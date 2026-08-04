@@ -37,7 +37,7 @@ mv "$next_environment" "$environment_file"
 
 compose config --quiet
 compose pull api web worker
-compose up -d api web worker caddy
+compose up -d --wait --wait-timeout 180 api web worker caddy
 compose ps
 
 rm -f "$temporary_file"

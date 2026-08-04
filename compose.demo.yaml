@@ -6,9 +6,10 @@ name: loadix-demo
 services:
   api:
     environment:
-      # This legacy overlay is a synthetic demonstration only. It intentionally
-      # retains Development behavior and must never carry pilot/customer data.
-      ASPNETCORE_ENVIRONMENT: Development
+      # The public demo remains synthetic, but it still runs with production
+      # HTTP/authentication safeguards. Its same-host dependency network is the
+      # only explicitly allowed plaintext boundary.
+      ASPNETCORE_ENVIRONMENT: Production
       AllowedHosts: ${DEMO_DOMAIN:-crimsonskyit.co.za}
       LoadIx__WebOrigin: https://${DEMO_DOMAIN:-crimsonskyit.co.za}
       LoadIx__RunBackgroundWorkers: "true"

@@ -79,14 +79,23 @@ builder.Services
     .AddOptions<DependencyOptions>()
     .Bind(builder.Configuration.GetSection(DependencyOptions.SectionName))
     .ValidateDataAnnotations()
+    .Validate(
+        options => builder.Environment.IsDevelopment()
+            || options.RedisUseSsl
+            || builder.Configuration.GetValue<bool>(
+                $"{LoadIxOptions.SectionName}:AllowInsecurePrivateDependencies"),
+        "Redis TLS is required unless explicitly limited to trusted private-host dependencies.")
     .ValidateOnStart();
 builder.Services
     .AddOptions<RabbitMqOptions>()
     .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
     .ValidateDataAnnotations()
     .Validate(
-        options => builder.Environment.IsDevelopment() || options.RabbitMqUseSsl,
-        "RabbitMQ TLS is required outside Development.")
+        options => builder.Environment.IsDevelopment()
+            || options.RabbitMqUseSsl
+            || builder.Configuration.GetValue<bool>(
+                $"{LoadIxOptions.SectionName}:AllowInsecurePrivateDependencies"),
+        "RabbitMQ TLS is required unless explicitly limited to trusted private-host dependencies.")
     .ValidateOnStart();
 
 builder.Services
@@ -131,7 +140,10 @@ builder.Services
         options => !string.IsNullOrWhiteSpace(options.Endpoint)
             && !string.IsNullOrWhiteSpace(options.AccessKey)
             && !string.IsNullOrWhiteSpace(options.SecretKey)
-            && (builder.Environment.IsDevelopment() || options.UseSsl),
+            && (builder.Environment.IsDevelopment()
+                || options.UseSsl
+                || builder.Configuration.GetValue<bool>(
+                    $"{LoadIxOptions.SectionName}:AllowInsecurePrivateDependencies")),
         "Document storage credentials and endpoint are invalid for the selected provider.")
     .Validate(
         options => builder.Environment.IsDevelopment()
@@ -481,7 +493,9 @@ builder.Services.AddProblemDetails(options =>
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi(apiVersion);
-builder.Services.AddSignalR();
+builder.Services
+    .AddSignalR()
+    .AddLoadIxRedisBackplane(dependencyOptions);
 if (loadIxOptions.RunBackgroundWorkers)
 {
     builder.Services.AddHostedService<OperationalOutboxDispatcher>();

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.103 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS build
 WORKDIR /source
 ENV NUGET_PACKAGES=/home/loadix/.nuget/packages
 
@@ -36,20 +36,21 @@ RUN LoadIxApiCompileManifest=/tmp/LoadIx.Api.CompileItems.props \
     --no-restore
 RUN dotnet tool install dotnet-ef \
     --tool-path /tools \
-    --version 10.0.3
+    --version 10.0.10
+RUN LoadIxApiCompileManifest=/tmp/LoadIx.Api.CompileItems.props \
+    LoadIxInfrastructureCompileManifest=/tmp/LoadIx.Infrastructure.CompileItems.props \
+    LoadIxApiIncludeConfigurationFiles=false \
+    /tools/dotnet-ef migrations bundle \
+    --project src/LoadIx.Infrastructure \
+    --startup-project src/LoadIx.Api \
+    --configuration Release \
+    --no-build \
+    --output /app/efbundle
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0.103 AS final
-WORKDIR /workspace
-COPY --from=build /source .
-COPY --from=build /tools /tools
-RUN rm -f /workspace/src/LoadIx.Api/appsettings.Development.json
-ENV PATH="/tools:${PATH}" \
-    NUGET_PACKAGES=/home/loadix/.nuget/packages \
-    DOTNET_EnableDiagnostics=0 \
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.10 AS final
+WORKDIR /app
+ENV DOTNET_EnableDiagnostics=0 \
     DOTNET_RUNNING_IN_CONTAINER=true
-RUN groupadd --gid 10001 loadix \
-    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin loadix \
-    && chown -R 10001:10001 /workspace /tools
-COPY --from=build --chown=10001:10001 /home/loadix/.nuget/packages /home/loadix/.nuget/packages
-USER 10001
-ENTRYPOINT ["dotnet-ef", "database", "update", "--project", "src/LoadIx.Infrastructure", "--startup-project", "src/LoadIx.Api", "--configuration", "Release", "--no-build"]
+COPY --from=build --chown=$APP_UID:$APP_UID /app/efbundle .
+USER $APP_UID
+ENTRYPOINT ["./efbundle"]

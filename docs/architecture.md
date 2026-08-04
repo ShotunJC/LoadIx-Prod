@@ -347,6 +347,8 @@ notifications.
 - RabbitMQ: durable integration events and external asynchronous boundaries. The
   core request path must not depend on immediate broker availability.
 - SignalR: transient live UI updates; reconnecting clients refetch state.
+  Production API and worker containers share a private Redis backplane so an
+  outbox event dispatched by the worker reaches clients connected to the API.
 
 The initial local Compose environment should include all production dependencies
 to expose integration failures early. The pilot separates API and worker
@@ -588,6 +590,9 @@ RabbitMQ remains the AMQP 0-9-1 broker. Documents use the application-owned
 `IObjectStorage` port with MinIO or another S3-compatible provider. SQL Server,
 Redis, SMTP, maps, scanning, and
 telemetry are private host or approved private/provider endpoints.
+The supported topology is an operator-controlled VPS or bare-metal Linux host;
+Azure application hosting and Azure-managed messaging/storage are not supported
+deployment targets.
 
 The pilot deployment publishes immutable images to GHCR and uses a protected
 GitHub Actions SSH workflow. Data Protection keys persist in a host-backed API

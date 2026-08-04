@@ -26,6 +26,8 @@ domain and application layers.
   API, health, and SignalR paths to the private API.
 - Run the API and background consumers as separate non-root containers. API
   instances set LoadIx__RunBackgroundWorkers=false; the worker sets it to true.
+  Both processes use the same private Redis backplane so worker-originated
+  SignalR invalidations reach clients connected to the API container.
 - Run EF Core migrations from a separate, one-shot migration image. The
   protected deployment workflow must complete migration before application
   containers change.
@@ -35,9 +37,9 @@ domain and application layers.
 - Keep application configuration in a root-owned, mode-0600 host env file. SSH
   deployment uses a protected private key and pinned known-hosts content.
 - Use RabbitMQ for the existing AMQP 0-9-1 integration. Azure Service Bus is not
-  a transparent replacement and is not part of the pilot.
+  a transparent replacement and is not supported by this deployment.
 - Use MinIO or another S3-compatible object-storage provider for documents.
-  Azure Blob is not a pilot prerequisite. Data Protection keys use a persistent
+  Azure Blob is not part of this deployment. Data Protection keys use a persistent
   host-backed filesystem volume for this single-host pilot.
 - Use private/certificate-validating SQL, Redis, RabbitMQ, object-storage, SMTP,
   and telemetry endpoints. No dependency management console is public.

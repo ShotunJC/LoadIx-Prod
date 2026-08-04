@@ -1,5 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup Condition="'$(LoadIxWorkerCompileManifest)' != ''">
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+  </PropertyGroup>
+
+  <Import
+    Project="$(LoadIxWorkerCompileManifest)"
+    Condition="'$(LoadIxWorkerCompileManifest)' != '' and Exists('$(LoadIxWorkerCompileManifest)')" />
+
+  <ItemGroup Condition="'$(LoadIxWorkerCompileManifest)' != ''">
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -23,6 +38,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
   </ItemGroup>
 
 </Project>

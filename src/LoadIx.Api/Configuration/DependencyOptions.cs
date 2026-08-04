@@ -12,6 +12,12 @@ public sealed class DependencyOptions
     [Range(1, 65535)]
     public int RedisPort { get; init; }
 
+    public bool RedisUseSsl { get; init; }
+
+    public string RedisPassword { get; init; } = string.Empty;
+
+    public string RedisServerName { get; init; } = string.Empty;
+
     [Required]
     public string RabbitMqHost { get; init; } = string.Empty;
 

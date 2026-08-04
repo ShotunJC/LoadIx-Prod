@@ -1,6 +1,10 @@
 # .NET
 **/bin/
 **/obj/
+# Guard against malformed SDK output paths such as `bin<unicode>Release`,
+# which previously reached the VPS build context and broke wildcard expansion.
+**/bin*Release/
+**/obj*Release/
 *.user
 *.suo
 .vs/

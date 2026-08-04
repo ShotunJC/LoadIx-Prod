@@ -8,7 +8,8 @@ account.
 
 The application remains provider-portable. The pilot uses RabbitMQ for AMQP
 0-9-1 messaging and MinIO or another S3-compatible service for document
-objects. Azure Service Bus and Azure Blob are not required by this deployment.
+objects. Azure hosting, Azure Service Bus, and Azure Blob are not supported by
+this deployment path.
 
 ## Target topology
 
@@ -29,6 +30,7 @@ objects. Azure Service Bus and Azure Blob are not required by this deployment.
 
     Worker container (non-root, no public port)
        +--> same SQL, Redis, RabbitMQ, object-storage, and provider endpoints
+       +--> Redis SignalR backplane -> API-connected clients
 
     Migration image (one-shot, protected workflow step)
 
@@ -88,15 +90,17 @@ complete these gates:
   eviction metrics, and an approved failover policy. Redis is never the system
   of record; do not put documents, credentials, or irreversible workflow state
   there.
+  The API and worker must use the same Redis endpoint and `LoadIx` channel
+  prefix because worker-dispatched SignalR invalidations cross this backplane.
 - **RabbitMQ:** use RabbitMQ directly, either as a protected service on the
   dedicated host or an AMQPS-compatible external service. Use a dedicated vhost,
   non-admin user, durable queues, dead-letter queues, and queue-depth alerts.
-  Azure Service Bus is not a drop-in replacement for the current client.
+  Azure Service Bus is not a drop-in replacement and is not supported here.
 - **Object storage:** use MinIO on the dedicated server or another private
   S3-compatible endpoint over HTTPS. Keep the document bucket private, use
   scoped credentials, version/replicate objects as policy allows, and include
-  metadata/object reconciliation in restore rehearsals. Azure Blob is not
-  required for this pilot.
+  metadata/object reconciliation in restore rehearsals. Azure Blob is not a
+  supported storage target for this deployment.
 
 ## Release sequence
 
@@ -130,6 +134,10 @@ complete these gates:
   AllowedHosts.
 - SQL, RabbitMQ, MinIO/S3, SMTP, and telemetry use certificate-validating TLS.
   Redis is private and must use provider TLS when it has a network endpoint.
+  Plaintext RabbitMQ/Redis/MinIO is allowed only when
+  `LOADIX_ALLOW_INSECURE_PRIVATE_DEPENDENCIES=true` and those ports are isolated
+  to the same trusted host/container network; never use that flag for a remote
+  endpoint.
   Do not use TrustServerCertificate=True for pilot data.
 - Data Protection keys persist in the API volume. This is safe for the
   single-host pilot only; a future multi-host deployment must use a shared,
@@ -206,4 +214,5 @@ No server or cloud deployment is performed by local validation. Run restore,
 format, warning-as-error build, unit/architecture tests, frontend checks,
 docker compose config, image builds/scans where Docker is available, and the
 HTTPS smoke-script syntax check. The existing compose.demo.yaml remains a
-Development synthetic-data demonstration and must not be used for pilot data.
+synthetic-data demonstration, uses Production HTTP/authentication safeguards,
+and must not be used for pilot data.

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.103 AS restore
+FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS restore
 WORKDIR /source
 
 COPY .editorconfig Directory.Build.props Directory.Packages.props global.json LoadIx.slnx ./
@@ -18,7 +18,7 @@ RUN mkdir -p src/LoadIx.Api/bin/Debug \
     src/LoadIx.Domain/bin/Debug \
     src/LoadIx.Infrastructure/bin/Debug \
     src/LoadIx.Worker/bin/Debug
-RUN for project in LoadIx.Api LoadIx.Infrastructure; do \
+RUN for project in LoadIx.Api LoadIx.Infrastructure LoadIx.Worker; do \
       manifest="/tmp/$project.CompileItems.props"; \
       { \
         printf '<Project><ItemGroup>\n'; \
@@ -34,6 +34,7 @@ RUN for project in LoadIx.Api LoadIx.Infrastructure; do \
     done
 RUN LoadIxApiCompileManifest=/tmp/LoadIx.Api.CompileItems.props \
     LoadIxInfrastructureCompileManifest=/tmp/LoadIx.Infrastructure.CompileItems.props \
+    LoadIxWorkerCompileManifest=/tmp/LoadIx.Worker.CompileItems.props \
     LoadIxApiIncludeConfigurationFiles=false \
     dotnet publish src/LoadIx.Worker/LoadIx.Worker.csproj \
     --configuration Release \
@@ -52,4 +53,6 @@ RUN rm -f /app/appsettings.Development.json \
     && mkdir -p /home/app/.aspnet/DataProtection-Keys \
     && chown -R $APP_UID:$APP_UID /home/app
 USER $APP_UID
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD test -r /proc/1/cmdline && grep --quiet 'LoadIx.Worker.dll' /proc/1/cmdline || exit 1
 ENTRYPOINT ["dotnet", "LoadIx.Worker.dll"]

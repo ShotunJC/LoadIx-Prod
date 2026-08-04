@@ -14,6 +14,9 @@ services:
       ConnectionStrings__Database: ${LOADIX_DATABASE_CONNECTION_STRING:?Set LOADIX_DATABASE_CONNECTION_STRING}
       Dependencies__RedisHost: ${LOADIX_REDIS_HOST:?Set LOADIX_REDIS_HOST}
       Dependencies__RedisPort: ${LOADIX_REDIS_PORT:-6380}
+      Dependencies__RedisUseSsl: ${LOADIX_REDIS_USE_SSL:-true}
+      Dependencies__RedisPassword: ${LOADIX_REDIS_PASSWORD:-}
+      Dependencies__RedisServerName: ${LOADIX_REDIS_SERVER_NAME:-${LOADIX_REDIS_HOST}}
       Dependencies__RabbitMqHost: ${LOADIX_RABBITMQ_HOST:?Set LOADIX_RABBITMQ_HOST}
       Dependencies__RabbitMqPort: ${LOADIX_RABBITMQ_PORT:-5671}
       Dependencies__RabbitMqUsername: ${LOADIX_RABBITMQ_USERNAME:?Set LOADIX_RABBITMQ_USERNAME}
@@ -31,6 +34,7 @@ services:
       LoadIx__Version: ${LOADIX_IMAGE_TAG}
       LoadIx__WebOrigin: ${LOADIX_WEB_ORIGIN:?Set LOADIX_WEB_ORIGIN}
       LoadIx__RunBackgroundWorkers: "false"
+      LoadIx__AllowInsecurePrivateDependencies: ${LOADIX_ALLOW_INSECURE_PRIVATE_DEPENDENCIES:-false}
       LoadIx__TrustedProxyIp: ${LOADIX_TRUSTED_PROXY_IP:-}
       Authentication__SigningKey: ${LOADIX_AUTHENTICATION_SIGNING_KEY:?Set LOADIX_AUTHENTICATION_SIGNING_KEY}
       AccountEmail__Host: ${LOADIX_SMTP_HOST}
@@ -62,6 +66,8 @@ services:
           "curl",
           "--fail",
           "--silent",
+          "--header",
+          "Host: api",
           "http://127.0.0.1:8080/health/ready",
         ]
       interval: 15s
@@ -77,6 +83,9 @@ services:
       ConnectionStrings__Database: ${LOADIX_DATABASE_CONNECTION_STRING}
       Dependencies__RedisHost: ${LOADIX_REDIS_HOST}
       Dependencies__RedisPort: ${LOADIX_REDIS_PORT:-6380}
+      Dependencies__RedisUseSsl: ${LOADIX_REDIS_USE_SSL:-true}
+      Dependencies__RedisPassword: ${LOADIX_REDIS_PASSWORD:-}
+      Dependencies__RedisServerName: ${LOADIX_REDIS_SERVER_NAME:-${LOADIX_REDIS_HOST}}
       Dependencies__RabbitMqHost: ${LOADIX_RABBITMQ_HOST}
       Dependencies__RabbitMqPort: ${LOADIX_RABBITMQ_PORT:-5671}
       Dependencies__RabbitMqUsername: ${LOADIX_RABBITMQ_USERNAME}
@@ -94,6 +103,7 @@ services:
       LoadIx__Version: ${LOADIX_IMAGE_TAG}
       LoadIx__WebOrigin: ${LOADIX_WEB_ORIGIN}
       LoadIx__RunBackgroundWorkers: "true"
+      LoadIx__AllowInsecurePrivateDependencies: ${LOADIX_ALLOW_INSECURE_PRIVATE_DEPENDENCIES:-false}
       Authentication__SigningKey: ${LOADIX_AUTHENTICATION_SIGNING_KEY}
       AccountEmail__Host: ${LOADIX_SMTP_HOST}
       AccountEmail__Port: ${LOADIX_SMTP_PORT:-587}

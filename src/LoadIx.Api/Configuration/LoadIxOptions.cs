@@ -23,6 +23,12 @@ public sealed class LoadIxOptions
     public bool RunBackgroundWorkers { get; init; } = true;
 
     /// <summary>
+    /// Allows plaintext connections only to dependencies isolated on the same
+    /// trusted host/private container network. Keep false for remote endpoints.
+    /// </summary>
+    public bool AllowInsecurePrivateDependencies { get; init; }
+
+    /// <summary>
     /// Optional single trusted reverse-proxy address. Forwarded headers are
     /// ignored unless this is explicitly configured.
     /// </summary>

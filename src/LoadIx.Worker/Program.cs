@@ -65,14 +65,23 @@ builder.Services
     .AddOptions<DependencyOptions>()
     .Bind(builder.Configuration.GetSection(DependencyOptions.SectionName))
     .ValidateDataAnnotations()
+    .Validate(
+        options => builder.Environment.IsDevelopment()
+            || options.RedisUseSsl
+            || builder.Configuration.GetValue<bool>(
+                $"{LoadIxOptions.SectionName}:AllowInsecurePrivateDependencies"),
+        "Redis TLS is required unless explicitly limited to trusted private-host dependencies.")
     .ValidateOnStart();
 builder.Services
     .AddOptions<RabbitMqOptions>()
     .Bind(builder.Configuration.GetSection(RabbitMqOptions.SectionName))
     .ValidateDataAnnotations()
     .Validate(
-        options => builder.Environment.IsDevelopment() || options.RabbitMqUseSsl,
-        "RabbitMQ TLS is required outside Development.")
+        options => builder.Environment.IsDevelopment()
+            || options.RabbitMqUseSsl
+            || builder.Configuration.GetValue<bool>(
+                $"{LoadIxOptions.SectionName}:AllowInsecurePrivateDependencies"),
+        "RabbitMQ TLS is required unless explicitly limited to trusted private-host dependencies.")
     .ValidateOnStart();
 builder.Services
     .AddOptions<AccountEmailOptions>()
@@ -101,7 +110,10 @@ builder.Services
         options => !string.IsNullOrWhiteSpace(options.Endpoint)
             && !string.IsNullOrWhiteSpace(options.AccessKey)
             && !string.IsNullOrWhiteSpace(options.SecretKey)
-            && (builder.Environment.IsDevelopment() || options.UseSsl),
+            && (builder.Environment.IsDevelopment()
+                || options.UseSsl
+                || builder.Configuration.GetValue<bool>(
+                    $"{LoadIxOptions.SectionName}:AllowInsecurePrivateDependencies")),
         "Document storage credentials and endpoint are invalid for the selected provider.")
     .Validate(
         options => builder.Environment.IsDevelopment()
@@ -126,6 +138,10 @@ var dataProtectionOptions = builder.Configuration
     .Get<LoadIxDataProtectionOptions>()
     ?? throw new InvalidOperationException(
         "Data Protection configuration is required.");
+var dependencyOptions = builder.Configuration
+    .GetRequiredSection(DependencyOptions.SectionName)
+    .Get<DependencyOptions>()
+    ?? throw new InvalidOperationException("Dependency configuration is required.");
 var databaseConnectionString = builder.Configuration.GetConnectionString("Database");
 if (string.IsNullOrWhiteSpace(databaseConnectionString))
 {
@@ -144,7 +160,9 @@ var dataProtection = builder.Services
 Directory.CreateDirectory(dataProtectionOptions.KeyRingPath);
 dataProtection.PersistKeysToFileSystem(
     new DirectoryInfo(dataProtectionOptions.KeyRingPath));
-builder.Services.AddSignalR();
+builder.Services
+    .AddSignalR()
+    .AddLoadIxRedisBackplane(dependencyOptions);
 builder.Services.AddHostedService<OperationalOutboxDispatcher>();
 builder.Services.AddHostedService<NotificationDeliveryDispatcher>();
 

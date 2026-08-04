@@ -5,10 +5,11 @@ runs database update.
 
 ## Migration image and job
 
-deploy/migrations.Dockerfile builds a multi-stage EF image. The final image
-runs as UID 10001 and executes dotnet ef database update against the
-LoadIx.Infrastructure migrations assembly. The dedicated-server deployment
-script runs the migration image as a one-shot Compose tools service:
+deploy/migrations.Dockerfile builds an EF migration bundle in an SDK build
+stage. The final image contains only the bundle and the ASP.NET runtime, runs
+as the platform non-root application user, and applies the
+LoadIx.Infrastructure migrations. The dedicated-server deployment script runs
+the migration image as a one-shot Compose tools service:
 
     docker compose --env-file /etc/loadix/pilot.env \
       -f compose.pilot.yaml --profile tools run --rm migrate

@@ -14,6 +14,9 @@ services:
         Encrypt=False;TrustServerCertificate=True
       Dependencies__RedisHost: redis
       Dependencies__RedisPort: 6379
+      Dependencies__RedisUseSsl: "false"
+      Dependencies__RedisPassword: ""
+      Dependencies__RedisServerName: redis
       Dependencies__RabbitMqHost: rabbitmq
       Dependencies__RabbitMqPort: 5672
       Dependencies__RabbitMqUsername: ${RABBITMQ_USER:-loadix}
@@ -31,6 +34,7 @@ services:
       LoadIx__Version: 0.1.0
       LoadIx__WebOrigin: http://localhost:${WEB_PORT:-5173}
       LoadIx__RunBackgroundWorkers: "true"
+      LoadIx__AllowInsecurePrivateDependencies: "true"
       DataProtection__Provider: FileSystem
       DataProtection__KeyRingPath: /home/app/.aspnet/DataProtection-Keys
       Authentication__SigningKey: ${JWT_SIGNING_KEY:-LoadIx-development-only-signing-key-change-before-production-2026}

@@ -50,7 +50,7 @@ compose --profile tools pull api web worker migrate
 # Migrations run before application containers change. The migration image is
 # supplied the same immutable tag as the application images.
 compose --profile tools run --rm migrate
-compose up -d --remove-orphans api web worker caddy
+compose up -d --remove-orphans --wait --wait-timeout 180 api web worker caddy
 compose ps
 
 rm -f "$backup_file"

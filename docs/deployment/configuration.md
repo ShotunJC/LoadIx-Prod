@@ -14,6 +14,8 @@ placeholders only.
 - Set the exact HTTPS browser origin in LOADIX_WEB_ORIGIN and include that host
   plus api in LOADIX_ALLOWED_HOSTS. Never use a wildcard.
 - Keep LoadIx__RunBackgroundWorkers=false on API and true on the worker.
+- Configure the same authenticated Redis endpoint on API and worker; it carries
+  the SignalR backplane as well as ephemeral coordination.
 - Use RabbitMQ AMQP 0-9-1. RabbitMqUseSsl=true and port 5671 are required for
   provider/network endpoints outside Development.
 - Use MinIO or another S3-compatible provider for documents. The current pilot
@@ -35,7 +37,9 @@ placeholders only.
 | LOADIX_WEB_ORIGIN                             | LoadIx__WebOrigin                         | Exact value such as https://pilot.example.com             |
 | LOADIX_ALLOWED_HOSTS                          | AllowedHosts                              | Public host;api, never *                                  |
 | LOADIX_DATABASE_CONNECTION_STRING             | ConnectionStrings__Database               | Protected SQL connection string                           |
-| LOADIX_REDIS_HOST / PORT                      | Dependencies__RedisHost / Port            | Private or managed Redis TLS endpoint                     |
+| LOADIX_REDIS_HOST / PORT                      | Dependencies__RedisHost / Port            | Private Redis endpoint shared by API and worker           |
+| LOADIX_REDIS_USE_SSL / PASSWORD / SERVER_NAME | Dependencies__Redis*                      | TLS/authentication for Redis and the SignalR backplane    |
+| LOADIX_ALLOW_INSECURE_PRIVATE_DEPENDENCIES    | LoadIx__AllowInsecurePrivateDependencies  | Same-host private network only; never remote              |
 | LOADIX_RABBITMQ_HOST / PORT                   | Dependencies__RabbitMqHost / Port         | RabbitMQ AMQPS endpoint, normally 5671                    |
 | LOADIX_RABBITMQ_USERNAME / PASSWORD           | Dependencies__RabbitMqUsername / Password | Least-privilege RabbitMQ user                             |
 | LOADIX_RABBITMQ_VHOST                         | Dependencies__RabbitMqVirtualHost         | Dedicated vhost, normally /loadix                         |

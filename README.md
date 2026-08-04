@@ -9,7 +9,7 @@ tests, deterministic demo data, and a complete local dependency stack.
 
 Install:
 
-- .NET SDK 10.0.103 or a compatible 10.0 patch selected by `global.json`;
+- .NET SDK 10.0.302 or a compatible 10.0 feature-band patch selected by `global.json`;
 - Node.js 24.13.1 or a compatible Node 24 release;
 - Docker Desktop with Docker Compose; and
 - Git.
@@ -536,7 +536,8 @@ GHCR, run the migration image over SSH, deploy the Compose release, and execute
 the post-deployment HTTPS smoke test. They do not contain cloud credentials.
 
 The pilot uses RabbitMQ for messaging and MinIO or another S3-compatible
-provider for documents. Azure Service Bus and Azure Blob are not required.
+provider for documents. Azure hosting, Azure Service Bus, and Azure Blob are not
+supported by this deployment path.
 Configure the protected `container-registry` and `pilot` GitHub environments
 only after server hardening, secret storage, backup policy, incident contacts,
 and pilot approvals are complete.
@@ -546,8 +547,9 @@ and pilot approvals are complete.
 For a temporary, synthetic-data demonstration server, use the public overlay. It places Caddy
 in front of the web container, obtains a certificate for the configured domain,
 and keeps SQL Server, Redis, RabbitMQ, MinIO, and Mailpit off the public network.
-This overlay retains the Development environment and synthetic seed accounts;
-do not use it for customer, pilot, or production data. The supported
+This overlay retains synthetic seed accounts while running the API with
+Production HTTP/authentication safeguards; do not use it for customer, pilot,
+or production data. The supported
 Milestone 18 deployment target is `compose.pilot.yaml`.
 
 On an Ubuntu VPS with Docker Compose v2:
