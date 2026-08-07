@@ -114,6 +114,39 @@ public sealed class OperationsNotificationEndpointTests(
             StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task AdministratorDashboardQueriesAreSqlTranslatable()
+    {
+        var admin = await LoginAsync(
+            DevelopmentIdentitySeeder.AdministratorEmail,
+            AdministratorPassword);
+        var paths = new[]
+        {
+            "/api/v1/operations/locations",
+            "/api/v1/reports/dashboard",
+            "/api/v1/reports/trip-register",
+            "/api/v1/reports/tonnage-by-customer",
+            "/api/v1/reports/tonnage-by-commodity",
+            "/api/v1/reports/tonnage-by-route",
+            "/api/v1/reports/variance",
+            "/api/v1/reports/driver-performance",
+            "/api/v1/reports/vehicle-utilisation",
+            "/api/v1/reports/contract-performance",
+            "/api/v1/reports/customer-revenue",
+            "/api/v1/reports/trip-profitability",
+            "/api/v1/reports/exceptions",
+            "/api/v1/reports/outstanding-pod",
+            "/api/v1/reports/expiries",
+            "/api/v1/reports/invoice-status",
+        };
+
+        foreach (var path in paths)
+        {
+            var response = await admin.GetAsync(path);
+            response.StatusCode.Should().Be(HttpStatusCode.OK, path);
+        }
+    }
+
     private WebApplicationFactory<Program> CreateFactory()
     {
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>

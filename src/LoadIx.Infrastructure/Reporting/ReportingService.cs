@@ -221,12 +221,14 @@ public sealed class ReportingService(
         var now = timeProvider.GetUtcNow().ToUniversalTime();
         var query = BuildTripFacts(filter, ReportDateMode.PlannedDelivery, await GetRangeAsync(filter, cancellationToken))
             .Where(item => item.OutsideTolerance || item.Status == TripStatus.ReconciliationRequired
-                || (ActiveStatuses.Contains(item.Status) && item.PlannedDeliveryAtUtc < now))
+                || (ActiveStatuses.Contains(item.Status) && item.PlannedDeliveryAtUtc < now));
+        return await PageAsync(query
+            .OrderByDescending(item => item.CompletedAtUtc ?? item.PlannedDeliveryAtUtc)
+            .ThenBy(item => item.TripId)
             .Select(item => new ExceptionReportRow(item.TripId, item.TripNumber, item.CustomerName,
                 item.Status.ToString(), item.OutsideTolerance ? "Outside tolerance"
                     : item.Status == TripStatus.ReconciliationRequired ? "Awaiting reconciliation" : "Delayed",
-                item.CompletedAtUtc ?? item.PlannedDeliveryAtUtc));
-        return await PageAsync(query.OrderByDescending(item => item.OccurredAtUtc).ThenBy(item => item.TripId), filter, cancellationToken);
+                item.CompletedAtUtc ?? item.PlannedDeliveryAtUtc)), filter, cancellationToken);
     }
 
     public async Task<ReportingPagedResponse<PodOutstandingRow>> GetOutstandingPodAsync(ReportingFilter filter, CancellationToken cancellationToken)
@@ -237,10 +239,12 @@ public sealed class ReportingService(
                 && !db.Documents.Any(document => document.OwnerType == DocumentOwnerType.Trip
                     && document.OwnerId == item.TripId
                     && document.DocumentType == DocumentType.ProofOfDelivery
-                    && document.Status == DocumentStatus.Available))
+                    && document.Status == DocumentStatus.Available));
+        return await PageAsync(query
+            .OrderBy(item => item.CompletedAtUtc)
+            .ThenBy(item => item.TripId)
             .Select(item => new PodOutstandingRow(item.TripId, item.TripNumber, item.CustomerName,
-                item.Status.ToString(), item.CompletedAtUtc!.Value, 0));
-        return await PageAsync(query.OrderBy(item => item.CompletedAtUtc).ThenBy(item => item.TripId), filter, cancellationToken);
+                item.Status.ToString(), item.CompletedAtUtc!.Value, 0)), filter, cancellationToken);
     }
 
     public async Task<ReportingPagedResponse<ExpiryReportRow>> GetExpiriesAsync(ReportingFilter filter, CancellationToken cancellationToken)
@@ -341,9 +345,26 @@ public sealed class ReportingService(
                             };
 
         var grouped = scopedBatches.GroupBy(item => item.Status)
-            .Select(group => new InvoiceStatusRow(group.Key.ToString(), group.Count(),
-                group.Sum(item => item.Total), group.Max(item => (DateTimeOffset?)item.CreatedAtUtc)));
-        return await PageAsync(grouped.OrderBy(item => item.Status), filter, cancellationToken);
+            .Select(group => new InvoiceStatusProjection
+            {
+                Status = group.Key,
+                BatchCount = group.Count(),
+                Total = group.Sum(item => item.Total),
+                LatestBatchAtUtc = group.Max(item => (DateTimeOffset?)item.CreatedAtUtc),
+            });
+        var page = await PageAsync(grouped.OrderBy(item => item.Status), filter, cancellationToken);
+        return new ReportingPagedResponse<InvoiceStatusRow>(
+            page.Items.Select(item => new InvoiceStatusRow(
+                item.Status.ToString(),
+                item.BatchCount,
+                item.Total,
+                item.LatestBatchAtUtc)).ToArray(),
+            page.Page,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            page.GeneratedAtUtc,
+            page.TimeZone);
     }
 
     public async Task<byte[]> ExportCsvAsync(string report, ReportingFilter filter, CancellationToken cancellationToken)
@@ -422,14 +443,6 @@ public sealed class ReportingService(
     private IQueryable<ReportFact> BuildTripFacts(ReportingFilter filter, ReportDateMode dateMode, UtcRange? range)
     {
         var now = timeProvider.GetUtcNow().ToUniversalTime();
-        var costTotals = db.CostEntries
-            .AsNoTracking()
-            .GroupBy(cost => cost.TripFinancialsId)
-            .Select(group => new
-            {
-                TripFinancialsId = group.Key,
-                Total = group.Sum(cost => cost.Amount),
-            });
         var query =
             from trip in db.Trips.AsNoTracking()
             join customer in db.Customers.AsNoTracking() on trip.CustomerId equals customer.Id
@@ -441,10 +454,6 @@ public sealed class ReportingService(
             from vehicle in vehicleJoin.DefaultIfEmpty()
             join financial in db.TripFinancials.AsNoTracking() on trip.Id equals financial.TripId into financialJoin
             from financial in financialJoin.DefaultIfEmpty()
-            join costTotalCandidate in costTotals
-                on financial == null ? Guid.Empty : financial.Id
-                equals costTotalCandidate.TripFinancialsId into costJoin
-            from costTotal in costJoin.DefaultIfEmpty()
             select new ReportFact
             {
                 TripId = trip.Id,
@@ -470,7 +479,11 @@ public sealed class ReportingService(
                 PlannedDeliveryAtUtc = trip.PlannedDeliveryAtUtc,
                 CompletedAtUtc = trip.CompletedAtUtc,
                 Revenue = financial == null ? 0m : financial.TaxExclusiveAmount,
-                TotalCost = costTotal == null ? 0m : costTotal.Total,
+                TotalCost = financial == null
+                    ? 0m
+                    : db.CostEntries
+                        .Where(cost => cost.TripFinancialsId == financial.Id)
+                        .Sum(cost => cost.Amount),
                 HasFinancials = financial != null,
                 TolerancePercent = contract.WeightTolerancePercent,
                 DeliveredTonnes = trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue
@@ -478,8 +491,11 @@ public sealed class ReportingService(
                     : trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue
                         ? (trip.QuantityUnit == WeightUnit.Kilograms ? (trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault()) / 1000m : trip.SourceGrossWeight.GetValueOrDefault() - trip.SourceTareWeight.GetValueOrDefault())
                         : null,
-                GrossMargin = financial == null ? 0m : financial.TaxExclusiveAmount
-                    - (costTotal == null ? 0m : costTotal.Total),
+                GrossMargin = financial == null
+                    ? 0m
+                    : financial.TaxExclusiveAmount - db.CostEntries
+                        .Where(cost => cost.TripFinancialsId == financial.Id)
+                        .Sum(cost => cost.Amount),
                 OutsideTolerance = trip.PlannedQuantity > 0m
                     && ((trip.DestinationGrossWeight.HasValue && trip.DestinationTareWeight.HasValue)
                         || (trip.SourceGrossWeight.HasValue && trip.SourceTareWeight.HasValue))
@@ -630,6 +646,7 @@ public sealed class ReportingService(
     private sealed class VehicleUtilisationProjection { public string Vehicle { get; set; } = string.Empty; public int AssignedTrips { get; set; } public int CompletedTrips { get; set; } public decimal UtilisationPercent { get; set; } public DateOnly? LicenceExpiry { get; set; } public DateOnly? RoadworthyExpiry { get; set; } }
     private sealed class ContractPerformanceProjection { public string Contract { get; set; } = string.Empty; public int CompletedTrips { get; set; } public decimal DeliveredTonnes { get; set; } public decimal Revenue { get; set; } public decimal GrossMargin { get; set; } public decimal ExceptionPercent { get; set; } }
     private sealed class ExpiryProjection { public string ResourceType { get; set; } = string.Empty; public string Resource { get; set; } = string.Empty; public DateOnly ExpiryDate { get; set; } public string Status { get; set; } = string.Empty; public Guid SortId { get; set; } }
+    private sealed class InvoiceStatusProjection { public InvoiceBatchStatus Status { get; set; } public int BatchCount { get; set; } public decimal Total { get; set; } public DateTimeOffset? LatestBatchAtUtc { get; set; } }
 }
 
 public sealed class ReportExportTooLargeException(int maximumRows, int totalRows) : Exception

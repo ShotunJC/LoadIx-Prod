@@ -164,14 +164,14 @@ public static class OperationsEndpoints
                     || (trip.Status == TripStatus.Completed
                         && trip.CompletedAtUtc >= completedTodayStart
                         && trip.CompletedAtUtc < completedTodayStart.AddDays(1)));
-            var latest = await db.TripLocationUpdates.AsNoTracking()
-                .Where(update => visibleTrips.Select(trip => trip.Id)
-                    .Contains(update.TripId))
-                .GroupBy(update => update.TripId)
-                .Select(grouping => grouping.OrderByDescending(update => update.CapturedAtUtc)
-                    .ThenByDescending(update => update.Id).First())
-                .Join(visibleTrips, update => update.TripId, trip => trip.Id,
-                    (update, trip) => new
+            var latest = await visibleTrips
+                .SelectMany(
+                    trip => db.TripLocationUpdates.AsNoTracking()
+                        .Where(update => update.TripId == trip.Id)
+                        .OrderByDescending(update => update.CapturedAtUtc)
+                        .ThenByDescending(update => update.Id)
+                        .Take(1),
+                    (trip, update) => new
                     {
                         tripId = trip.Id,
                         tripNumber = trip.TripNumber,
@@ -179,7 +179,7 @@ public static class OperationsEndpoints
                         latitude = update.Latitude,
                         longitude = update.Longitude,
                         accuracyMetres = update.AccuracyMetres,
-                        capturedAtUtc = update.CapturedAtUtc,
+                        capturedAtUtc = update.CapturedAtUtc
                     })
                 .OrderByDescending(item => item.capturedAtUtc)
                 .ThenBy(item => item.tripId)
