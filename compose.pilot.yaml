@@ -1,0 +1,173 @@
+name: loadix-pilot
+
+# Dedicated-server pilot stack. The application containers and Caddy run on
+# the host; SQL Server, Redis, RabbitMQ, object storage, SMTP, SMS, maps, and
+# telemetry are supplied as private endpoints through the protected env file.
+# Keep those services off the public interface and use their provider TLS.
+services:
+  api:
+    image: ${LOADIX_IMAGE_REGISTRY:?Set LOADIX_IMAGE_REGISTRY}/loadix-api:${LOADIX_IMAGE_TAG:?Set LOADIX_IMAGE_TAG}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+      AllowedHosts: ${LOADIX_ALLOWED_HOSTS:?Set LOADIX_ALLOWED_HOSTS}
+      ConnectionStrings__Database: ${LOADIX_DATABASE_CONNECTION_STRING:?Set LOADIX_DATABASE_CONNECTION_STRING}
+      Dependencies__RedisHost: ${LOADIX_REDIS_HOST:?Set LOADIX_REDIS_HOST}
+      Dependencies__RedisPort: ${LOADIX_REDIS_PORT:-6380}
+      Dependencies__RedisUseSsl: ${LOADIX_REDIS_USE_SSL:-true}
+      Dependencies__RedisPassword: ${LOADIX_REDIS_PASSWORD:-}
+      Dependencies__RedisServerName: ${LOADIX_REDIS_SERVER_NAME:-${LOADIX_REDIS_HOST}}
+      Dependencies__RabbitMqHost: ${LOADIX_RABBITMQ_HOST:?Set LOADIX_RABBITMQ_HOST}
+      Dependencies__RabbitMqPort: ${LOADIX_RABBITMQ_PORT:-5671}
+      Dependencies__RabbitMqUsername: ${LOADIX_RABBITMQ_USERNAME:?Set LOADIX_RABBITMQ_USERNAME}
+      Dependencies__RabbitMqPassword: ${LOADIX_RABBITMQ_PASSWORD:?Set LOADIX_RABBITMQ_PASSWORD}
+      Dependencies__RabbitMqVirtualHost: ${LOADIX_RABBITMQ_VHOST:-/loadix}
+      Dependencies__RabbitMqUseSsl: ${LOADIX_RABBITMQ_USE_SSL:-true}
+      Dependencies__RabbitMqServerName: ${LOADIX_RABBITMQ_SERVER_NAME:?Set LOADIX_RABBITMQ_SERVER_NAME}
+      Dependencies__ReportExportQueueName: ${LOADIX_REPORT_QUEUE:-loadix.report-exports}
+      Dependencies__ReportExportDeadLetterQueueName: ${LOADIX_REPORT_DLQ:-loadix.report-exports.dead-letter}
+      Dependencies__ObjectStorageHost: ${LOADIX_OBJECT_STORAGE_HOST:?Set LOADIX_OBJECT_STORAGE_HOST}
+      Dependencies__ObjectStoragePort: ${LOADIX_OBJECT_STORAGE_PORT:-443}
+      Dependencies__SmtpHost: ${LOADIX_SMTP_HOST:?Set LOADIX_SMTP_HOST}
+      Dependencies__SmtpPort: ${LOADIX_SMTP_PORT:-587}
+      LoadIx__ServiceName: LoadIx.Api
+      LoadIx__Version: ${LOADIX_IMAGE_TAG}
+      LoadIx__WebOrigin: ${LOADIX_WEB_ORIGIN:?Set LOADIX_WEB_ORIGIN}
+      LoadIx__RunBackgroundWorkers: "false"
+      LoadIx__AllowInsecurePrivateDependencies: ${LOADIX_ALLOW_INSECURE_PRIVATE_DEPENDENCIES:-false}
+      LoadIx__TrustedProxyIp: ${LOADIX_TRUSTED_PROXY_IP:-}
+      Authentication__SigningKey: ${LOADIX_AUTHENTICATION_SIGNING_KEY:?Set LOADIX_AUTHENTICATION_SIGNING_KEY}
+      AccountEmail__Host: ${LOADIX_SMTP_HOST}
+      AccountEmail__Port: ${LOADIX_SMTP_PORT:-587}
+      AccountEmail__FromAddress: ${LOADIX_SMTP_FROM_ADDRESS:?Set LOADIX_SMTP_FROM_ADDRESS}
+      AccountEmail__Username: ${LOADIX_SMTP_USERNAME:-}
+      AccountEmail__Password: ${LOADIX_SMTP_PASSWORD:-}
+      AccountEmail__EnableSsl: ${LOADIX_SMTP_ENABLE_SSL:-true}
+      Documents__Provider: S3Compatible
+      Documents__Endpoint: ${LOADIX_OBJECT_STORAGE_ENDPOINT:?Set LOADIX_OBJECT_STORAGE_ENDPOINT}
+      Documents__AccessKey: ${LOADIX_OBJECT_STORAGE_ACCESS_KEY:?Set LOADIX_OBJECT_STORAGE_ACCESS_KEY}
+      Documents__SecretKey: ${LOADIX_OBJECT_STORAGE_SECRET_KEY:?Set LOADIX_OBJECT_STORAGE_SECRET_KEY}
+      Documents__Bucket: ${LOADIX_DOCUMENT_BUCKET:-loadix-documents}
+      Documents__UseSsl: ${LOADIX_OBJECT_STORAGE_USE_SSL:-true}
+      Documents__MalwareScanner: ${LOADIX_MALWARE_SCANNER:?Set an approved malware scanner adapter}
+      DataProtection__Provider: FileSystem
+      DataProtection__ApplicationName: LoadIx
+      DataProtection__KeyRingPath: /home/app/.aspnet/DataProtection-Keys
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${LOADIX_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    volumes:
+      - api-data-protection:/home/app/.aspnet/DataProtection-Keys
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "--silent",
+          "--header",
+          "Host: api",
+          "http://127.0.0.1:8080/health/ready",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  worker:
+    image: ${LOADIX_IMAGE_REGISTRY}/loadix-worker:${LOADIX_IMAGE_TAG}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Database: ${LOADIX_DATABASE_CONNECTION_STRING}
+      Dependencies__RedisHost: ${LOADIX_REDIS_HOST}
+      Dependencies__RedisPort: ${LOADIX_REDIS_PORT:-6380}
+      Dependencies__RedisUseSsl: ${LOADIX_REDIS_USE_SSL:-true}
+      Dependencies__RedisPassword: ${LOADIX_REDIS_PASSWORD:-}
+      Dependencies__RedisServerName: ${LOADIX_REDIS_SERVER_NAME:-${LOADIX_REDIS_HOST}}
+      Dependencies__RabbitMqHost: ${LOADIX_RABBITMQ_HOST}
+      Dependencies__RabbitMqPort: ${LOADIX_RABBITMQ_PORT:-5671}
+      Dependencies__RabbitMqUsername: ${LOADIX_RABBITMQ_USERNAME}
+      Dependencies__RabbitMqPassword: ${LOADIX_RABBITMQ_PASSWORD}
+      Dependencies__RabbitMqVirtualHost: ${LOADIX_RABBITMQ_VHOST:-/loadix}
+      Dependencies__RabbitMqUseSsl: ${LOADIX_RABBITMQ_USE_SSL:-true}
+      Dependencies__RabbitMqServerName: ${LOADIX_RABBITMQ_SERVER_NAME}
+      Dependencies__ReportExportQueueName: ${LOADIX_REPORT_QUEUE:-loadix.report-exports}
+      Dependencies__ReportExportDeadLetterQueueName: ${LOADIX_REPORT_DLQ:-loadix.report-exports.dead-letter}
+      Dependencies__ObjectStorageHost: ${LOADIX_OBJECT_STORAGE_HOST}
+      Dependencies__ObjectStoragePort: ${LOADIX_OBJECT_STORAGE_PORT:-443}
+      Dependencies__SmtpHost: ${LOADIX_SMTP_HOST}
+      Dependencies__SmtpPort: ${LOADIX_SMTP_PORT:-587}
+      LoadIx__ServiceName: LoadIx.Worker
+      LoadIx__Version: ${LOADIX_IMAGE_TAG}
+      LoadIx__WebOrigin: ${LOADIX_WEB_ORIGIN}
+      LoadIx__RunBackgroundWorkers: "true"
+      LoadIx__AllowInsecurePrivateDependencies: ${LOADIX_ALLOW_INSECURE_PRIVATE_DEPENDENCIES:-false}
+      Authentication__SigningKey: ${LOADIX_AUTHENTICATION_SIGNING_KEY}
+      AccountEmail__Host: ${LOADIX_SMTP_HOST}
+      AccountEmail__Port: ${LOADIX_SMTP_PORT:-587}
+      AccountEmail__FromAddress: ${LOADIX_SMTP_FROM_ADDRESS}
+      AccountEmail__Username: ${LOADIX_SMTP_USERNAME:-}
+      AccountEmail__Password: ${LOADIX_SMTP_PASSWORD:-}
+      AccountEmail__EnableSsl: ${LOADIX_SMTP_ENABLE_SSL:-true}
+      Documents__Provider: S3Compatible
+      Documents__Endpoint: ${LOADIX_OBJECT_STORAGE_ENDPOINT}
+      Documents__AccessKey: ${LOADIX_OBJECT_STORAGE_ACCESS_KEY}
+      Documents__SecretKey: ${LOADIX_OBJECT_STORAGE_SECRET_KEY}
+      Documents__Bucket: ${LOADIX_DOCUMENT_BUCKET:-loadix-documents}
+      Documents__UseSsl: ${LOADIX_OBJECT_STORAGE_USE_SSL:-true}
+      Documents__MalwareScanner: ${LOADIX_MALWARE_SCANNER}
+    networks:
+      - backend
+    volumes:
+      - api-data-protection:/home/app/.aspnet/DataProtection-Keys
+    restart: unless-stopped
+
+  web:
+    image: ${LOADIX_IMAGE_REGISTRY}/loadix-web:${LOADIX_IMAGE_TAG}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - frontend
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10.2-alpine
+    environment:
+      LOADIX_DOMAIN: ${LOADIX_DOMAIN:?Set LOADIX_DOMAIN}
+      ACME_EMAIL: ${LOADIX_ACME_EMAIL:?Set LOADIX_ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile.pilot:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_started
+    networks:
+      - frontend
+    restart: unless-stopped
+
+  migrate:
+    profiles: ["tools"]
+    image: ${LOADIX_IMAGE_REGISTRY}/loadix-migrations:${LOADIX_IMAGE_TAG}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Database: ${LOADIX_DATABASE_CONNECTION_STRING}
+    networks:
+      - backend
+
+volumes:
+  api-data-protection:
+  caddy-data:
+  caddy-config:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge

@@ -9,6 +9,8 @@ public sealed class RabbitMqOptions
     public string RabbitMqUsername { get; init; } = "loadix";
     public string RabbitMqPassword { get; init; } = string.Empty;
     public string RabbitMqVirtualHost { get; init; } = "/";
+    public bool RabbitMqUseSsl { get; init; }
+    public string RabbitMqServerName { get; init; } = string.Empty;
     public string ReportExportQueueName { get; init; } = "loadix.report-exports";
     public string ReportExportDeadLetterQueueName { get; init; } = "loadix.report-exports.dead-letter";
 }

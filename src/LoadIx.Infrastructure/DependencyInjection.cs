@@ -38,7 +38,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        string connectionString)
+        string connectionString,
+        bool registerBackgroundWorkers = true)
     {
         services.AddDbContext<LoadIxDbContext>(options =>
             options.UseSqlServer(connectionString, sqlServer =>
@@ -81,7 +82,10 @@ public static class DependencyInjection
             serviceProvider.GetRequiredService<CurrentEdgeDeviceRequestContext>());
         services.AddSingleton<IPasswordHasher<EdgeDeviceCredential>, PasswordHasher<EdgeDeviceCredential>>();
         services.AddScoped<IEdgeDeviceService, EdgeDeviceService>();
-        services.AddHostedService<EdgeCredentialCleanupWorker>();
+        if (registerBackgroundWorkers)
+        {
+            services.AddHostedService<EdgeCredentialCleanupWorker>();
+        }
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<ILoadInstructionService, LoadInstructionService>();
         services.AddScoped<ITripService, TripService>();
@@ -97,25 +101,32 @@ public static class DependencyInjection
         services.AddScoped<IReportExportService>(serviceProvider =>
             serviceProvider.GetRequiredService<ReportExportService>());
         services.AddSingleton<IReportExportPublisher, RabbitMqReportExportPublisher>();
-        services.AddHostedService<ReportExportWorker>();
-        services.AddHostedService<ReportExportRepublisher>();
-        services.AddHostedService<Observability.OperationalMetricsCollector>();
-        services.AddSingleton<IMinioClient>(serviceProvider =>
+        if (registerBackgroundWorkers)
+        {
+            services.AddHostedService<ReportExportWorker>();
+            services.AddHostedService<ReportExportRepublisher>();
+            services.AddHostedService<Observability.OperationalMetricsCollector>();
+        }
+
+        services.AddSingleton<IObjectStorage>(serviceProvider =>
         {
             var options = serviceProvider
                 .GetRequiredService<IOptions<DocumentStorageOptions>>()
                 .Value;
-            var builder = new MinioClient()
+
+            var clientBuilder = new MinioClient()
                 .WithEndpoint(options.Endpoint)
                 .WithCredentials(options.AccessKey, options.SecretKey);
             if (options.UseSsl)
             {
-                builder = builder.WithSSL();
+                clientBuilder = clientBuilder.WithSSL();
             }
 
-            return builder.Build();
+            return new MinioObjectStorage(
+                clientBuilder.Build(),
+                serviceProvider.GetRequiredService<IOptions<DocumentStorageOptions>>(),
+                serviceProvider.GetRequiredService<TransientOperationExecutor>());
         });
-        services.AddSingleton<IObjectStorage, MinioObjectStorage>();
         services.AddSingleton<IMalwareScanner>(serviceProvider =>
             string.Equals(
                 serviceProvider

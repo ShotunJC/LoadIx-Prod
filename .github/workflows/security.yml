@@ -47,18 +47,35 @@ jobs:
   container-scan:
     name: Container vulnerability scan
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            dockerfile: deploy/api.Dockerfile
+          - name: web
+            dockerfile: deploy/web.Dockerfile
+          - name: worker
+            dockerfile: deploy/worker.Dockerfile
+          - name: migrations
+            dockerfile: deploy/migrations.Dockerfile
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build API image
-        run: docker build --file deploy/api.Dockerfile --tag loadix-api:security .
+      - name: Build ${{ matrix.name }} image
+        run: >-
+          docker build
+          --file ${{ matrix.dockerfile }}
+          --tag loadix-${{ matrix.name }}:security
+          ${{ matrix.name == 'web' && '--build-arg API_UPSTREAM=loadix-api:8080 --build-arg API_HOST=loadix-api' || '' }}
+          .
 
-      - name: Scan API image with Trivy
+      - name: Scan ${{ matrix.name }} image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: loadix-api:security
+          image-ref: loadix-${{ matrix.name }}:security
           format: table
-          exit-code: '1'
+          exit-code: "1"
           ignore-unfixed: true
           severity: HIGH,CRITICAL
           vuln-type: os,library

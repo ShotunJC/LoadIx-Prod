@@ -78,6 +78,13 @@ public sealed class RabbitMqReportExportPublisher(
             UserName = _options.RabbitMqUsername,
             Password = _options.RabbitMqPassword,
             VirtualHost = _options.RabbitMqVirtualHost,
+            Ssl = new SslOption
+            {
+                Enabled = _options.RabbitMqUseSsl,
+                ServerName = string.IsNullOrWhiteSpace(_options.RabbitMqServerName)
+                    ? _options.RabbitMqHost
+                    : _options.RabbitMqServerName,
+            },
         };
         _connection = await factory.CreateConnectionAsync(cancellationToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
@@ -269,6 +276,13 @@ public sealed class ReportExportWorker(
             UserName = _options.RabbitMqUsername,
             Password = _options.RabbitMqPassword,
             VirtualHost = _options.RabbitMqVirtualHost,
+            Ssl = new SslOption
+            {
+                Enabled = _options.RabbitMqUseSsl,
+                ServerName = string.IsNullOrWhiteSpace(_options.RabbitMqServerName)
+                    ? _options.RabbitMqHost
+                    : _options.RabbitMqServerName,
+            },
         };
         await using var connection = await factory.CreateConnectionAsync(cancellationToken);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);

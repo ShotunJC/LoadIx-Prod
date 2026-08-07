@@ -12,6 +12,12 @@ public sealed class DependencyOptions
     [Range(1, 65535)]
     public int RedisPort { get; init; }
 
+    public bool RedisUseSsl { get; init; }
+
+    public string RedisPassword { get; init; } = string.Empty;
+
+    public string RedisServerName { get; init; } = string.Empty;
+
     [Required]
     public string RabbitMqHost { get; init; } = string.Empty;
 
@@ -30,14 +36,14 @@ public sealed class DependencyOptions
     public string ReportExportQueueName { get; init; } = "loadix.report-exports";
 
     [Required]
-    public string MinioHost { get; init; } = string.Empty;
+    public string ObjectStorageHost { get; init; } = string.Empty;
 
     [Range(1, 65535)]
-    public int MinioPort { get; init; }
+    public int ObjectStoragePort { get; init; }
 
     [Required]
-    public string MailpitHost { get; init; } = string.Empty;
+    public string SmtpHost { get; init; } = string.Empty;
 
     [Range(1, 65535)]
-    public int MailpitPort { get; init; }
+    public int SmtpPort { get; init; }
 }

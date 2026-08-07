@@ -7,26 +7,36 @@ services:
       dockerfile: deploy/api.Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      AllowedHosts: localhost;127.0.0.1;api
       ConnectionStrings__Database: >-
         Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
         User Id=sa;Password=${SQL_PASSWORD:-LoadIx_Local_Only_123!};
         Encrypt=False;TrustServerCertificate=True
       Dependencies__RedisHost: redis
       Dependencies__RedisPort: 6379
+      Dependencies__RedisUseSsl: "false"
+      Dependencies__RedisPassword: ""
+      Dependencies__RedisServerName: redis
       Dependencies__RabbitMqHost: rabbitmq
       Dependencies__RabbitMqPort: 5672
       Dependencies__RabbitMqUsername: ${RABBITMQ_USER:-loadix}
       Dependencies__RabbitMqPassword: ${RABBITMQ_PASSWORD:-LoadIx_Local_Only_123!}
       Dependencies__RabbitMqVirtualHost: /
-      Dependencies__ReportExportQueueName: loadix.report-exports
-      Dependencies__ReportExportDeadLetterQueueName: loadix.report-exports.dead-letter
-      Dependencies__MinioHost: minio
-      Dependencies__MinioPort: 9000
-      Dependencies__MailpitHost: mailpit
-      Dependencies__MailpitPort: 1025
+      Dependencies__RabbitMqUseSsl: "false"
+      Dependencies__RabbitMqServerName: rabbitmq
+      Dependencies__ReportExportQueueName: ${REPORT_EXPORT_QUEUE_NAME:-loadix.report-exports}
+      Dependencies__ReportExportDeadLetterQueueName: ${REPORT_EXPORT_DEAD_LETTER_QUEUE_NAME:-loadix.report-exports.dead-letter}
+      Dependencies__ObjectStorageHost: minio
+      Dependencies__ObjectStoragePort: 9000
+      Dependencies__SmtpHost: mailpit
+      Dependencies__SmtpPort: 1025
       LoadIx__ServiceName: LoadIx.Api
       LoadIx__Version: 0.1.0
       LoadIx__WebOrigin: http://localhost:${WEB_PORT:-5173}
+      LoadIx__RunBackgroundWorkers: "true"
+      LoadIx__AllowInsecurePrivateDependencies: "true"
+      DataProtection__Provider: FileSystem
+      DataProtection__KeyRingPath: /home/app/.aspnet/DataProtection-Keys
       Authentication__SigningKey: ${JWT_SIGNING_KEY:-LoadIx-development-only-signing-key-change-before-production-2026}
       AccountEmail__Host: mailpit
       AccountEmail__Port: 1025
@@ -37,6 +47,9 @@ services:
       Documents__AccessKey: ${MINIO_USER:-loadix}
       Documents__SecretKey: ${MINIO_PASSWORD:-LoadIx_Local_Only_123!}
       Documents__Bucket: ${MINIO_DOCUMENT_BUCKET:-loadix-documents}
+      Documents__Provider: S3Compatible
+      Documents__UseSsl: "false"
+      Documents__MalwareScanner: DevelopmentSignature
     ports:
       - "${API_PORT:-8080}:8080"
     depends_on:

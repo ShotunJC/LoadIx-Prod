@@ -173,8 +173,8 @@ public sealed class EdgeDeviceAuthenticationHandler(
             return false;
         }
 
-        if (nonce.Length is not >= 16 and <= 128
-            || idempotencyKey.Length is not >= 8 and <= 128
+        if (nonce.Length is < 16 or > 128
+            || idempotencyKey.Length is < 8 or > 128
             || !IsSafeHeaderValue(nonce)
             || !IsSafeHeaderValue(idempotencyKey))
         {

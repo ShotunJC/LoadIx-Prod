@@ -22,8 +22,8 @@ flowchart LR
     Web --> Api["LoadIx ASP.NET Core API"]
     Api --> Sql["SQL Server"]
     Api --> Redis["Redis"]
-    Api --> Objects["MinIO-compatible object storage"]
-    Api --> Jobs["Hangfire worker"]
+    Api --> Objects["Object storage adapter"]
+    Api --> Jobs["Background worker"]
     Api --> Broker["RabbitMQ"]
     Api --> Notify["Email/SMS providers"]
     Api --> Telemetry["OpenTelemetry backend"]
@@ -32,7 +32,7 @@ flowchart LR
 
 RabbitMQ is not required for ordinary in-process module calls. It is reserved for
 durable asynchronous integration, external consumers, and future service
-extraction. Hangfire handles scheduled/retriable application jobs. Their
+extraction. The background worker handles scheduled/retriable application jobs. Their
 responsibilities must not overlap accidentally.
 
 ## Recommended Repository Structure
@@ -68,7 +68,12 @@ responsibilities must not overlap accidentally.
 |   `-- loadix-web/
 |-- deploy/
 |   |-- api.Dockerfile
-|   `-- web.Dockerfile
+|   |-- web.Dockerfile
+|   |-- worker.Dockerfile
+|   |-- migrations.Dockerfile
+|   |-- nginx.conf.template
+|   `-- Caddyfile.pilot
+|-- compose.pilot.yaml
 `-- .github/
     `-- workflows/
 ```
@@ -335,17 +340,20 @@ notifications.
 
 - Redis: distributed cache, rate-limit support, and ephemeral coordination only;
   it is not a system of record.
-- Hangfire: scheduled notifications, outbox dispatch trigger, retention work, and
-  retriable internal jobs. Use the SQL Server-backed store initially unless
-  operational testing justifies another store.
+- Background worker: scheduled notifications, outbox dispatch, report export,
+  metrics, retention work, and retriable internal jobs. It is a separate
+  production deployable, while local Compose may keep the hosted work in the
+  API for convenience.
 - RabbitMQ: durable integration events and external asynchronous boundaries. The
   core request path must not depend on immediate broker availability.
 - SignalR: transient live UI updates; reconnecting clients refetch state.
+  Production API and worker containers share a private Redis backplane so an
+  outbox event dispatched by the worker reaches clients connected to the API.
 
 The initial local Compose environment should include all production dependencies
-to expose integration failures early, but deployment may initially run API and
-Hangfire processing in one host. Split the worker process later without changing
-business modules if workload isolation demands it.
+to expose integration failures early. The pilot separates API and worker
+processes without changing business modules; local Compose keeps one API-hosted
+worker path to reduce developer setup.
 
 ## Observability and Operations
 
@@ -406,7 +414,7 @@ system rather than used as an unstyled admin template.
 | ADR-004 | Explicit command/query handlers; MediatR optional | Accepted | Preserves pattern without making a library an architectural dependency |
 | ADR-005 | One schema per logical module | Recommended | Clarifies ownership and eases future extraction |
 | ADR-006 | Transactional outbox for external events | Accepted | Avoids dual-write loss and supports RabbitMQ availability gaps |
-| ADR-007 | SQL-backed Hangfire initially | Recommended | Avoids another persistence mechanism for durable job state |
+| ADR-007 | SQL-backed durable background work initially | Recommended | Avoids another persistence mechanism for durable job state |
 | ADR-008 | Object quarantine and authorized signed downloads | Accepted | Required for safe evidence handling |
 | ADR-009 | OpenAPI-generated frontend client | Recommended | Reduces cross-stack contract drift |
 | ADR-010 | Invoice preparation, not accounting ledger | Provisional | Controls MVP scope pending finance discovery |
@@ -433,7 +441,7 @@ system rather than used as an unstyled admin template.
 | ADR-031 | Generated reservations are promoted to operational trips with the same public GUID | Accepted | Preserves instruction links and idempotent generation while giving the Trips module independent lifecycle, concurrency, and history ownership |
 | ADR-032 | Trip commands use an explicit domain state machine and append-only transition records | Accepted | Prevents arbitrary status mutation and retains actor, UTC time, previous/new state, reason, and manual-override evidence |
 | ADR-033 | SQL-backed trip-command idempotency binds tenant, actor, key, route, trip, and payload hash | Accepted | Mobile retries return the existing authoritative trip while key reuse for another command or payload is rejected |
-| ADR-034 | Document binaries use an application-owned object-storage port with an S3-compatible infrastructure adapter | Accepted | MinIO is the local provider while production S3-compatible or Azure Blob adapters can be substituted without changing document policy or domain behavior |
+| ADR-034 | Document binaries use an application-owned object-storage port with an S3-compatible infrastructure adapter | Accepted | MinIO is the current provider while another S3-compatible service can be substituted without changing document policy or domain behavior |
 | ADR-035 | Uploads are copied to opaque tenant quarantine keys before malware scanning and promotion | Accepted | Validation, fail-closed scanning, checksum-based duplicate detection, and server-generated final keys prevent untrusted client metadata from controlling storage |
 | ADR-036 | Document metadata is soft-deleted before trip finalisation and immutable after completion | Accepted | The metadata tombstone preserves audit and concurrency evidence; object cleanup is best-effort, while completed-trip evidence cannot be changed |
 | ADR-037 | Image originals are preserved and previews are derived safety artifacts | Accepted | Auto-oriented, dimension-constrained JPEG previews support the UI without silently rewriting or discarding evidentiary data in the original object |
@@ -446,6 +454,7 @@ system rather than used as an unstyled admin template.
 | ADR-044 | Reporting accepts date-only filters, resolves exclusive UTC boundaries on the server, and processes export jobs in bounded pages | Accepted | A selected calendar date belongs to the tenant timezone, including DST days; SQL count/order/page operations must not be replaced by an in-memory cap |
 | ADR-045 | Edge agents submit structured, tenant/site-bound readings through per-device credentials and replay-safe commands | Accepted | Keeps hardware protocol parsing at the edge while providing hashed secret rotation, revocation, offline replay, audit evidence, and idempotent ingestion |
 | ADR-046 | Performance and reliability controls use bounded reads, transient-only provider retries, circuit breakers, dead letters, explicit workload seeding, and k6 evidence | Accepted | Protects pilot latency and recovery behavior while keeping performance claims tied to a reproducible generated workload and recorded run |
+| ADR-047 | Dedicated-server pilot hosting with Docker Compose, Caddy, protected SSH deployment, persistent MinIO/S3 storage, RabbitMQ, separate worker, and explicit migration job | Accepted | Makes the modular monolith deployable on the current VPS/dedicated-server path while keeping provider choices outside domain/application logic |
 
 ### Milestone 14 reporting semantics
 
@@ -572,6 +581,26 @@ custom metrics cover active trips, online edge devices, notification depth,
 outbox depth/dead letters, report queue depth, background failures, notification
 failures, and request/job timing.
 
+### Milestone 18 pilot deployment boundary
+
+The production deployment foundation targets the current VPS/dedicated-server
+path: a Linux host running Docker Compose, Caddy for public TLS, a non-root web
+container, a private API, a separate worker, and a one-shot EF migration image.
+RabbitMQ remains the AMQP 0-9-1 broker. Documents use the application-owned
+`IObjectStorage` port with MinIO or another S3-compatible provider. SQL Server,
+Redis, SMTP, maps, scanning, and
+telemetry are private host or approved private/provider endpoints.
+The supported topology is an operator-controlled VPS or bare-metal Linux host;
+Azure application hosting and Azure-managed messaging/storage are not supported
+deployment targets.
+
+The pilot deployment publishes immutable images to GHCR and uses a protected
+GitHub Actions SSH workflow. Data Protection keys persist in a host-backed API
+volume for this single-host pilot. The dedicated-server Compose file,
+configuration, migration, backup/restore, rollback, runbook,
+incident-response, and post-deployment smoke test live under
+`docs/deployment`, `compose.pilot.yaml`, and `scripts`.
+
 ### Justified changes to the proposed architecture
 
 1. Treat MediatR as optional. The explicit application-command pattern is the
@@ -624,7 +653,10 @@ failures, and request/job timing.
   adjustment records with audit history; legal invoice issuance, tax-number
   rendering, credit notes, and accounting-platform posting remain future
   decisions.
-- Hosting platform, identity federation, notification providers, telemetry
-  backend, backup objectives, and availability SLOs remain undecided.
+- The dedicated-server Compose deployment is the default documented pilot
+  target. Provider-specific adapters and templates remain replaceable;
+  production notification providers, telemetry backend, final backup
+  objectives, host-replacement process, and availability SLOs still require
+  pilot-owner approval.
 
 Create focused ADRs under `docs/decisions/` as these choices are finalized.

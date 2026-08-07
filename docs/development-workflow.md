@@ -181,15 +181,25 @@ Every handoff should state:
 
 ## CI Plan
 
-The initial GitHub Actions pipeline should contain:
+The GitHub Actions pipeline contains or is expected to contain:
 
 1. repository hygiene and secret scanning;
 2. backend restore, formatting, warning-as-error build, unit and architecture tests;
 3. frontend clean install, formatting, lint, typecheck, component tests, and build;
 4. container-backed integration tests;
-5. Docker image builds and vulnerability scanning;
-6. Playwright smoke tests on protected branches or pull requests; and
-7. publication only from protected, approved branches with immutable image tags.
+5. production Docker image builds for API, web, worker, and migration images;
+6. dependency and container vulnerability scanning;
+7. post-deployment HTTPS smoke tests on a protected pilot environment;
+8. a manually approved database migration job before application traffic; and
+9. publication only from protected, approved branches with immutable image tags.
+
+The repository workflows are split into `ci.yml` (backend/frontend build,
+format, tests, lint, typecheck, and build), `security.yml` (dependency and
+container scans), `containers.yml` (production image build and protected GHCR
+publication), `pilot.yml` (protected SSH migration, dedicated-server Compose
+deployment, smoke test, and failure guidance), and `rollback.yml` (protected
+manual image rollback). No workflow stores a cloud credential or deploys merely
+because a developer pushes a branch.
 
 Dependency caching may accelerate builds but must not replace lockfile-based clean
 installs.

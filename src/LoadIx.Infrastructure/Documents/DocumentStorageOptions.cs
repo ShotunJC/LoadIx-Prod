@@ -9,13 +9,10 @@ public sealed class DocumentStorageOptions
     [Required]
     public string Provider { get; init; } = "S3Compatible";
 
-    [Required]
     public string Endpoint { get; init; } = string.Empty;
 
-    [Required]
     public string AccessKey { get; init; } = string.Empty;
 
-    [Required]
     public string SecretKey { get; init; } = string.Empty;
 
     [Required]

@@ -12,7 +12,7 @@
     Project="$(LoadIxApiCompileManifest)"
     Condition="'$(LoadIxApiCompileManifest)' != '' and Exists('$(LoadIxApiCompileManifest)')" />
 
-  <ItemGroup Condition="'$(LoadIxApiCompileManifest)' != ''">
+  <ItemGroup Condition="'$(LoadIxApiCompileManifest)' != '' and '$(LoadIxApiIncludeConfigurationFiles)' != 'false'">
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
@@ -30,6 +30,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />

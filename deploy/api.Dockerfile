@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.103 AS restore
+FROM mcr.microsoft.com/dotnet/sdk:10.0.302 AS restore
 WORKDIR /source
 
 COPY .editorconfig Directory.Build.props Directory.Packages.props global.json LoadIx.slnx ./
@@ -50,7 +50,10 @@ ENV ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_EnableDiagnostics=0
 EXPOSE 8080
 COPY --from=build /app/publish .
-RUN mkdir -p /home/app/.aspnet/DataProtection-Keys \
+RUN rm -f /app/appsettings.Development.json \
+    && mkdir -p /home/app/.aspnet/DataProtection-Keys \
     && chown -R $APP_UID:$APP_UID /home/app/.aspnet
 USER $APP_UID
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl --fail --silent --header "Host: api" http://127.0.0.1:8080/health/live || exit 1
 ENTRYPOINT ["dotnet", "LoadIx.Api.dll"]
