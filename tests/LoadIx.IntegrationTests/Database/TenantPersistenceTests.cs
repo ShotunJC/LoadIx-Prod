@@ -139,17 +139,17 @@ public sealed class TenantPersistenceTests(MsSqlDatabaseFixture database)
             (await context.DbContext.Branches.IgnoreQueryFilters().CountAsync())
                 .Should().Be(2);
             (await context.DbContext.Customers.IgnoreQueryFilters().CountAsync())
-                .Should().Be(3);
+                .Should().Be(5);
             (await context.DbContext.Locations.IgnoreQueryFilters().CountAsync())
-                .Should().Be(6);
+                .Should().Be(8);
             (await context.DbContext.Commodities.IgnoreQueryFilters().CountAsync())
-                .Should().Be(4);
+                .Should().Be(5);
             (await context.DbContext.Drivers.IgnoreQueryFilters().CountAsync())
-                .Should().Be(10);
+                .Should().Be(20);
             (await context.DbContext.Vehicles.IgnoreQueryFilters().CountAsync())
-                .Should().Be(10);
-            (await context.DbContext.Trailers.IgnoreQueryFilters().CountAsync())
                 .Should().Be(15);
+            (await context.DbContext.Trailers.IgnoreQueryFilters().CountAsync())
+                .Should().Be(25);
         }
     }
 

@@ -119,6 +119,26 @@ public sealed class DevelopmentDataSeeder(
                 "DEMO-TAX-003",
                 30,
                 AddressAt("30 Fictional Quarry Way", "Pretoria", "Gauteng", "0002"))
+                .Value,
+            Customer.Create(
+                DevelopmentSeedIds.CustomerIds[3],
+                DevelopmentSeedIds.TenantId,
+                "Illustrative Metals Exporters (Pty) Ltd",
+                "Illustrative Metals",
+                "DEMO-CUST-004",
+                "DEMO-TAX-004",
+                30,
+                AddressAt("40 Sample Export Road", "Richards Bay", "KwaZulu-Natal", "3900"))
+                .Value,
+            Customer.Create(
+                DevelopmentSeedIds.CustomerIds[4],
+                DevelopmentSeedIds.TenantId,
+                "Training Infrastructure Supplies (Pty) Ltd",
+                "Training Infrastructure",
+                "DEMO-CUST-005",
+                "DEMO-TAX-005",
+                14,
+                AddressAt("50 Fictional Project Way", "Midrand", "Gauteng", "1685"))
                 .Value);
     }
 
@@ -188,10 +208,12 @@ public sealed class DevelopmentDataSeeder(
         {
             (1, "Demo Mine North", "MINE-N", LocationType.Mine, -25.667m, 27.243m, DevelopmentSeedIds.CustomerIds[0]),
             (2, "Demo Mine South", "MINE-S", LocationType.Mine, -25.702m, 27.312m, DevelopmentSeedIds.CustomerIds[0]),
-            (3, "Sample Grain Silo", "SILO-1", LocationType.Warehouse, -27.388m, 26.619m, DevelopmentSeedIds.CustomerIds[1]),
-            (4, "Example Quarry", "QUARRY-1", LocationType.Customer, -25.732m, 28.218m, DevelopmentSeedIds.CustomerIds[2]),
+            (3, "Free State Grain Depot", "DEPOT-FS", LocationType.Depot, -27.388m, 26.619m, DevelopmentSeedIds.CustomerIds[1]),
+            (4, "Gauteng Customer Delivery", "DEL-GP", LocationType.Customer, -25.732m, 28.218m, DevelopmentSeedIds.CustomerIds[2]),
             (5, "Johannesburg Depot", "DEPOT-JHB", LocationType.Depot, -26.204m, 28.047m, (Guid?)null),
             (6, "Central Weighbridge", "WB-CENTRAL", LocationType.Weighbridge, -26.126m, 28.108m, (Guid?)null),
+            (7, "Richards Bay Demo Port", "PORT-RB", LocationType.Port, -28.795m, 32.097m, DevelopmentSeedIds.CustomerIds[3]),
+            (8, "Midrand Customer Site", "DEL-MID", LocationType.Customer, -25.999m, 28.126m, DevelopmentSeedIds.CustomerIds[4]),
         };
 
         foreach (var item in locationData)
@@ -228,9 +250,10 @@ public sealed class DevelopmentDataSeeder(
         var commodities = new[]
         {
             ("Coal", "COAL"),
-            ("Maize", "MAIZE"),
-            ("Aggregate Stone", "STONE"),
-            ("River Sand", "SAND"),
+            ("Manganese", "MANGANESE"),
+            ("Iron ore", "IRON-ORE"),
+            ("Grain", "GRAIN"),
+            ("Aggregate", "AGGREGATE"),
         };
 
         for (var index = 0; index < commodities.Length; index++)
@@ -253,7 +276,7 @@ public sealed class DevelopmentDataSeeder(
             return;
         }
 
-        for (var number = 1; number <= 10; number++)
+        for (var number = 1; number <= 20; number++)
         {
             dbContext.Drivers.Add(Driver.Create(
                 DeterministicGuid(160, number),
@@ -282,7 +305,7 @@ public sealed class DevelopmentDataSeeder(
             return;
         }
 
-        for (var number = 1; number <= 10; number++)
+        for (var number = 1; number <= 15; number++)
         {
             dbContext.Vehicles.Add(Vehicle.Create(
                 DeterministicGuid(170, number),
@@ -311,7 +334,7 @@ public sealed class DevelopmentDataSeeder(
             return;
         }
 
-        for (var number = 1; number <= 15; number++)
+        for (var number = 1; number <= 25; number++)
         {
             dbContext.Trailers.Add(Trailer.Create(
                 DeterministicGuid(180, number),

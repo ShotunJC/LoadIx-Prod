@@ -69,7 +69,7 @@ public sealed class MasterDataEndpointTests(
             "/api/v1/customers?page=1&pageSize=2&status=all&sort=legalName&direction=asc");
 
         first!.Items.Should().HaveCount(2);
-        first.TotalCount.Should().Be(3);
+        first.TotalCount.Should().Be(5);
         first.Items.Select(item => item.Id).Should()
             .Equal(repeated!.Items.Select(item => item.Id));
         first.Items.Select(item => item.LegalName).Should().BeInAscendingOrder();

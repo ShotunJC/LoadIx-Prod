@@ -469,6 +469,32 @@ RabbitMQ/SMTP/SMS/map providers, MinIO/S3 retention and backup design,
 backup/restore rehearsal, incident contacts, privacy/DPA review, and pilot
 capacity evidence.
 
+## M19 - Realistic Pilot Demonstration Environment
+
+**Outcome:** Sales and pilot training use a polished, deterministic and safely
+resettable synthetic tenant that exercises the complete LoadIx workflow.
+
+**Status:** Implemented on 2026-08-07.
+
+**Deliverables:**
+
+- a stable `LoadIx Demo Transport` tenant with representative branches,
+  customers, locations, commodities, fleet, commercial terms and instructions;
+- thirty-two trips distributed from planning through completion, including
+  within-tolerance and approved-exception reconciliation stories;
+- object-store-backed repository-generated PDF evidence, notification history,
+  approved invoice-ready financials, reporting/dashboard facts and a simulated
+  weighbridge edge device;
+- an idempotent seed and tenant-scoped reset guarded by Development environment,
+  explicit acknowledgement and production-like database-name refusal;
+- twelve step-by-step sales/training scripts in `docs/demo-guide.md`; and
+- demo identification, current terminology, actionable dashboard navigation,
+  responsive presentation and explicit loading/error behavior.
+
+**Key checks:** canonical entity/status counts, repeat seed and reset/reseed,
+cross-tenant-safe reset scope, object download, dashboard/report facts, backend
+build/tests, frontend lint/typecheck/tests/build and Compose validation.
+
 ## Cross-Cutting Work in Every Milestone
 
 - schema migrations and realistic synthetic seed updates;
