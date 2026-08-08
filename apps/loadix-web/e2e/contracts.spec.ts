@@ -33,13 +33,32 @@ test('creates and activates a transport contract', async ({ page }) => {
   await page.getByLabel('Amount per tonne').fill('125')
   await page.getByLabel('Minimum charge').fill('1000')
   await page.getByLabel('Fuel surcharge (%)').fill('5')
-  await page.getByRole('button', { name: 'Create draft contract' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Save and activate' }).click()
 
   await expect(
     page.getByRole('heading', { name: contractNumber }),
   ).toBeVisible()
-  await expect(page.getByText('Draft', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Activate contract' }).click()
   await expect(page.getByText('Active', { exact: true })).toBeVisible()
   await expect(page.getByText('Activated', { exact: true })).toBeVisible()
+})
+
+test('preserves contract state while opening inline customer creation', async ({
+  page,
+}) => {
+  await page.goto('/login')
+  await page.getByLabel('Email').fill('admin@loadix.example.invalid')
+  await page.getByLabel('Password').fill('LoadIx Demo Admin 2026!')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('link', { name: 'Contracts' }).click()
+  await page.getByRole('button', { name: 'New contract' }).click()
+  await page.getByLabel('Contract number').fill('PRESERVED-CONTRACT')
+  await page.getByRole('button', { name: 'Create new customer' }).click()
+  await expect(
+    page.getByRole('dialog', { name: 'Create customer' }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByLabel('Contract number')).toHaveValue(
+    'PRESERVED-CONTRACT',
+  )
 })

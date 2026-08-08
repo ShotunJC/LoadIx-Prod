@@ -611,9 +611,7 @@ function AssignmentForm({
         </label>
       </div>
       <fieldset>
-        <legend className="text-sm font-semibold">
-          Trailers (up to three)
-        </legend>
+        <legend className="text-sm font-semibold">Trailers (up to two)</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-3">
           {resources.data?.trailers.items.map((item) => (
             <label
@@ -623,7 +621,7 @@ function AssignmentForm({
               <input
                 checked={trailerIds.includes(item.id)}
                 disabled={
-                  !trailerIds.includes(item.id) && trailerIds.length >= 3
+                  !trailerIds.includes(item.id) && trailerIds.length >= 2
                 }
                 onChange={(event) => {
                   setTrailerIds((values) =>
@@ -693,9 +691,13 @@ function LifecycleControls({
         : canManage)
   const [reason, setReason] = useState('')
   const sourceRequired =
-    trip.status === 'Loading' && !trip.sourceWeighbridgeReference
+    trip.status === 'Loading' &&
+    trip.sourceWeightCaptureRequired &&
+    !trip.sourceWeighbridgeReference
   const destinationRequired =
-    trip.status === 'Unloading' && !trip.destinationWeighbridgeReference
+    trip.status === 'Unloading' &&
+    trip.destinationWeightCaptureRequired &&
+    !trip.destinationWeighbridgeReference
 
   return (
     <div className="space-y-4 rounded-xl border bg-white p-5 shadow-sm">
@@ -717,6 +719,17 @@ function LifecycleControls({
       ) : null}
       {trip.status === 'ReconciliationRequired' && canComplete ? (
         <div className="flex flex-wrap gap-2">
+          <p className="w-full text-sm text-slate-600">
+            Reconciliation:{' '}
+            {trip.reconciliationStatus === 'NotApplicable'
+              ? 'Not applicable â€” this route does not use weighbridges.'
+              : trip.reconciliationStatus.replace(
+                  /([a-z])([A-Z])/g,
+                  '$1 $2',
+                )}{' '}
+            Quantity source:{' '}
+            {trip.quantitySource.replace(/([a-z])([A-Z])/g, '$1 $2')}.
+          </p>
           <Button
             disabled={busy || trip.isReconciled}
             onClick={() => {

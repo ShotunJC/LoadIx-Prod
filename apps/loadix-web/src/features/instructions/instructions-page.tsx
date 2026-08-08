@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { ChevronLeft, Pencil, Plus, X } from 'lucide-react'
 import { useAuth } from '@/auth/auth-context'
 import { Button } from '@/components/ui/button'
+import { FieldLabel } from '@/components/ui/field-help'
 import { getContract, listContracts } from '@/features/contracts/contract-api'
 import {
   cancelInstruction,
@@ -32,6 +33,34 @@ interface FormValues {
   customerInstructionReference: string
   priority: string
   specialInstructions: string
+}
+
+const instructionFieldHelp: Record<keyof FormValues, string> = {
+  instructionNumber:
+    'The unique load or order reference used by operations and the customer.',
+  transportContractId:
+    'The active agreement that supplies the customer, route, commodity and billing rules.',
+  contractRouteId: 'The approved collection-to-delivery route for this load.',
+  commodityId: 'The material or goods that will be transported.',
+  requestedQuantity: 'The total quantity the customer has asked to move.',
+  quantityUnit: 'The unit used for the requested quantity and trip planning.',
+  requestedTripCount:
+    'An optional estimate of how many trips operations expects to use.',
+  collectionWindowStart:
+    'The earliest date and time the first collection may begin.',
+  collectionWindowEnd:
+    'The latest date and time by which collection should occur.',
+  deliveryWindowStart:
+    'The earliest date and time the delivery site will accept the load.',
+  deliveryWindowEnd: 'The latest date and time by which delivery should occur.',
+  customerPurchaseOrderReference:
+    'The customer purchase-order number that should follow this work into billing.',
+  customerInstructionReference:
+    'Any separate instruction, call-off or booking reference supplied by the customer.',
+  priority:
+    'Signals how urgently dispatch should schedule and monitor this load.',
+  specialInstructions:
+    'Load-specific safety, handling, access or document requirements for operations.',
 }
 
 const tomorrow = new Date(Date.now() + 86_400_000)
@@ -610,7 +639,7 @@ function InstructionWizard({
 }) {
   const auth = useAuth()
   const locked = Boolean(existing?.trips.length)
-  const [step, setStep] = useState(locked ? 3 : 1)
+  const [step, setStep] = useState(locked ? 4 : 1)
   const [contractId, setContractId] = useState(
     existing?.transportContractId ?? '',
   )
@@ -658,10 +687,16 @@ function InstructionWizard({
         },
   })
   const save = useMutation({
-    mutationFn: (values: FormValues) => {
+    mutationFn: async ({
+      values,
+      plan,
+    }: {
+      values: FormValues
+      plan: boolean
+    }) => {
       const selectedContract = contract.data
       if (!selectedContract) throw new Error('Select an active contract.')
-      return saveInstruction(
+      const saved = await saveInstruction(
         auth.request,
         {
           ...values,
@@ -684,6 +719,9 @@ function InstructionWizard({
         },
         existing?.id,
       )
+      return plan && saved.status === 'Draft'
+        ? planInstruction(auth.request, saved)
+        : saved
     },
     onSuccess: onSaved,
   })
@@ -709,14 +747,22 @@ function InstructionWizard({
     type = 'text',
     required = true,
   ) => (
-    <label>
-      <span className="mb-1 block text-sm font-bold">{label}</span>
+    <div>
+      <FieldLabel help={instructionFieldHelp[name]} label={label} />
       <input
+        aria-label={label}
         className="h-11 w-full rounded-md border px-3"
         type={type}
         {...form.register(name, { required })}
       />
-    </label>
+    </div>
+  )
+  const selectedRouteId = useWatch({
+    control: form.control,
+    name: 'contractRouteId',
+  })
+  const selectedRoute = contract.data?.routes.find(
+    (route) => route.id === selectedRouteId,
   )
 
   return (
@@ -730,7 +776,7 @@ function InstructionWizard({
         <div className="flex justify-between">
           <div>
             <p className="text-sm font-bold text-emerald-700">
-              Step {step} of 3
+              Step {step} of 4
             </p>
             <h2 className="text-2xl font-black" id="instruction-wizard-title">
               {existing ? 'Edit' : 'Create'} load instruction
@@ -749,18 +795,20 @@ function InstructionWizard({
           className="mt-6"
           onSubmit={(event) =>
             void form.handleSubmit((values) => {
-              save.mutate(values)
+              save.mutate({ values, plan: false })
             })(event)
           }
         >
           {step === 1 ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {field('instructionNumber', 'Instruction number')}
-              <label>
-                <span className="mb-1 block text-sm font-bold">
-                  Transport contract
-                </span>
+              <div>
+                <FieldLabel
+                  help={instructionFieldHelp.transportContractId}
+                  label="Transport contract"
+                />
                 <select
+                  aria-label="Transport contract"
                   className="h-11 w-full rounded-md border bg-white px-3"
                   disabled={Boolean(existing?.trips.length)}
                   {...form.register('transportContractId', { required: true })}
@@ -778,10 +826,14 @@ function InstructionWizard({
                     </option>
                   ))}
                 </select>
-              </label>
-              <label>
-                <span className="mb-1 block text-sm font-bold">Route</span>
+              </div>
+              <div>
+                <FieldLabel
+                  help={instructionFieldHelp.contractRouteId}
+                  label="Route"
+                />
                 <select
+                  aria-label="Route"
                   className="h-11 w-full rounded-md border bg-white px-3"
                   {...form.register('contractRouteId', { required: true })}
                 >
@@ -793,10 +845,14 @@ function InstructionWizard({
                     </option>
                   ))}
                 </select>
-              </label>
-              <label>
-                <span className="mb-1 block text-sm font-bold">Commodity</span>
+              </div>
+              <div>
+                <FieldLabel
+                  help={instructionFieldHelp.commodityId}
+                  label="Commodity"
+                />
                 <select
+                  aria-label="Commodity"
                   className="h-11 w-full rounded-md border bg-white px-3"
                   {...form.register('commodityId', { required: true })}
                 >
@@ -807,24 +863,26 @@ function InstructionWizard({
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             </div>
           ) : null}
           {step === 2 ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {field('requestedQuantity', 'Requested quantity', 'number')}
-              <label>
-                <span className="mb-1 block text-sm font-bold">
-                  Quantity unit
-                </span>
+              <div>
+                <FieldLabel
+                  help={instructionFieldHelp.quantityUnit}
+                  label="Quantity unit"
+                />
                 <select
+                  aria-label="Quantity unit"
                   className="h-11 w-full rounded-md border bg-white px-3"
                   {...form.register('quantityUnit')}
                 >
                   <option>Tonnes</option>
                   <option>Kilograms</option>
                 </select>
-              </label>
+              </div>
               {field(
                 'requestedTripCount',
                 'Requested trip count',
@@ -855,9 +913,13 @@ function InstructionWizard({
           ) : null}
           {step === 3 ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <label>
-                <span className="mb-1 block text-sm font-bold">Priority</span>
+              <div>
+                <FieldLabel
+                  help={instructionFieldHelp.priority}
+                  label="Priority"
+                />
                 <select
+                  aria-label="Priority"
                   className="h-11 w-full rounded-md border bg-white px-3"
                   {...form.register('priority')}
                 >
@@ -866,7 +928,7 @@ function InstructionWizard({
                   <option>High</option>
                   <option>Urgent</option>
                 </select>
-              </label>
+              </div>
               {field(
                 'customerPurchaseOrderReference',
                 'Customer purchase-order reference',
@@ -879,15 +941,72 @@ function InstructionWizard({
                 'text',
                 false,
               )}
-              <label className="sm:col-span-2">
-                <span className="mb-1 block text-sm font-bold">
-                  Special instructions
-                </span>
+              <div className="sm:col-span-2">
+                <FieldLabel
+                  help={instructionFieldHelp.specialInstructions}
+                  label="Special instructions"
+                />
                 <textarea
+                  aria-label="Special instructions"
                   className="min-h-32 w-full rounded-md border p-3"
                   {...form.register('specialInstructions')}
                 />
-              </label>
+              </div>
+            </div>
+          ) : null}
+          {step === 4 ? (
+            <div className="space-y-4" aria-label="Load instruction review">
+              <div className="rounded-xl border bg-slate-50 p-5">
+                <h3 className="text-lg font-black">Review and create</h3>
+                {/* eslint-disable react-hooks/incompatible-library -- React Hook Form watch drives the review summary. */}
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <Summary
+                    label="Customer"
+                    value={contract.data?.customerName ?? 'Select a contract'}
+                  />
+                  <Summary
+                    label="Contract"
+                    value={contract.data?.contractNumber ?? 'Not selected'}
+                  />
+                  <Summary
+                    label="Planned quantity"
+                    value={`${form.watch('requestedQuantity')} ${form.watch('quantityUnit')}`}
+                  />
+                  <Summary
+                    label="Expected trips"
+                    value={form.watch('requestedTripCount') || 'Not specified'}
+                  />
+                  <Summary
+                    label="Collection weighing"
+                    value={
+                      selectedRoute?.sourceWeightCaptureRequired
+                        ? 'Required'
+                        : 'Not required'
+                    }
+                  />
+                  <Summary
+                    label="Delivery weighing"
+                    value={
+                      selectedRoute?.destinationWeightCaptureRequired
+                        ? 'Required'
+                        : 'Not required'
+                    }
+                  />
+                  <Summary
+                    label="Collection window"
+                    value={`${form.watch('collectionWindowStart')} â€“ ${form.watch('collectionWindowEnd')}`}
+                  />
+                  <Summary
+                    label="Delivery window"
+                    value={`${form.watch('deliveryWindowStart')} â€“ ${form.watch('deliveryWindowEnd')}`}
+                  />
+                </dl>
+                {/* eslint-enable react-hooks/incompatible-library */}
+              </div>
+              <p className="text-sm text-slate-600">
+                Save as draft keeps this instruction editable. Plan load
+                confirms it for trip generation.
+              </p>
             </div>
           ) : null}
           {save.isError ? (
@@ -906,7 +1025,7 @@ function InstructionWizard({
             >
               Back
             </Button>
-            {step < 3 ? (
+            {step < 4 ? (
               <Button
                 onClick={(event) => {
                   event.preventDefault()
@@ -917,17 +1036,47 @@ function InstructionWizard({
                 Continue
               </Button>
             ) : (
-              <Button disabled={save.isPending || !contract.data} type="submit">
-                {save.isPending
-                  ? 'Saving…'
-                  : existing
-                    ? 'Save changes'
-                    : 'Create draft instruction'}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  disabled={save.isPending || !contract.data}
+                  type="submit"
+                  variant="outline"
+                >
+                  {save.isPending
+                    ? 'Saving…'
+                    : existing
+                      ? 'Save changes'
+                      : 'Create draft instruction'}
+                </Button>
+                {!existing || existing.status === 'Draft' ? (
+                  <Button
+                    disabled={save.isPending || !contract.data}
+                    onClick={() => {
+                      void form.handleSubmit((values) => {
+                        save.mutate({ values, plan: true })
+                      })()
+                    }}
+                    type="button"
+                  >
+                    Plan load
+                  </Button>
+                ) : null}
+              </div>
             )}
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+function Summary({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-bold tracking-wide text-slate-500 uppercase">
+        {label}
+      </dt>
+      <dd className="mt-1 font-semibold text-slate-900">{value}</dd>
     </div>
   )
 }

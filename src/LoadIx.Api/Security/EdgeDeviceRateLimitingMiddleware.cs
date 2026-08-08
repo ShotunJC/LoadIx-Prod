@@ -1,6 +1,6 @@
 using System.Threading.RateLimiting;
-using LoadIx.Application.Edge;
 using LoadIx.Infrastructure.Edge;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -44,9 +44,7 @@ public sealed class EdgeDeviceRateLimitingMiddleware(
             new EventId(4201, "EdgeRateLimitRejected"),
             "Edge device request rate limit rejected for partition {Partition}.");
 
-    public async Task InvokeAsync(
-        HttpContext context,
-        IEdgeDeviceRequestContext edgeRequestContext)
+    public async Task InvokeAsync(HttpContext context)
     {
         if (!context.Request.Path.StartsWithSegments("/api/v1/edge"))
         {
@@ -54,23 +52,48 @@ public sealed class EdgeDeviceRateLimitingMiddleware(
             return;
         }
 
-        var rawDevicePartition = Guid.TryParse(
-            context.Request.Headers[EdgeDeviceAuthenticationDefaults.DeviceIdHeader],
-            out var rawDeviceId)
-            ? rawDeviceId.ToString()
-            : "invalid-device";
-        var partition = edgeRequestContext.EdgeDeviceId is { } deviceId
-            && edgeRequestContext.TenantId is { } tenantId
-            ? $"authenticated:{tenantId.Value}:{deviceId}"
-            : $"unauthenticated:{rawDevicePartition}:"
-                + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
-        using var lease = await limiter.AcquireAsync(
-            partition,
-            context.RequestAborted);
+        // Device identifiers are attacker-controlled until authentication succeeds.
+        // Keying this boundary by that header would let a caller evade the expensive
+        // credential-verification limit by sending a fresh GUID on every request.
+        var rawPartition = "unauthenticated:ip:"
+            + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        if (!await TryAcquireAsync(context, rawPartition))
+        {
+            return;
+        }
+
+        var requiresEdgeAuthentication = !context.Request.Path.Equals(
+            "/api/v1/edge/bootstrap",
+            StringComparison.OrdinalIgnoreCase);
+        if (requiresEdgeAuthentication)
+        {
+            var authentication = await context.AuthenticateAsync(
+                EdgeDeviceAuthenticationDefaults.Scheme);
+            if (authentication.Succeeded && authentication.Principal is not null)
+            {
+                context.User = authentication.Principal;
+                var tenantId = context.User.FindFirst(LoadIxClaimTypes.TenantId)?.Value;
+                var deviceId = context.User.FindFirst(LoadIxClaimTypes.EdgeDeviceId)?.Value;
+                if (!string.IsNullOrWhiteSpace(tenantId)
+                    && !string.IsNullOrWhiteSpace(deviceId)
+                    && !await TryAcquireAsync(
+                        context,
+                        $"authenticated:{tenantId}:{deviceId}"))
+                {
+                    return;
+                }
+            }
+        }
+
+        await next(context);
+    }
+
+    private async Task<bool> TryAcquireAsync(HttpContext context, string partition)
+    {
+        using var lease = await limiter.AcquireAsync(partition, context.RequestAborted);
         if (lease.IsAcquired)
         {
-            await next(context);
-            return;
+            return true;
         }
 
         RateLimitRejected(logger, partition, null);
@@ -87,5 +110,6 @@ public sealed class EdgeDeviceRateLimitingMiddleware(
                 Instance = context.Request.Path,
             },
             context.RequestAborted);
+        return false;
     }
 }

@@ -1,5 +1,12 @@
 # LoadIx Domain Glossary
 
+## Quantity source
+
+The auditable origin of a trip's billable or delivered quantity: fixed,
+collection measured, delivery measured, reconciled measured, authorised manual,
+or non-weighed. Route weight requirements and tolerance are snapshotted onto a
+trip at generation time.
+
 This glossary establishes a shared language. Definitions marked **provisional**
 must be confirmed through domain discovery before their model is finalized.
 

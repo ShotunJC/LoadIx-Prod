@@ -3,6 +3,14 @@ import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { App } from '@/App'
 
+const offlineMocks = vi.hoisted(() => ({
+  clear: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('@/offline/command-queue', () => ({
+  clearDriverOfflineData: offlineMocks.clear,
+}))
+
 describe('Authentication flow', () => {
   it('logs in and opens the protected dashboard', async () => {
     window.history.pushState({}, '', '/login')
@@ -70,5 +78,6 @@ describe('Authentication flow', () => {
       '/api/v1/auth/login',
       expect.objectContaining({ method: 'POST' }),
     )
+    expect(offlineMocks.clear).toHaveBeenCalledTimes(2)
   })
 })

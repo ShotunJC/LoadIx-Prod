@@ -1,5 +1,13 @@
 # LoadIx Delivery Milestones
 
+## UX and workflow improvement milestone
+
+Implemented guided contract and load workflows, inline contract master-data
+creation, active contract editing with historical protections, a two-trailer
+maximum, optional route weighbridges, quantity-source reporting, grouped
+permission-aware navigation, migration, and regression coverage. Detailed user
+guidance is in `docs/workflow-improvements.md`.
+
 ## Delivery Principles
 
 - Deliver vertical, testable capabilities while establishing shared foundations

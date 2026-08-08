@@ -1,6 +1,7 @@
 using LoadIx.Application.Security;
 using LoadIx.Domain.Trips;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoadIx.Api.Endpoints;
@@ -27,13 +28,13 @@ public static class OperationsEndpoints
             int? limit,
             LoadIxDbContext db,
             TimeProvider time,
+            TenantClock tenantClock,
             CancellationToken cancellationToken) =>
         {
             var now = time.GetUtcNow().ToUniversalTime();
-            var completedTodayStart = new DateTimeOffset(
-                now.UtcDateTime.Date,
-                TimeSpan.Zero);
-            var completedTodayEnd = completedTodayStart.AddDays(1);
+            var completedToday = await tenantClock.LocalDayAsync(
+                now,
+                cancellationToken);
             var activeStatuses = new[]
             {
                 TripStatus.Planned,
@@ -52,8 +53,8 @@ public static class OperationsEndpoints
                 .Where(trip => activeStatuses.Contains(trip.Status)
                     || (trip.Status == TripStatus.Completed
                         && trip.CompletedAtUtc.HasValue
-                        && trip.CompletedAtUtc.Value >= completedTodayStart
-                        && trip.CompletedAtUtc.Value < completedTodayEnd));
+                        && trip.CompletedAtUtc.Value >= completedToday.StartUtc
+                        && trip.CompletedAtUtc.Value < completedToday.EndUtc));
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var value = search.Trim();
@@ -139,12 +140,13 @@ public static class OperationsEndpoints
         group.MapGet("/locations", async (
             LoadIxDbContext db,
             TimeProvider time,
+            TenantClock tenantClock,
             CancellationToken cancellationToken) =>
         {
             var now = time.GetUtcNow().ToUniversalTime();
-            var completedTodayStart = new DateTimeOffset(
-                now.UtcDateTime.Date,
-                TimeSpan.Zero);
+            var completedToday = await tenantClock.LocalDayAsync(
+                now,
+                cancellationToken);
             var activeStatuses = new[]
             {
                 TripStatus.Planned,
@@ -162,8 +164,8 @@ public static class OperationsEndpoints
             var visibleTrips = db.Trips.AsNoTracking()
                 .Where(trip => activeStatuses.Contains(trip.Status)
                     || (trip.Status == TripStatus.Completed
-                        && trip.CompletedAtUtc >= completedTodayStart
-                        && trip.CompletedAtUtc < completedTodayStart.AddDays(1)));
+                        && trip.CompletedAtUtc >= completedToday.StartUtc
+                        && trip.CompletedAtUtc < completedToday.EndUtc));
             var latest = await visibleTrips
                 .SelectMany(
                     trip => db.TripLocationUpdates.AsNoTracking()

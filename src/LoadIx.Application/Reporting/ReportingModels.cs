@@ -42,6 +42,7 @@ public sealed record TripRegisterRow(
     string Status,
     decimal PlannedQuantity,
     decimal? DeliveredQuantity,
+    string QuantitySource,
     string? Driver,
     string? Vehicle,
     DateTimeOffset PlannedDeliveryAtUtc,

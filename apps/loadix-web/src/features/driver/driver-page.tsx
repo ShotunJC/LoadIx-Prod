@@ -102,8 +102,9 @@ export function DriverPage() {
     url: string,
     body: Record<string, unknown>,
   ) => {
+    const idempotencyKey = `driver-${crypto.randomUUID()}`
     if (!navigator.onLine) {
-      await queue.enqueue(kind, { url, method: 'POST', body })
+      await queue.enqueue(kind, { url, method: 'POST', body }, idempotencyKey)
       await refreshQueue()
       return
     }
@@ -113,12 +114,12 @@ export function DriverPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Idempotency-Key': `driver-${crypto.randomUUID()}`,
+          'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify(body),
       })
     } catch {
-      await queue.enqueue(kind, { url, method: 'POST', body })
+      await queue.enqueue(kind, { url, method: 'POST', body }, idempotencyKey)
       await refreshQueue()
       return
     }
@@ -132,7 +133,7 @@ export function DriverPage() {
           queryKey: ['driver-trip', trip.id],
         })
       } else if (isTransientStatus(response.status)) {
-        await queue.enqueue(kind, { url, method: 'POST', body })
+        await queue.enqueue(kind, { url, method: 'POST', body }, idempotencyKey)
         await refreshQueue()
       } else {
         setLocationMessage(

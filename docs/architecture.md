@@ -1,5 +1,14 @@
 # LoadIx Architecture
 
+## ADR-031: Route-specific weight capture snapshots
+
+**Status:** Accepted. A contract route independently configures collection and
+delivery weight capture. Generated trips copy those flags, tolerance, and manual
+quantity policy. Contract edits therefore affect future trips only. Manual
+quantity is a distinct rate source protected by `Trip.Override`, idempotency,
+reason capture, and audit history. Existing referenced route/rate identities are
+protected from destructive edits.
+
 ## Status and Context
 
 This document began as the architecture baseline for an empty repository.
@@ -648,7 +657,7 @@ incident-response, and post-deployment smoke test live under
   reservations divide the remaining instruction quantity evenly to three decimal
   places; the requested trip count is advisory. Each reservation is promoted to
   an operational trip with the same identifier. The initial assignment supports
-  one driver, one vehicle, and up to three trailers. Multi-route,
+  one driver, one vehicle, and up to two trailers. Multi-route,
   multi-commodity, split-stop, diversion, and return behavior remains a later
   decision.
 - Source/destination gross, tare, net, and ticket-reference checkpoints plus

@@ -5,6 +5,7 @@ using LoadIx.Domain.Commercial;
 using LoadIx.Domain.Common;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoadIx.Infrastructure.Contracts;
@@ -13,7 +14,7 @@ public sealed class ContractService(
     LoadIxDbContext dbContext,
     ICurrentRequestContext requestContext,
     SecurityAuditWriter auditWriter,
-    TimeProvider timeProvider) : IContractService
+    TenantClock tenantClock) : IContractService
 {
     private const int MaximumPageSize = 100;
 
@@ -33,7 +34,7 @@ public sealed class ContractService(
                 "Page must be positive, pageSize must be between 1 and 100, and direction must be asc or desc.");
         }
 
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = await tenantClock.TodayAsync(cancellationToken);
         var contracts = dbContext.TransportContracts.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -179,7 +180,8 @@ public sealed class ContractService(
             model.Notes,
             definitions.Routes!,
             model.CommodityIds,
-            definitions.Rates!);
+            definitions.Rates!,
+            model.ManualQuantityPermitted);
         if (result.IsFailure) return Validation<ContractDetail>(result.Error!);
 
         dbContext.TransportContracts.Add(result.Value);
@@ -202,63 +204,35 @@ public sealed class ContractService(
         if (!ApplyVersion(contract, model.Version)) return InvalidVersion<ContractDetail>();
         var validation = await ValidateReferencesAsync(model, cancellationToken);
         if (validation is not null) return validation;
-        var definitions = BuildDefinitions(model, renewIds: true);
+        var definitions = BuildDefinitions(model, renewIds: false);
         if (definitions.Result is not null) return definitions.Result;
+        var historicalValidation = await ValidateHistoricalChangesAsync(
+            contract, definitions.Routes!, definitions.Rates!, cancellationToken);
+        if (historicalValidation is not null) return historicalValidation;
 
-        return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(
-            async () =>
-            {
-                await using var transaction =
-                    await dbContext.Database.BeginTransactionAsync(cancellationToken);
-                await dbContext.ContractRates
-                    .Where(item => item.TransportContractId == contract.Id)
-                    .ExecuteDeleteAsync(cancellationToken);
-                await dbContext.ContractCommodities
-                    .Where(item => item.TransportContractId == contract.Id)
-                    .ExecuteDeleteAsync(cancellationToken);
-                await dbContext.ContractRoutes
-                    .Where(item => item.TransportContractId == contract.Id)
-                    .ExecuteDeleteAsync(cancellationToken);
-                var trackedChildren = contract.Rates.Cast<object>()
-                    .Concat(contract.Commodities)
-                    .Concat(contract.Routes)
-                    .ToArray();
-                foreach (var child in trackedChildren)
-                {
-                    dbContext.Entry(child).State = EntityState.Detached;
-                }
-
-                var result = contract.Update(
-                    model.CustomerId,
-                    model.ContractNumber,
-                    model.Name,
-                    model.StartDate,
-                    model.EndDate,
-                    model.DefaultCurrency,
-                    model.PaymentTermsDays,
-                    model.WeightTolerancePercent,
-                    model.Notes,
-                    definitions.Routes!,
-                    model.CommodityIds,
-                    definitions.Rates!);
-                if (result.IsFailure) return Validation<ContractDetail>(result.Error!);
-                dbContext.ChangeTracker.DetectChanges();
-                foreach (var child in trackedChildren)
-                {
-                    dbContext.Entry(child).State = EntityState.Detached;
-                }
-
-                dbContext.ContractRoutes.AddRange(contract.Routes);
-                dbContext.ContractRates.AddRange(contract.Rates);
-                dbContext.ContractCommodities.AddRange(contract.Commodities);
-                var saved = await SaveAsync(contract, "Updated", cancellationToken);
-                if (saved.IsSuccess)
-                {
-                    await transaction.CommitAsync(cancellationToken);
-                }
-
-                return saved;
-            });
+        dbContext.RemoveRange(contract.Rates.Where(item =>
+            definitions.Rates!.All(value => value.Id != item.Id)));
+        dbContext.RemoveRange(contract.Commodities.Where(item =>
+            !model.CommodityIds.Contains(item.CommodityId)));
+        dbContext.RemoveRange(contract.Routes.Where(item =>
+            definitions.Routes!.All(value => value.Id != item.Id)));
+        var result = contract.Update(
+            model.CustomerId,
+            model.ContractNumber,
+            model.Name,
+            model.StartDate,
+            model.EndDate,
+            model.DefaultCurrency,
+            model.PaymentTermsDays,
+            model.WeightTolerancePercent,
+            model.Notes,
+            definitions.Routes!,
+            model.CommodityIds,
+            definitions.Rates!,
+            model.ManualQuantityPermitted);
+        return result.IsFailure
+            ? Validation<ContractDetail>(result.Error!)
+            : await SaveAsync(contract, "Updated", cancellationToken);
     }
 
     public Task<ContractResult<ContractDetail>> ActivateAsync(
@@ -357,7 +331,7 @@ public sealed class ContractService(
             .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (contract is null) return NotFound<ContractDetail>();
         if (!ApplyVersion(contract, version)) return InvalidVersion<ContractDetail>();
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = await tenantClock.TodayAsync(cancellationToken);
         if (action == "Activated"
             && (contract.StartDate > today || contract.EndDate < today))
         {
@@ -417,6 +391,67 @@ public sealed class ContractService(
         return null;
     }
 
+    private async Task<ContractResult<ContractDetail>?> ValidateHistoricalChangesAsync(
+        TransportContract contract,
+        IReadOnlyCollection<ContractRouteDefinition> routes,
+        IReadOnlyCollection<ContractRateDefinition> rates,
+        CancellationToken cancellationToken)
+    {
+        var usedRouteIds = await dbContext.LoadInstructions.AsNoTracking()
+            .Where(item => item.TransportContractId == contract.Id)
+            .Select(item => item.ContractRouteId)
+            .Union(dbContext.Trips.AsNoTracking()
+                .Where(item => item.TransportContractId == contract.Id)
+                .Select(item => item.ContractRouteId))
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var submittedRoutes = routes.ToDictionary(item => item.Id!.Value);
+        foreach (var existing in contract.Routes.Where(item =>
+                     usedRouteIds.Contains(item.Id)))
+        {
+            if (!submittedRoutes.TryGetValue(existing.Id, out var submitted)
+                || submitted.SourceLocationId != existing.SourceLocationId
+                || submitted.DestinationLocationId != existing.DestinationLocationId)
+            {
+                return Fail<ContractDetail>(
+                    ContractFailure.Conflict,
+                    "contract.historical_route_protected",
+                    "A route already used by a load or trip cannot be removed or have its locations changed.");
+            }
+        }
+
+        var usedRateIds = await dbContext.Trips.AsNoTracking()
+            .Where(item => item.TransportContractId == contract.Id)
+            .Select(item => item.RateSnapshot.RateId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var submittedRates = rates.ToDictionary(item => item.Id!.Value);
+        foreach (var existing in contract.Rates.Where(item =>
+                     usedRateIds.Contains(item.Id)))
+        {
+            if (!submittedRates.TryGetValue(existing.Id, out var submitted)
+                || submitted.ContractRouteId != existing.ContractRouteId
+                || submitted.RateType != existing.RateType
+                || submitted.EffectiveFrom != existing.EffectiveFrom
+                || submitted.EffectiveTo != existing.EffectiveTo
+                || submitted.FixedAmount != existing.FixedAmount
+                || submitted.BaseFee != existing.BaseFee
+                || submitted.PerTonneAmount != existing.PerTonneAmount
+                || submitted.MinimumCharge != existing.MinimumCharge
+                || submitted.FuelSurchargePercent != existing.FuelSurchargePercent
+                || submitted.RoundingDecimalPlaces != existing.RoundingDecimalPlaces
+                || submitted.RoundingMode != existing.RoundingMode)
+            {
+                return Fail<ContractDetail>(
+                    ContractFailure.Conflict,
+                    "contract.historical_rate_protected",
+                    "A rate already snapshotted by a trip cannot be removed or changed. Add a future-dated rate instead.");
+            }
+        }
+
+        return null;
+    }
+
     private static (
         IReadOnlyList<ContractRouteDefinition>? Routes,
         IReadOnlyList<ContractRateDefinition>? Rates,
@@ -449,7 +484,11 @@ public sealed class ContractService(
             idMap[route.Id!.Value],
             route.SourceLocationId,
             route.DestinationLocationId,
-            route.Reference)).ToArray();
+            route.Reference,
+            route.SourceWeightCaptureRequired,
+            route.DestinationWeightCaptureRequired,
+            route.CollectionInstructions,
+            route.DeliveryInstructions)).ToArray();
         var rates = new List<ContractRateDefinition>();
         foreach (var rate in model.Rates)
         {
@@ -505,7 +544,7 @@ public sealed class ContractService(
         var commodities = await dbContext.Commodities
             .Where(item => commodityIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        var today = await tenantClock.TodayAsync(cancellationToken);
         return new ContractDetail(
             contract.Id,
             contract.ContractNumber,
@@ -518,6 +557,7 @@ public sealed class ContractService(
             contract.DefaultCurrency,
             contract.PaymentTermsDays,
             contract.WeightTolerancePercent,
+            contract.ManualQuantityPermitted,
             contract.Notes,
             contract.Routes.Select(route => new ContractRouteModel(
                 route.Id,
@@ -525,7 +565,11 @@ public sealed class ContractService(
                 route.SourceLocationId,
                 locationNames[route.SourceLocationId],
                 route.DestinationLocationId,
-                locationNames[route.DestinationLocationId])).ToArray(),
+                locationNames[route.DestinationLocationId],
+                route.SourceWeightCaptureRequired,
+                route.DestinationWeightCaptureRequired,
+                route.CollectionInstructions,
+                route.DeliveryInstructions)).ToArray(),
             contract.Rates.Select(rate => new ContractRateModel(
                 rate.Id,
                 rate.ContractRouteId,

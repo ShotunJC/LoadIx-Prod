@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async (response) => {
         if (!response.ok) {
           accessToken.current = null
+          await clearDriverOfflineData()
           setUser(null)
           return false
         }
@@ -109,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('The email or password is incorrect.')
       }
 
+      await clearDriverOfflineData()
       applyAuthentication((await response.json()) as AuthResponse)
     },
     [applyAuthentication],

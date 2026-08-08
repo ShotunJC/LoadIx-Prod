@@ -84,7 +84,16 @@ describe('ContractsPage', () => {
       screen.getByRole('dialog', { name: 'Create transport contract' }),
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Contract number')).toBeInTheDocument()
-    expect(screen.getByLabelText('Weight tolerance (%)')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Help for Contract number' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Help for Customer' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Create new customer' }),
+    ).toBeInTheDocument()
   })
 })
 

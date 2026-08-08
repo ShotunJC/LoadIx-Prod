@@ -70,6 +70,8 @@ internal sealed class ContractRouteConfiguration :
         builder.Property(entity => entity.TenantId).ConfigureTenantId();
         builder.Property(entity => entity.Reference)
             .HasMaxLength(80).IsUnicode(false).IsRequired();
+        builder.Property(entity => entity.CollectionInstructions).HasMaxLength(1000);
+        builder.Property(entity => entity.DeliveryInstructions).HasMaxLength(1000);
         builder.HasIndex(entity => new
         {
             entity.TenantId,

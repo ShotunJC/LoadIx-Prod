@@ -38,7 +38,11 @@ public sealed record ContractRouteModel(
     Guid SourceLocationId,
     string SourceLocationName,
     Guid DestinationLocationId,
-    string DestinationLocationName);
+    string DestinationLocationName,
+    bool SourceWeightCaptureRequired,
+    bool DestinationWeightCaptureRequired,
+    string? CollectionInstructions,
+    string? DeliveryInstructions);
 
 public sealed record ContractRateModel(
     Guid Id,
@@ -71,6 +75,7 @@ public sealed record ContractDetail(
     string DefaultCurrency,
     int PaymentTermsDays,
     decimal WeightTolerancePercent,
+    bool ManualQuantityPermitted,
     string? Notes,
     IReadOnlyList<ContractRouteModel> Routes,
     IReadOnlyList<ContractRateModel> Rates,
@@ -81,7 +86,11 @@ public sealed record ContractRouteWriteModel(
     Guid? Id,
     string Reference,
     Guid SourceLocationId,
-    Guid DestinationLocationId);
+    Guid DestinationLocationId,
+    bool SourceWeightCaptureRequired = true,
+    bool DestinationWeightCaptureRequired = true,
+    string? CollectionInstructions = null,
+    string? DeliveryInstructions = null);
 
 public sealed record ContractRateWriteModel(
     Guid? Id,
@@ -110,7 +119,8 @@ public sealed record ContractWriteModel(
     IReadOnlyList<ContractRouteWriteModel> Routes,
     IReadOnlyList<Guid> CommodityIds,
     IReadOnlyList<ContractRateWriteModel> Rates,
-    string? Version = null);
+    string? Version = null,
+    bool ManualQuantityPermitted = false);
 
 public sealed record ContractTransitionModel(string Version);
 

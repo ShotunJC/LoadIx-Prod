@@ -45,6 +45,13 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             .HasPrecision(18, 3);
         builder.Property(entity => entity.DestinationWeighbridgeReference)
             .HasMaxLength(120);
+        builder.Property(entity => entity.WeightTolerancePercent).HasPrecision(9, 4);
+        builder.Property(entity => entity.ReconciledQuantity).HasPrecision(18, 3);
+        builder.Property(entity => entity.ManualQuantity).HasPrecision(18, 3);
+        builder.Property(entity => entity.ReconciliationStatus)
+            .HasConversion<string>().HasMaxLength(32).IsUnicode(false);
+        builder.Property(entity => entity.QuantitySource)
+            .HasConversion<string>().HasMaxLength(32).IsUnicode(false);
         builder.Ignore(entity => entity.CurrentTrailerIds);
         builder.Ignore(entity => entity.SourceNetWeight);
         builder.Ignore(entity => entity.DestinationNetWeight);

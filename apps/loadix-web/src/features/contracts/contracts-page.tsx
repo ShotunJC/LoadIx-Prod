@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
-import { Calculator, ChevronLeft, Plus, X } from 'lucide-react'
+import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
+import { Calculator, ChevronLeft, Pencil, Plus, X } from 'lucide-react'
 import { useAuth } from '@/auth/auth-context'
 import { Button } from '@/components/ui/button'
+import { FieldHelp, FieldLabel } from '@/components/ui/field-help'
 import {
   createContract,
   getContract,
@@ -11,11 +12,13 @@ import {
   listContracts,
   previewRate,
   transitionContract,
+  updateContract,
   type ContractDetail,
   type RateCalculation,
 } from './contract-api'
 import {
   listMasterData,
+  saveMasterData,
   type MasterDataItem,
 } from '../master-data/master-data-api'
 
@@ -32,13 +35,59 @@ interface WizardValues {
   routeReference: string
   sourceLocationId: string
   destinationLocationId: string
+  sourceWeightCaptureRequired: boolean
+  destinationWeightCaptureRequired: boolean
+  collectionInstructions: string
+  deliveryInstructions: string
   commodityId: string
+  manualQuantityPermitted: boolean
   rateType: string
   fixedAmount: string
   baseFee: string
   perTonneAmount: string
   minimumCharge: string
   fuelSurchargePercent: string
+}
+
+const contractFieldHelp: Record<keyof WizardValues, string> = {
+  customerId:
+    'The customer whose work, rates and billing terms this contract governs.',
+  contractNumber: 'Your unique customer-facing reference for this agreement.',
+  name: 'A short description that helps users recognise this contract.',
+  startDate:
+    'The first day on which loads may be planned against this contract.',
+  endDate:
+    'The final contract day; leave blank only for an open-ended agreement.',
+  defaultCurrency:
+    'The three-letter currency used for every rate on this contract, such as ZAR.',
+  paymentTermsDays:
+    'The number of days allowed for payment after an invoice is issued.',
+  weightTolerancePercent:
+    'The permitted difference between collection and delivery net weight before review is required.',
+  notes: 'Internal commercial context visible to authorised LoadIx users.',
+  routeReference: 'A short unique name for this collection-to-delivery route.',
+  sourceLocationId: 'The site where the load is collected.',
+  destinationLocationId: 'The site where the load is delivered.',
+  sourceWeightCaptureRequired:
+    'Select this when collection cannot be completed without a valid source weight.',
+  destinationWeightCaptureRequired:
+    'Select this when delivery cannot be completed without a valid destination weight.',
+  collectionInstructions:
+    'Standing access, safety or loading directions for the collection site.',
+  deliveryInstructions:
+    'Standing access, safety or offloading directions for the delivery site.',
+  commodityId: 'The material or goods permitted on this contract route.',
+  manualQuantityPermitted:
+    'Allows an authorised supervisor to record an audited quantity when no measured quantity is available.',
+  rateType:
+    'Determines which trip quantity and fee structure are used to calculate the charge.',
+  fixedAmount: 'The charge for each trip regardless of measured quantity.',
+  baseFee: 'The fixed part of a charge before any per-tonne amount is added.',
+  perTonneAmount: 'The amount charged for each billable tonne.',
+  minimumCharge:
+    'The lowest charge permitted after the rate and fuel surcharge are calculated.',
+  fuelSurchargePercent:
+    'The percentage added to the calculated transport charge for fuel recovery.',
 }
 
 const today = new Date().toISOString().slice(0, 10)
@@ -55,6 +104,9 @@ export function ContractsPage() {
   const [customerId, setCustomerId] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [editingContract, setEditingContract] = useState<ContractDetail | null>(
+    null,
+  )
 
   const customers = useLookup(auth.request, 'customers', 'tradingName')
   const contracts = useQuery({
@@ -82,15 +134,31 @@ export function ContractsPage() {
 
   if (selectedId) {
     return (
-      <ContractDetailView
-        canManage={canManage}
-        contract={detail.data}
-        error={detail.error}
-        loading={detail.isLoading}
-        onBack={() => {
-          setSelectedId(null)
-        }}
-      />
+      <>
+        <ContractDetailView
+          canManage={canManage}
+          contract={detail.data}
+          error={detail.error}
+          loading={detail.isLoading}
+          onBack={() => {
+            setSelectedId(null)
+          }}
+          onEdit={setEditingContract}
+        />
+        {editingContract ? (
+          <ContractWizard
+            contract={editingContract}
+            onClose={() => {
+              setEditingContract(null)
+            }}
+            onCreated={(contract) => {
+              setEditingContract(null)
+              queryClient.setQueryData(['contract', contract.id], contract)
+              void queryClient.invalidateQueries({ queryKey: ['contracts'] })
+            }}
+          />
+        ) : null}
+      </>
     )
   }
 
@@ -317,46 +385,67 @@ function ContractTable({
 }
 
 function ContractWizard({
+  contract,
   onClose,
   onCreated,
 }: {
+  contract?: ContractDetail
   onClose: () => void
   onCreated: (contract: ContractDetail) => void
 }) {
   const auth = useAuth()
+  const queryClient = useQueryClient()
   const [step, setStep] = useState(1)
   const customers = useLookup(auth.request, 'customers', 'tradingName')
   const locations = useLookup(auth.request, 'locations', 'name')
   const commodities = useLookup(auth.request, 'commodities', 'name')
+  const [inlineType, setInlineType] = useState<
+    'customer' | 'source' | 'destination' | 'commodity' | null
+  >(null)
+  const existingRoute = contract?.routes[0]
+  const existingRate = contract?.rates[0]
   const form = useForm<WizardValues>({
     defaultValues: {
-      customerId: '',
-      contractNumber: '',
-      name: '',
-      startDate: today,
-      endDate: nextYear,
-      defaultCurrency: 'ZAR',
-      paymentTermsDays: '30',
-      weightTolerancePercent: '1.5',
-      notes: '',
-      routeReference: '',
-      sourceLocationId: '',
-      destinationLocationId: '',
-      commodityId: '',
-      rateType: 'BasePlusPerTonne',
-      fixedAmount: '',
-      baseFee: '500',
-      perTonneAmount: '100',
-      minimumCharge: '',
-      fuelSurchargePercent: '',
+      customerId: contract?.customerId ?? '',
+      contractNumber: contract?.contractNumber ?? '',
+      name: contract?.name ?? '',
+      startDate: contract?.startDate ?? today,
+      endDate: contract?.endDate ?? nextYear,
+      defaultCurrency: contract?.defaultCurrency ?? 'ZAR',
+      paymentTermsDays: String(contract?.paymentTermsDays ?? 30),
+      weightTolerancePercent: String(contract?.weightTolerancePercent ?? 1.5),
+      notes: contract?.notes ?? '',
+      routeReference: existingRoute?.reference ?? '',
+      sourceLocationId: existingRoute?.sourceLocationId ?? '',
+      destinationLocationId: existingRoute?.destinationLocationId ?? '',
+      sourceWeightCaptureRequired:
+        existingRoute?.sourceWeightCaptureRequired ?? true,
+      destinationWeightCaptureRequired:
+        existingRoute?.destinationWeightCaptureRequired ?? true,
+      collectionInstructions: existingRoute?.collectionInstructions ?? '',
+      deliveryInstructions: existingRoute?.deliveryInstructions ?? '',
+      commodityId: contract?.commodities[0]?.commodityId ?? '',
+      manualQuantityPermitted: contract?.manualQuantityPermitted ?? false,
+      rateType: existingRate?.rateType ?? 'BasePlusPerTonne',
+      fixedAmount: String(existingRate?.fixedAmount ?? ''),
+      baseFee: String(existingRate?.baseFee ?? '500'),
+      perTonneAmount: String(existingRate?.perTonneAmount ?? '100'),
+      minimumCharge: String(existingRate?.minimumCharge ?? ''),
+      fuelSurchargePercent: String(existingRate?.fuelSurchargePercent ?? ''),
     },
   })
   const create = useMutation({
-    mutationFn: (values: WizardValues) => {
-      const routeId = crypto.randomUUID()
+    mutationFn: async ({
+      values,
+      activate,
+    }: {
+      values: WizardValues
+      activate: boolean
+    }) => {
+      const routeId = existingRoute?.id ?? crypto.randomUUID()
       const optionalNumber = (value: string) =>
         value.trim() ? Number(value) : null
-      return createContract(auth.request, {
+      const payload = {
         customerId: values.customerId,
         contractNumber: values.contractNumber,
         name: values.name,
@@ -365,6 +454,7 @@ function ContractWizard({
         defaultCurrency: values.defaultCurrency.toUpperCase(),
         paymentTermsDays: Number(values.paymentTermsDays),
         weightTolerancePercent: Number(values.weightTolerancePercent),
+        manualQuantityPermitted: values.manualQuantityPermitted,
         notes: values.notes || null,
         routes: [
           {
@@ -372,12 +462,17 @@ function ContractWizard({
             reference: values.routeReference,
             sourceLocationId: values.sourceLocationId,
             destinationLocationId: values.destinationLocationId,
+            sourceWeightCaptureRequired: values.sourceWeightCaptureRequired,
+            destinationWeightCaptureRequired:
+              values.destinationWeightCaptureRequired,
+            collectionInstructions: values.collectionInstructions || null,
+            deliveryInstructions: values.deliveryInstructions || null,
           },
         ],
         commodityIds: [values.commodityId],
         rates: [
           {
-            id: crypto.randomUUID(),
+            id: existingRate?.id ?? crypto.randomUUID(),
             contractRouteId: routeId,
             rateType: values.rateType,
             effectiveFrom: values.startDate,
@@ -391,7 +486,14 @@ function ContractWizard({
             roundingMode: 'AwayFromZero',
           },
         ],
-      })
+        version: contract?.version ?? null,
+      }
+      const saved = contract
+        ? await updateContract(auth.request, contract.id, payload)
+        : await createContract(auth.request, payload)
+      return activate && saved.status !== 'Active'
+        ? transitionContract(auth.request, saved, 'activate')
+        : saved
     },
     onSuccess: onCreated,
   })
@@ -419,16 +521,17 @@ function ContractWizard({
     type = 'text',
     required = true,
   ) => (
-    <label className="block">
-      <span className="mb-1 block text-sm font-bold">{label}</span>
+    <div className="block">
+      <FieldLabel help={contractFieldHelp[name]} label={label} />
       <input
+        aria-label={label}
         className="h-11 w-full rounded-md border px-3"
         type={type}
         {...form.register(name, {
           required: required ? `${label} is required.` : false,
         })}
       />
-    </label>
+    </div>
   )
 
   return (
@@ -442,10 +545,12 @@ function ContractWizard({
         <div className="mb-6 flex items-start justify-between">
           <div>
             <p className="text-sm font-bold text-emerald-700">
-              Step {step} of 4
+              Step {step} of 5
             </p>
             <h2 className="text-2xl font-black" id="contract-wizard-title">
-              Create transport contract
+              {contract
+                ? 'Edit transport contract'
+                : 'Create transport contract'}
             </h2>
           </div>
           <Button
@@ -459,18 +564,25 @@ function ContractWizard({
         <form
           onSubmit={(event) => {
             void form.handleSubmit((values) => {
-              create.mutate(values)
+              create.mutate({ values, activate: false })
             })(event)
           }}
         >
           {step === 1 ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <LookupSelect
+                help={contractFieldHelp.customerId}
                 items={customers.data?.items ?? []}
                 label="Customer"
                 name="customerId"
                 register={form.register}
                 textKey="tradingName"
+              />
+              <InlineCreateAction
+                label="Create new customer"
+                onClick={() => {
+                  setInlineType('customer')
+                }}
               />
               {field('contractNumber', 'Contract number')}
               {field('name', 'Contract name')}
@@ -478,53 +590,122 @@ function ContractWizard({
               {field('endDate', 'End date', 'date', false)}
               {field('defaultCurrency', 'Currency')}
               {field('paymentTermsDays', 'Payment terms (days)', 'number')}
-              {field(
-                'weightTolerancePercent',
-                'Weight tolerance (%)',
-                'number',
-              )}
-              <label className="sm:col-span-2">
-                <span className="mb-1 block text-sm font-bold">Notes</span>
+              <div className="sm:col-span-2">
+                <FieldLabel help={contractFieldHelp.notes} label="Notes" />
                 <textarea
+                  aria-label="Notes"
                   className="min-h-24 w-full rounded-md border p-3"
                   {...form.register('notes')}
                 />
-              </label>
+              </div>
             </div>
           ) : null}
           {step === 2 ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {field('routeReference', 'Route reference')}
               <LookupSelect
+                help={contractFieldHelp.sourceLocationId}
                 items={locations.data?.items ?? []}
                 label="Source location"
                 name="sourceLocationId"
                 register={form.register}
                 textKey="name"
               />
+              <InlineCreateAction
+                label="Create collection location"
+                onClick={() => {
+                  setInlineType('source')
+                }}
+              />
               <LookupSelect
+                help={contractFieldHelp.destinationLocationId}
                 items={locations.data?.items ?? []}
                 label="Destination location"
                 name="destinationLocationId"
                 register={form.register}
                 textKey="name"
               />
+              <InlineCreateAction
+                label="Create delivery location"
+                onClick={() => {
+                  setInlineType('destination')
+                }}
+              />
+              <CheckField
+                help={contractFieldHelp.sourceWeightCaptureRequired}
+                label="Collection weight capture required"
+                registration={form.register('sourceWeightCaptureRequired')}
+              />
+              <CheckField
+                help={contractFieldHelp.destinationWeightCaptureRequired}
+                label="Delivery weight capture required"
+                registration={form.register('destinationWeightCaptureRequired')}
+              />
+              <div>
+                <FieldLabel
+                  help={contractFieldHelp.collectionInstructions}
+                  label="Collection instructions"
+                />
+                <textarea
+                  aria-label="Collection instructions"
+                  className="min-h-20 w-full rounded-md border p-3"
+                  {...form.register('collectionInstructions')}
+                />
+              </div>
+              <div>
+                <FieldLabel
+                  help={contractFieldHelp.deliveryInstructions}
+                  label="Delivery instructions"
+                />
+                <textarea
+                  aria-label="Delivery instructions"
+                  className="min-h-20 w-full rounded-md border p-3"
+                  {...form.register('deliveryInstructions')}
+                />
+              </div>
             </div>
           ) : null}
           {step === 3 ? (
-            <LookupSelect
-              items={commodities.data?.items ?? []}
-              label="Permitted commodity"
-              name="commodityId"
-              register={form.register}
-              textKey="name"
-            />
+            <div className="space-y-4">
+              <LookupSelect
+                help={contractFieldHelp.commodityId}
+                items={commodities.data?.items ?? []}
+                label="Permitted commodity"
+                name="commodityId"
+                register={form.register}
+                textKey="name"
+              />
+              <InlineCreateAction
+                label="Create new commodity"
+                onClick={() => {
+                  setInlineType('commodity')
+                }}
+              />
+              {field(
+                'weightTolerancePercent',
+                'Weight tolerance (%)',
+                'number',
+              )}
+              <CheckField
+                help={contractFieldHelp.manualQuantityPermitted}
+                label="Allow authorised manual quantity capture"
+                registration={form.register('manualQuantityPermitted')}
+              />
+              <p className="text-sm text-slate-600">
+                Manual quantities are audited and require the Trip Override
+                permission.
+              </p>
+            </div>
           ) : null}
           {step === 4 ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <label>
-                <span className="mb-1 block text-sm font-bold">Rate type</span>
+              <div>
+                <FieldLabel
+                  help={contractFieldHelp.rateType}
+                  label="Rate type"
+                />
                 <select
+                  aria-label="Rate type"
                   className="h-11 w-full rounded-md border bg-white px-3"
                   {...form.register('rateType', { required: true })}
                 >
@@ -535,8 +716,11 @@ function ContractWizard({
                   </option>
                   <option value="ReconciledTonne">Reconciled tonne</option>
                   <option value="BasePlusPerTonne">Base plus per tonne</option>
+                  <option value="ManualQuantityPerTonne">
+                    Authorised manual quantity per tonne
+                  </option>
                 </select>
-              </label>
+              </div>
               {field('fixedAmount', 'Fixed amount', 'number', false)}
               {field('baseFee', 'Base fee', 'number', false)}
               {field('perTonneAmount', 'Amount per tonne', 'number', false)}
@@ -551,6 +735,51 @@ function ContractWizard({
                 Money rounds to two decimals, midpoint away from zero. Fuel is
                 applied before the minimum-charge floor.
               </p>
+            </div>
+          ) : null}
+          {step === 5 ? (
+            <div className="space-y-4" aria-label="Contract review">
+              {contract?.status === 'Active' ? (
+                <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+                  Changes apply to future trips only. Existing trips retain
+                  their saved rate and route snapshot.
+                </p>
+              ) : null}
+              <Panel title="Review and save">
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  {/* eslint-disable react-hooks/incompatible-library -- React Hook Form watch drives the review summary. */}
+                  <Term
+                    label="Contract"
+                    value={`${form.watch('contractNumber')} Â· ${form.watch('name')}`}
+                  />
+                  <Term
+                    label="Period"
+                    value={`${form.watch('startDate')} â€“ ${form.watch('endDate') || 'Open'}`}
+                  />
+                  <Term label="Route" value={form.watch('routeReference')} />
+                  <Term
+                    label="Rate"
+                    value={rateLabel(form.watch('rateType'))}
+                  />
+                  <Term
+                    label="Collection weighing"
+                    value={
+                      form.watch('sourceWeightCaptureRequired')
+                        ? 'Required'
+                        : 'Not required'
+                    }
+                  />
+                  <Term
+                    label="Delivery weighing"
+                    value={
+                      form.watch('destinationWeightCaptureRequired')
+                        ? 'Required'
+                        : 'Not required'
+                    }
+                  />
+                  {/* eslint-enable react-hooks/incompatible-library */}
+                </dl>
+              </Panel>
             </div>
           ) : null}
           {form.formState.errors.root ? (
@@ -572,7 +801,7 @@ function ContractWizard({
             >
               Back
             </Button>
-            {step < 4 ? (
+            {step < 5 ? (
               <Button
                 onClick={(event) => {
                   event.preventDefault()
@@ -583,12 +812,59 @@ function ContractWizard({
                 Continue
               </Button>
             ) : (
-              <Button disabled={create.isPending} type="submit">
-                {create.isPending ? 'Creating…' : 'Create draft contract'}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  disabled={create.isPending}
+                  type="submit"
+                  variant="outline"
+                >
+                  {create.isPending ? 'Creating…' : 'Create draft contract'}
+                </Button>
+                <Button
+                  disabled={create.isPending}
+                  onClick={() => {
+                    void form.handleSubmit((values) => {
+                      create.mutate({ values, activate: true })
+                    })()
+                  }}
+                  type="button"
+                >
+                  Save and activate
+                </Button>
+              </div>
             )}
           </div>
         </form>
+        {inlineType ? (
+          <InlineMasterDialog
+            customerId={form.getValues('customerId')}
+            onClose={() => {
+              setInlineType(null)
+            }}
+            onSaved={(item) => {
+              const fieldName =
+                inlineType === 'customer'
+                  ? 'customerId'
+                  : inlineType === 'commodity'
+                    ? 'commodityId'
+                    : inlineType === 'source'
+                      ? 'sourceLocationId'
+                      : 'destinationLocationId'
+              form.setValue(fieldName, item.id, { shouldDirty: true })
+              const resource =
+                inlineType === 'customer'
+                  ? 'customers'
+                  : inlineType === 'commodity'
+                    ? 'commodities'
+                    : 'locations'
+              void queryClient.invalidateQueries({
+                queryKey: ['contract-lookup', resource],
+              })
+              setInlineType(null)
+            }}
+            type={inlineType}
+          />
+        ) : null}
       </div>
     </div>
   )
@@ -600,12 +876,14 @@ function ContractDetailView({
   error,
   canManage,
   onBack,
+  onEdit,
 }: {
   contract: ContractDetail | undefined
   loading: boolean
   error: Error | null
   canManage: boolean
   onBack: () => void
+  onEdit: (contract: ContractDetail) => void
 }) {
   const auth = useAuth()
   const queryClient = useQueryClient()
@@ -676,6 +954,14 @@ function ContractDetailView({
         </div>
         {canManage ? (
           <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                onEdit(contract)
+              }}
+              variant="outline"
+            >
+              <Pencil size={18} /> Edit contract
+            </Button>
             {contract.status === 'Draft' || contract.status === 'Suspended' ? (
               <Button
                 disabled={transition.isPending}
@@ -729,6 +1015,16 @@ function ContractDetailView({
               <strong>{route.reference}</strong>
               <p className="text-sm text-slate-600">
                 {route.sourceLocationName} → {route.destinationLocationName}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Collection weighing:{' '}
+                {route.sourceWeightCaptureRequired
+                  ? 'required'
+                  : 'not required'}{' '}
+                · Delivery weighing:{' '}
+                {route.destinationWeightCaptureRequired
+                  ? 'required'
+                  : 'not required'}
               </p>
             </div>
           ))}
@@ -866,12 +1162,14 @@ function useLookup(
 
 function LookupSelect({
   items,
+  help,
   label,
   name,
   register,
   textKey,
 }: {
   items: MasterDataItem[]
+  help: string
   label: string
   name: keyof WizardValues
   register: ReturnType<typeof useForm<WizardValues>>['register']
@@ -880,10 +1178,11 @@ function LookupSelect({
   const id = `contract-${name}`
   return (
     <div>
-      <label className="mb-1 block text-sm font-bold" htmlFor={id}>
-        {label}
-      </label>
+      <div>
+        <FieldLabel help={help} label={label} />
+      </div>
       <select
+        aria-label={label}
         className="h-11 w-full rounded-md border bg-white px-3"
         id={id}
         {...register(name, { required: `${label} is required.` })}
@@ -895,6 +1194,245 @@ function LookupSelect({
           </option>
         ))}
       </select>
+    </div>
+  )
+}
+
+function InlineCreateAction({
+  label,
+  onClick,
+}: {
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <Button onClick={onClick} type="button" variant="ghost">
+      <Plus size={16} /> {label}
+    </Button>
+  )
+}
+
+function CheckField({
+  label,
+  help,
+  registration,
+}: {
+  label: string
+  help: string
+  registration: UseFormRegisterReturn
+}) {
+  return (
+    <div className="flex min-h-11 items-center gap-3 rounded-md border p-3 text-sm font-bold">
+      <input
+        aria-label={label}
+        className="size-5"
+        type="checkbox"
+        {...registration}
+      />
+      {label}
+      <FieldHelp label={label} text={help} />
+    </div>
+  )
+}
+
+function InlineMasterDialog({
+  type,
+  customerId,
+  onClose,
+  onSaved,
+}: {
+  type: 'customer' | 'source' | 'destination' | 'commodity'
+  customerId: string
+  onClose: () => void
+  onSaved: (item: MasterDataItem) => void
+}) {
+  const auth = useAuth()
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [registration, setRegistration] = useState('')
+  const [city, setCity] = useState('')
+  const [addressLine, setAddressLine] = useState('')
+  const resource =
+    type === 'customer'
+      ? 'customers'
+      : type === 'commodity'
+        ? 'commodities'
+        : 'locations'
+  const save = useMutation({
+    mutationFn: () => {
+      const address = {
+        line1: addressLine,
+        line2: null,
+        city,
+        provinceOrRegion: 'Gauteng',
+        postalCode: '0001',
+        countryCode: 'ZA',
+      }
+      const payload =
+        type === 'customer'
+          ? {
+              legalName: name,
+              tradingName: name,
+              registrationNumber: registration,
+              taxNumber: null,
+              paymentTermsDays: 30,
+              billingAddress: address,
+              contacts: [],
+              notes: null,
+            }
+          : type === 'commodity'
+            ? { name, code, defaultWeightUnit: 'Tonnes' }
+            : {
+                customerId: customerId || null,
+                name,
+                code,
+                type: type === 'source' ? 'CollectionSite' : 'DeliverySite',
+                address,
+                latitude: null,
+                longitude: null,
+                geofenceRadiusMetres: null,
+                siteInstructions: null,
+                contactName: null,
+                contactPhoneNumber: null,
+                operatingHours: null,
+              }
+      return saveMasterData(auth.request, resource, payload)
+    },
+    onSuccess: onSaved,
+  })
+  const needsAddress = type !== 'commodity'
+  return (
+    <div className="fixed inset-0 z-60 grid place-items-center bg-slate-950/55 p-4">
+      <form
+        aria-labelledby="inline-master-title"
+        aria-modal="true"
+        className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-2xl"
+        onSubmit={(event) => {
+          event.preventDefault()
+          save.mutate()
+        }}
+        role="dialog"
+      >
+        <div className="flex items-start justify-between">
+          <h3 className="text-xl font-black" id="inline-master-title">
+            Create{' '}
+            {type === 'customer'
+              ? 'customer'
+              : type === 'commodity'
+                ? 'commodity'
+                : 'location'}
+          </h3>
+          <Button
+            aria-label="Close"
+            onClick={onClose}
+            type="button"
+            variant="ghost"
+          >
+            <X />
+          </Button>
+        </div>
+        <div className="block text-sm font-bold">
+          <FieldLabel
+            help={
+              type === 'customer'
+                ? 'The customer trading name shown throughout LoadIx.'
+                : type === 'commodity'
+                  ? 'The recognised name of the transported material or goods.'
+                  : 'The operating name users will recognise for this site.'
+            }
+            label="Name"
+          />
+          <input
+            aria-label="Name"
+            className="mt-1 h-11 w-full rounded-md border px-3"
+            onChange={(event) => {
+              setName(event.target.value)
+            }}
+            required
+            value={name}
+          />
+        </div>
+        {type === 'customer' ? (
+          <div className="block text-sm font-bold">
+            <FieldLabel
+              help="The customer company or business registration number."
+              label="Registration number"
+            />
+            <input
+              aria-label="Registration number"
+              className="mt-1 h-11 w-full rounded-md border px-3"
+              onChange={(event) => {
+                setRegistration(event.target.value)
+              }}
+              required
+              value={registration}
+            />
+          </div>
+        ) : (
+          <div className="block text-sm font-bold">
+            <FieldLabel
+              help="A short unique reference used in lists, documents and searches."
+              label="Code"
+            />
+            <input
+              aria-label="Code"
+              className="mt-1 h-11 w-full rounded-md border px-3"
+              onChange={(event) => {
+                setCode(event.target.value)
+              }}
+              required
+              value={code}
+            />
+          </div>
+        )}
+        {needsAddress ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="block text-sm font-bold">
+              <FieldLabel
+                help="The primary physical address used to identify and route to this site."
+                label="Street address"
+              />
+              <input
+                aria-label="Street address"
+                className="mt-1 h-11 w-full rounded-md border px-3"
+                onChange={(event) => {
+                  setAddressLine(event.target.value)
+                }}
+                required
+                value={addressLine}
+              />
+            </div>
+            <div className="block text-sm font-bold">
+              <FieldLabel
+                help="The town or city used for routing and correspondence."
+                label="City"
+              />
+              <input
+                aria-label="City"
+                className="mt-1 h-11 w-full rounded-md border px-3"
+                onChange={(event) => {
+                  setCity(event.target.value)
+                }}
+                required
+                value={city}
+              />
+            </div>
+          </div>
+        ) : null}
+        {save.isError ? (
+          <p className="text-sm font-bold text-red-700" role="alert">
+            {save.error.message}
+          </p>
+        ) : null}
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose} type="button" variant="outline">
+            Cancel
+          </Button>
+          <Button disabled={save.isPending} type="submit">
+            {save.isPending ? 'Savingâ€¦' : 'Create and select'}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

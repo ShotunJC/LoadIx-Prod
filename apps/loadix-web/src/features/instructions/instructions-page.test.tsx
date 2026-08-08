@@ -81,6 +81,12 @@ describe('InstructionsPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Instruction number')).toBeInTheDocument()
     expect(screen.getByLabelText('Transport contract')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Help for Instruction number' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Help for Transport contract' }),
+    ).toBeInTheDocument()
   })
 })
 

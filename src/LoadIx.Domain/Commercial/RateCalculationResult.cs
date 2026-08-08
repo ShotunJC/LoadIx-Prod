@@ -67,6 +67,7 @@ public static class ContractRateCalculator
             ContractRateType.DestinationNetTonne => input.DestinationNetTonnes,
             ContractRateType.ReconciledTonne => input.ReconciledTonnes,
             ContractRateType.BasePlusPerTonne => input.ReconciledTonnes,
+            ContractRateType.ManualQuantityPerTonne => input.ReconciledTonnes,
             _ => 0m,
         };
         if (rate.RateType != ContractRateType.FixedPerTrip && tonnes is null)

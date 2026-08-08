@@ -295,7 +295,7 @@ minimum-charge floor.
 ## Load instructions and planned quantities
 
 Operations users manage customer instructions at `/load-instructions`. The
-three-step wizard selects an active contract route and permitted commodity,
+four-step wizard selects an active contract route and permitted commodity,
 captures requested quantity and trip-count guidance, collection and delivery
 windows, customer references, priority, and operational instructions.
 
@@ -335,7 +335,7 @@ Trip APIs are under `/api/v1/trips`. Assignment and lifecycle endpoints accept
 only explicit commands; there is no generic status update. Every retry-prone
 command requires an `Idempotency-Key`, and every editable command requires the
 latest base64 `version`. Active, available, and compliant drivers, vehicles, and
-up to three trailers are checked against overlapping non-terminal trip windows.
+up to two trailers are checked against overlapping non-terminal trip windows.
 
 The implemented lifecycle is:
 

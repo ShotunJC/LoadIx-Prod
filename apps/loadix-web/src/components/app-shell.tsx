@@ -25,79 +25,124 @@ import { Button } from '@/components/ui/button'
 import { NotificationCenter } from '@/features/notifications/notification-center'
 import { cn } from '@/lib/utils'
 
-const navigationItems = [
-  { label: 'Dashboard', to: '/', icon: LayoutDashboard },
-  { label: 'Operations', to: '/operations', icon: Route },
-  { label: 'Notifications', to: '/notifications', icon: Bell },
+const navigationGroups = [
   {
-    label: 'Finance',
-    to: '/finance',
-    icon: Receipt,
-    permission: 'Finance.View',
+    heading: 'Dashboard',
+    items: [
+      { label: 'Overview', to: '/', icon: LayoutDashboard },
+      { label: 'Notifications', to: '/notifications', icon: Bell },
+    ],
   },
   {
-    label: 'Reports',
-    to: '/reports',
-    icon: BarChart3,
-    permission: 'Report.View',
+    heading: 'Operations',
+    items: [
+      { label: 'Operations board', to: '/operations', icon: Route },
+      {
+        label: 'Load instructions',
+        to: '/load-instructions',
+        icon: ClipboardList,
+        permission: 'Trip.View',
+      },
+      {
+        label: 'Trips',
+        to: '/trips',
+        icon: ClipboardList,
+        permission: 'Trip.View',
+      },
+      {
+        label: 'Driver workspace',
+        to: '/driver',
+        icon: Smartphone,
+        permission: 'Trip.Driver.Execute',
+      },
+    ],
   },
   {
-    label: 'Trips',
-    to: '/trips',
-    icon: ClipboardList,
-    permission: 'Trip.View',
+    heading: 'Commercial',
+    items: [
+      {
+        label: 'Customers',
+        to: '/customers',
+        icon: Contact,
+        permission: 'Customer.View',
+      },
+      {
+        label: 'Contracts',
+        to: '/contracts',
+        icon: FileText,
+        permission: 'Contract.View',
+      },
+    ],
   },
   {
-    label: 'Driver workspace',
-    to: '/driver',
-    icon: Smartphone,
-    permission: 'Trip.Driver.Execute',
+    heading: 'Fleet',
+    items: [
+      { label: 'Trucks', to: '/fleet', icon: Truck, permission: 'Fleet.View' },
+      {
+        label: 'Drivers',
+        to: '/drivers',
+        icon: Contact,
+        permission: 'Fleet.View',
+      },
+      {
+        label: 'Trailers',
+        to: '/trailers',
+        icon: Truck,
+        permission: 'Fleet.View',
+      },
+    ],
   },
   {
-    label: 'Load instructions',
-    to: '/load-instructions',
-    icon: ClipboardList,
-    permission: 'Trip.View',
+    heading: 'Sites and commodities',
+    items: [
+      {
+        label: 'Locations',
+        to: '/locations',
+        icon: MapPin,
+        permission: 'Customer.View',
+      },
+      {
+        label: 'Commodities',
+        to: '/commodities',
+        icon: Package,
+        permission: 'Contract.View',
+      },
+      {
+        label: 'Edge devices',
+        to: '/edge-devices',
+        icon: Cpu,
+        permission: 'EdgeDevice.View',
+      },
+    ],
   },
   {
-    label: 'Branches',
-    to: '/branches',
-    icon: Building2,
-    permission: 'Tenant.View',
+    heading: 'Finance and reports',
+    items: [
+      {
+        label: 'Finance',
+        to: '/finance',
+        icon: Receipt,
+        permission: 'Finance.View',
+      },
+      {
+        label: 'Reports',
+        to: '/reports',
+        icon: BarChart3,
+        permission: 'Report.View',
+      },
+    ],
   },
   {
-    label: 'Customers',
-    to: '/customers',
-    icon: Contact,
-    permission: 'Customer.View',
-  },
-  {
-    label: 'Locations',
-    to: '/locations',
-    icon: MapPin,
-    permission: 'Customer.View',
-  },
-  {
-    label: 'Commodities',
-    to: '/commodities',
-    icon: Package,
-    permission: 'Contract.View',
-  },
-  {
-    label: 'Contracts',
-    to: '/contracts',
-    icon: FileText,
-    permission: 'Contract.View',
-  },
-  { label: 'Trucks', to: '/fleet', icon: Truck, permission: 'Fleet.View' },
-  { label: 'Drivers', to: '/drivers', icon: Contact, permission: 'Fleet.View' },
-  { label: 'Trailers', to: '/trailers', icon: Truck, permission: 'Fleet.View' },
-  { label: 'Users', to: '/users', icon: Users, permission: 'User.View' },
-  {
-    label: 'Edge devices',
-    to: '/edge-devices',
-    icon: Cpu,
-    permission: 'EdgeDevice.View',
+    heading: 'Administration',
+    items: [
+      {
+        label: 'Branches',
+        to: '/branches',
+        icon: Building2,
+        permission: 'Tenant.View',
+      },
+      { label: 'Users', to: '/users', icon: Users, permission: 'User.View' },
+    ],
   },
 ] as const
 
@@ -169,28 +214,37 @@ export function AppShell() {
           aria-label="Primary navigation"
           className="flex-1 space-y-1 overflow-y-auto px-3 py-5"
         >
-          {navigationItems
-            .filter(
+          {navigationGroups.map((group) => {
+            const visibleItems = group.items.filter(
               (item) =>
                 !('permission' in item) ||
                 auth.user?.permissions.includes(item.permission),
             )
-            .map((item) => (
-              <Link
-                activeProps={{
-                  className: 'bg-brand-500/15 text-brand-100 border-brand-500',
-                }}
-                className="flex min-h-11 items-center gap-3 rounded-md border-l-2 border-transparent px-3 text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
-                key={item.to}
-                onClick={() => {
-                  setNavigationOpen(false)
-                }}
-                to={item.to}
-              >
-                <item.icon aria-hidden="true" size={19} />
-                {item.label}
-              </Link>
-            ))}
+            return visibleItems.length ? (
+              <div className="pb-3" key={group.heading}>
+                <p className="px-3 pt-2 pb-1 text-[10px] font-bold tracking-[0.16em] text-slate-500 uppercase">
+                  {group.heading}
+                </p>
+                {visibleItems.map((item) => (
+                  <Link
+                    activeProps={{
+                      className:
+                        'bg-brand-500/15 text-brand-100 border-brand-500',
+                    }}
+                    className="flex min-h-11 items-center gap-3 rounded-md border-l-2 border-transparent px-3 text-sm font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
+                    key={item.to}
+                    onClick={() => {
+                      setNavigationOpen(false)
+                    }}
+                    to={item.to}
+                  >
+                    <item.icon aria-hidden="true" size={19} />
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null
+          })}
         </nav>
 
         <div className="border-t border-slate-800 p-4 text-xs text-slate-500">

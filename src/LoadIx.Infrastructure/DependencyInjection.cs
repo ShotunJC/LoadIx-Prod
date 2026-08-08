@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<CurrentRequestContext>();
         services.AddScoped<ICurrentRequestContext>(
             serviceProvider => serviceProvider.GetRequiredService<CurrentRequestContext>());
+        services.AddScoped<TenantClock>();
         services.AddScoped<DevelopmentDataSeeder>();
         services.AddScoped<DevelopmentIdentitySeeder>();
         services.AddScoped<PerformanceDataSeeder>();
