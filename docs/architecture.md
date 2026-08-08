@@ -147,6 +147,21 @@ pipeline and dispatch value exceeds its dependency and indirection cost.
 
 ## Persistence
 
+### Deterministic demonstration environment
+
+The pilot demonstration is infrastructure-owned seed orchestration over the
+normal domain model and object-storage abstraction. It is not runtime fallback
+data and no controller or React component contains demo business rules. Stable
+IDs and a fixed reference instant make the tenant reproducible. The seed is
+idempotent; the reset deletes only records owned by the well-known synthetic
+tenant, retains immutable security-audit evidence and stable login identities,
+then rebuilds the canonical operational story.
+
+Demo commands are denied unless the host is in `Development`, an explicit
+`LOADIX_DEMO_SEED_ENABLED=true` acknowledgement is present, and the SQL catalog
+name is non-empty and non-production-like. The public demo runtime continues to
+run under the `Production` ASP.NET Core environment and never seeds on startup.
+
 ### SQL ownership
 
 Use one SQL Server database for the modular monolith. Each table has a clear

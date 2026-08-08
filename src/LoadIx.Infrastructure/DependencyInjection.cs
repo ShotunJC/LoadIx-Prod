@@ -75,6 +75,8 @@ public static class DependencyInjection
         services.AddScoped<DevelopmentDataSeeder>();
         services.AddScoped<DevelopmentIdentitySeeder>();
         services.AddScoped<PerformanceDataSeeder>();
+        services.AddScoped<DemoScenarioSeeder>();
+        services.AddScoped<DemoDataResetter>();
         services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
         services.AddScoped<SecurityAuditWriter>();
         services.AddScoped<CurrentEdgeDeviceRequestContext>();

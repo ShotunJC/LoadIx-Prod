@@ -624,6 +624,45 @@ if (args.Contains("--seed-performance", StringComparer.OrdinalIgnoreCase))
     return;
 }
 
+if (args.Contains("--seed-demo", StringComparer.OrdinalIgnoreCase)
+    || args.Contains("--reset-demo", StringComparer.OrdinalIgnoreCase))
+{
+    if (!app.Environment.IsDevelopment()
+        || !string.Equals(
+            Environment.GetEnvironmentVariable("LOADIX_DEMO_SEED_ENABLED"),
+            "true",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            "Demo data commands require Development and LOADIX_DEMO_SEED_ENABLED=true.");
+    }
+
+    var connectionString = builder.Configuration.GetConnectionString("Database") ?? string.Empty;
+    var databaseName = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString).InitialCatalog;
+    if (string.IsNullOrWhiteSpace(databaseName)
+        || databaseName.Contains("prod", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(databaseName, "master", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException(
+            "Demo data commands refuse empty, master, or production-like database names.");
+    }
+
+    await using var scope = app.Services.CreateAsyncScope();
+    if (args.Contains("--reset-demo", StringComparer.OrdinalIgnoreCase))
+    {
+        await scope.ServiceProvider.GetRequiredService<DemoDataResetter>()
+            .ResetAsync(CancellationToken.None);
+    }
+
+    await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>()
+        .SeedAsync(CancellationToken.None);
+    await scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>()
+        .SeedAsync(CancellationToken.None);
+    await scope.ServiceProvider.GetRequiredService<DemoScenarioSeeder>()
+        .SeedAsync(CancellationToken.None);
+    return;
+}
+
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();

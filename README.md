@@ -44,11 +44,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\migrate.ps1
 ```
 
-The migration helper applies all EF Core migrations and then idempotently creates
-the synthetic `LoadIx Demo Transport` tenant with two branches, three customers,
-six locations, four commodities, ten drivers, ten trucks, and fifteen trailers.
-It is safe to run the helper again. Development seeding is rejected outside the
-`Development` environment.
+The migration helper applies all EF Core migrations and creates the synthetic
+`LoadIx Demo Transport` master-data tenant. The full pilot demonstration adds
+five customers, five commodities, twenty drivers, fifteen trucks, twenty-five
+trailers, contracts, instructions, thirty-two trips, documents, notifications,
+finance records and an edge-device example. See [the demonstration guide](docs/demo-guide.md)
+for scenario scripts and the guarded seed/reset commands.
 
 The development tenant administrator is:
 

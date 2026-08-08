@@ -197,6 +197,14 @@ services:
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      LOADIX_DEMO_SEED_ENABLED: "true"
+      Documents__Endpoint: minio:9000
+      Documents__AccessKey: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      Documents__SecretKey: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      Documents__Bucket: ${MINIO_DOCUMENT_BUCKET:-loadix-documents}
+      Documents__Provider: S3Compatible
+      Documents__UseSsl: "false"
+      Documents__MalwareScanner: DevelopmentSignature
 
       ConnectionStrings__Database: >-
         Server=sqlserver,1433;Database=${SQL_DATABASE:-LoadIx};
@@ -208,6 +216,8 @@ services:
 
     depends_on:
       sqlserver:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
     networks:
@@ -268,7 +278,7 @@ services:
           --no-launch-profile \
           -- \
           --environment Development \
-          --seed-development
+          --seed-demo
 
 volumes:
   caddy-data:

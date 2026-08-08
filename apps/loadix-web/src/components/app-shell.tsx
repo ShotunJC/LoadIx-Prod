@@ -104,6 +104,7 @@ const navigationItems = [
 export function AppShell() {
   const [navigationOpen, setNavigationOpen] = useState(false)
   const auth = useAuth()
+  const isDemo = auth.user?.tenantId === '10000000-0000-0000-0000-000000000001'
 
   return (
     <div className="min-h-screen bg-slate-100/80">
@@ -193,11 +194,16 @@ export function AppShell() {
         </nav>
 
         <div className="border-t border-slate-800 p-4 text-xs text-slate-500">
-          Foundation build · v0.1.0
+          Pilot demonstration · synthetic data
         </div>
       </aside>
 
       <div className="lg:pl-64">
+        {isDemo ? (
+          <div className="bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:px-6">
+            LoadIx Demo Transport · Synthetic training data · Resettable workspace
+          </div>
+        ) : null}
         <header className="sticky top-0 z-20 flex h-18 items-center justify-between border-b bg-white/95 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
             <Button
