@@ -201,7 +201,8 @@ export function AppShell() {
       <div className="lg:pl-64">
         {isDemo ? (
           <div className="bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-900 sm:px-6">
-            LoadIx Demo Transport · Synthetic training data · Resettable workspace
+            LoadIx Demo Transport · Synthetic training data · Resettable
+            workspace
           </div>
         ) : null}
         <header className="sticky top-0 z-20 flex h-18 items-center justify-between border-b bg-white/95 px-4 backdrop-blur sm:px-6">

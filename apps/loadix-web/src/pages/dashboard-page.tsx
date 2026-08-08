@@ -1,4 +1,11 @@
-import { ArrowRight, CircleAlert, Clock3, FileText, Route, Truck } from 'lucide-react'
+import {
+  ArrowRight,
+  CircleAlert,
+  Clock3,
+  FileText,
+  Route,
+  Truck,
+} from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/auth/auth-context'
@@ -104,8 +111,12 @@ export function DashboardPage() {
       </section>
 
       {dashboard.isError ? (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
-          Dashboard data could not be loaded. Check the connection and try again.
+        <div
+          className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          role="alert"
+        >
+          Dashboard data could not be loaded. Check the connection and try
+          again.
         </div>
       ) : null}
 
@@ -129,20 +140,37 @@ export function DashboardPage() {
           <ArrowRight aria-hidden="true" className="text-slate-400" size={19} />
         </div>
         <div className="grid gap-3 p-5 sm:grid-cols-3">
-          <Link className="rounded-lg border p-4 hover:border-brand-500 hover:bg-brand-50" to="/operations">
+          <Link
+            className="hover:border-brand-500 hover:bg-brand-50 rounded-lg border p-4"
+            to="/operations"
+          >
             <Route className="text-brand-700" aria-hidden="true" size={22} />
             <p className="mt-3 font-bold text-slate-900">Track active trips</p>
-            <p className="mt-1 text-sm text-slate-600">Open the live operations board and exception queue.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Open the live operations board and exception queue.
+            </p>
           </Link>
-          <Link className="rounded-lg border p-4 hover:border-brand-500 hover:bg-brand-50" to="/trips">
+          <Link
+            className="hover:border-brand-500 hover:bg-brand-50 rounded-lg border p-4"
+            to="/trips"
+          >
             <Truck className="text-brand-700" aria-hidden="true" size={22} />
             <p className="mt-3 font-bold text-slate-900">Run a trip workflow</p>
-            <p className="mt-1 text-sm text-slate-600">Dispatch, weigh, deliver and reconcile a synthetic trip.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Dispatch, weigh, deliver and reconcile a synthetic trip.
+            </p>
           </Link>
-          <Link className="rounded-lg border p-4 hover:border-brand-500 hover:bg-brand-50" to="/finance">
+          <Link
+            className="hover:border-brand-500 hover:bg-brand-50 rounded-lg border p-4"
+            to="/finance"
+          >
             <FileText className="text-brand-700" aria-hidden="true" size={22} />
-            <p className="mt-3 font-bold text-slate-900">Prepare an invoice batch</p>
-            <p className="mt-1 text-sm text-slate-600">Use approved invoice-ready trips with transparent costs.</p>
+            <p className="mt-3 font-bold text-slate-900">
+              Prepare an invoice batch
+            </p>
+            <p className="mt-1 text-sm text-slate-600">
+              Use approved invoice-ready trips with transparent costs.
+            </p>
           </Link>
         </div>
       </section>
