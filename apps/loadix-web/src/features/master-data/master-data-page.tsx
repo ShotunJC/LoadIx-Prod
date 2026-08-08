@@ -6,6 +6,7 @@ import { Plus, Search, X } from 'lucide-react'
 import { z } from 'zod'
 import { useAuth } from '@/auth/auth-context'
 import { Button } from '@/components/ui/button'
+import { FieldHelp, FieldLabel } from '@/components/ui/field-help'
 import { DataTable, type DataColumn } from './data-table'
 import {
   listMasterData,
@@ -281,6 +282,74 @@ function Compliance({ value }: { value: string }) {
 
 type FormValues = Record<string, string | boolean>
 const formBoundary = z.record(z.string(), z.union([z.string(), z.boolean()]))
+
+const masterFieldHelp: Record<string, string> = {
+  name: 'The clear operating name people will recognise in lists and searches.',
+  code: 'A short unique reference used on documents, searches and integrations.',
+  legalName: 'The customer name registered with the relevant authority.',
+  tradingName:
+    'The everyday customer name shown to dispatch and finance users.',
+  registrationNumber: 'The customer company or business registration number.',
+  taxNumber: 'The tax or VAT number used on finance documents when applicable.',
+  paymentTermsDays: 'The number of days the customer has to pay an invoice.',
+  contactName: 'The main person to contact about this record.',
+  contactEmail:
+    'The email address used for operational or account communication.',
+  contactPhoneNumber:
+    'The telephone number used for urgent operational contact.',
+  contactCategory:
+    'Identifies whether this person handles operations or finance.',
+  financeContactName:
+    'The person who handles customer invoices and account queries.',
+  financeContactEmail: 'The address used for invoices and finance queries.',
+  financeContactPhoneNumber: 'The direct number for customer finance queries.',
+  notes: 'Internal context that other authorised users should know.',
+  addressLine1: 'The primary street, site or physical address.',
+  addressLine2: 'Optional additional building, unit or area information.',
+  city: 'The town or city used for routing and correspondence.',
+  provinceOrRegion: 'The province, state or operating region for this address.',
+  postalCode: 'The postal code associated with the address.',
+  countryCode: 'The two-letter country code, for example ZA for South Africa.',
+  defaultWeightUnit:
+    'The unit normally used when planning loads for this commodity.',
+  type: 'Describes how this site is used in transport operations.',
+  customerId:
+    'Optionally links the location to the customer that owns or uses it.',
+  latitude: 'The north-south GPS coordinate used for mapping and geofencing.',
+  longitude: 'The east-west GPS coordinate used for mapping and geofencing.',
+  geofenceRadiusMetres:
+    'How close a device must be to count as arriving at the site.',
+  operatingHours: 'The normal times during which vehicles may enter or load.',
+  siteInstructions:
+    'Standing access, safety, loading or delivery instructions.',
+  branchId: 'The operating branch responsible for this driver or fleet asset.',
+  driverType: 'Shows whether the driver is an employee or a contractor.',
+  firstName: 'The driver’s given name as used in operational records.',
+  lastName: 'The driver’s family name as used in operational records.',
+  identificationReference:
+    'An internal reference to the protected identity record; do not enter an ID image.',
+  mobileNumber: 'The number used to contact the driver during a trip.',
+  licenceNumber: 'The number printed on the driver or vehicle licence.',
+  licenceExpiry: 'The last date on which the licence remains valid.',
+  emergencyContactName:
+    'The person to contact if an incident involves this driver.',
+  emergencyContactNumber: 'The emergency contact’s telephone number.',
+  fleetNumber:
+    'The operator’s unique internal number for this truck or trailer.',
+  registration: 'The official vehicle registration shown on the number plate.',
+  make: 'The vehicle or trailer manufacturer.',
+  model: 'The manufacturer’s model name or designation.',
+  year: 'The model or manufacture year used for fleet records.',
+  tareWeight: 'The empty weight of the truck or trailer, excluding cargo.',
+  carryingCapacity: 'The maximum cargo weight this asset may carry.',
+  weightUnit: 'The unit used for tare weight and carrying capacity.',
+  roadworthyExpiry: 'The last date of the current roadworthy certificate.',
+  isAvailable: 'Select this only when the asset may be allocated to a trip.',
+}
+
+const masterHelp = (name: string) =>
+  masterFieldHelp[name] ??
+  'Enter the value used to identify this record in operations.'
 
 export function MasterDataPage({ module }: { module: MasterDataModule }) {
   const definition = definitions[module]
@@ -724,11 +793,10 @@ function ModuleFields({
     label: string,
     options: { type?: string; required?: boolean } = {},
   ) => (
-    <label className="block">
-      <span className="mb-1 block text-sm font-bold text-slate-700">
-        {label}
-      </span>
+    <div className="block">
+      <FieldLabel help={masterHelp(name)} label={label} />
       <input
+        aria-label={label}
         className="h-11 w-full rounded-md border px-3"
         type={options.type ?? 'text'}
         {...register(name, {
@@ -741,18 +809,16 @@ function ModuleFields({
           {String(errors[name].message)}
         </span>
       ) : null}
-    </label>
+    </div>
   )
 
   const select = (name: string, label: string, options: string[]) => (
     <div className="block">
-      <label
-        className="mb-1 block text-sm font-bold text-slate-700"
-        htmlFor={`master-data-${name}`}
-      >
-        {label}
-      </label>
+      <div>
+        <FieldLabel help={masterHelp(name)} label={label} />
+      </div>
       <select
+        aria-label={label}
         className="h-11 w-full rounded-md border bg-white px-3"
         id={`master-data-${name}`}
         {...register(name, { required: `${label} is required.` })}
@@ -769,13 +835,11 @@ function ModuleFields({
 
   const branchSelect = () => (
     <div className="block">
-      <label
-        className="mb-1 block text-sm font-bold text-slate-700"
-        htmlFor="master-data-branch"
-      >
-        Branch
-      </label>
+      <div>
+        <FieldLabel help={masterHelp('branchId')} label="Branch" />
+      </div>
       <select
+        aria-label="Branch"
         className="h-11 w-full rounded-md border bg-white px-3"
         id="master-data-branch"
         {...register('branchId', { required: 'Branch is required.' })}
@@ -839,15 +903,14 @@ function ModuleFields({
             required: false,
           })}
         </fieldset>
-        <label className="block">
-          <span className="mb-1 block text-sm font-bold text-slate-700">
-            Notes
-          </span>
+        <div className="block">
+          <FieldLabel help={masterHelp('notes')} label="Notes" />
           <textarea
+            aria-label="Notes"
             className="min-h-24 w-full rounded-md border p-3"
             {...register('notes')}
           />
-        </label>
+        </div>
       </>
     )
   }
@@ -868,11 +931,10 @@ function ModuleFields({
             'DeliverySite',
             'Generic',
           ])}
-          <label className="block">
-            <span className="mb-1 block text-sm font-bold text-slate-700">
-              Customer
-            </span>
+          <div className="block">
+            <FieldLabel help={masterHelp('customerId')} label="Customer" />
             <select
+              aria-label="Customer"
               className="h-11 w-full rounded-md border bg-white px-3"
               {...register('customerId')}
             >
@@ -883,7 +945,7 @@ function ModuleFields({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </div>
         <AddressFields field={field} />
         <fieldset className="grid gap-4 sm:grid-cols-2">
@@ -900,15 +962,17 @@ function ModuleFields({
             required: false,
           })}
         </fieldset>
-        <label className="block">
-          <span className="mb-1 block text-sm font-bold text-slate-700">
-            Site instructions
-          </span>
+        <div className="block">
+          <FieldLabel
+            help={masterHelp('siteInstructions')}
+            label="Site instructions"
+          />
           <textarea
+            aria-label="Site instructions"
             className="min-h-24 w-full rounded-md border p-3"
             {...register('siteInstructions')}
           />
-        </label>
+        </div>
       </>
     )
   }
@@ -962,10 +1026,18 @@ function ModuleFields({
         ? field('roadworthyExpiry', 'Roadworthy expiry', { type: 'date' })
         : null}
       {field('licenceExpiry', 'Licence expiry', { type: 'date' })}
-      <label className="flex items-center gap-3 pt-7 font-bold">
-        <input type="checkbox" {...register('isAvailable')} />
+      <div className="flex items-center gap-3 pt-7 font-bold">
+        <input
+          aria-label="Currently available"
+          type="checkbox"
+          {...register('isAvailable')}
+        />
         Currently available
-      </label>
+        <FieldHelp
+          label="Currently available"
+          text={masterHelp('isAvailable')}
+        />
+      </div>
     </div>
   )
 }

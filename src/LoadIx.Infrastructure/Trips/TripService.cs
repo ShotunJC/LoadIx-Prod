@@ -13,6 +13,7 @@ using LoadIx.Domain.Trips;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Operations;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoadIx.Infrastructure.Trips;
@@ -22,7 +23,8 @@ public sealed class TripService(
     ICurrentRequestContext requestContext,
     SecurityAuditWriter auditWriter,
     INotificationService notificationService,
-    TimeProvider timeProvider) : ITripService
+    TimeProvider timeProvider,
+    TenantClock tenantClock) : ITripService
 {
     private const int MaximumPageSize = 100;
 
@@ -554,6 +556,44 @@ public sealed class TripService(
                 });
     }
 
+    public async Task<TripResult<TripDetail>> RecordManualQuantityAsync(
+        Guid id,
+        TripManualQuantityModel model,
+        string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var denied = Authorize<TripDetail>(LoadIxPermissions.TripOverride);
+        if (denied is not null) return denied;
+        var hash = Hash(model.Quantity, model.Reason);
+        var preflight = await PreflightAsync(
+            id, "RecordManualQuantity", idempotencyKey, hash, cancellationToken);
+        if (preflight is not null) return preflight;
+        var trip = await TripQuery()
+            .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (trip is null) return NotFound<TripDetail>();
+        if (!ApplyVersion(trip, model.Version)) return InvalidVersion<TripDetail>();
+        var result = trip.RecordManualQuantity(
+            model.Quantity, Context(model.Reason, true));
+        return result.IsFailure
+            ? Validation<TripDetail>(result.Error!)
+            : await SaveCommandAsync(
+                trip,
+                "RecordManualQuantity",
+                idempotencyKey,
+                hash,
+                cancellationToken,
+                new TripAuditDetails
+                {
+                    AdditionalEventType = "Trip.ManualQuantityRecorded",
+                    AfterSummaryJson = AuditSummary.Serialize(new
+                    {
+                        quantity = trip.ManualQuantity,
+                        source = trip.QuantitySource.ToString(),
+                    }),
+                    Reason = model.Reason,
+                });
+    }
+
     public async Task<TripResult<TripDetail>> AddNoteAsync(
         Guid id,
         TripNoteModel model,
@@ -663,8 +703,9 @@ public sealed class TripService(
                 cancellationToken);
         var route = contract.Routes.Single(
             item => item.Id == instruction.ContractRouteId);
-        var collectionDate = DateOnly.FromDateTime(
-            instruction.CollectionWindowStartUtc.UtcDateTime);
+        var collectionDate = await tenantClock.LocalDateAsync(
+            instruction.CollectionWindowStartUtc,
+            cancellationToken);
         var rate = contract.Rates
             .Where(item => item.ContractRouteId == route.Id
                 && item.EffectiveFrom <= collectionDate
@@ -710,7 +751,11 @@ public sealed class TripService(
                 reservation.PlannedQuantity,
                 reservation.QuantityUnit,
                 instruction.CollectionWindowStartUtc,
-                instruction.DeliveryWindowEndUtc),
+                instruction.DeliveryWindowEndUtc,
+                route.SourceWeightCaptureRequired,
+                route.DestinationWeightCaptureRequired,
+                contract.ManualQuantityPermitted,
+                contract.WeightTolerancePercent),
             snapshot);
         return created.IsFailure
             ? TripBuildResult.Fail(
@@ -727,16 +772,17 @@ public sealed class TripService(
         IReadOnlyCollection<Guid> trailerIds,
         CancellationToken cancellationToken)
     {
-        if (trailerIds.Count > 3 || trailerIds.Distinct().Count() != trailerIds.Count)
+        if (trailerIds.Count > 2 || trailerIds.Distinct().Count() != trailerIds.Count)
         {
             return Fail<TripDetail>(
                 TripFailure.Validation,
                 "trip.trailers_invalid",
-                "A trip supports up to three distinct trailers.");
+                "A trip supports up to two distinct trailers.");
         }
 
-        var collectionDate = DateOnly.FromDateTime(
-            trip.PlannedCollectionAtUtc.UtcDateTime);
+        var collectionDate = await tenantClock.LocalDateAsync(
+            trip.PlannedCollectionAtUtc,
+            cancellationToken);
         var driver = await dbContext.Drivers.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == driverId, cancellationToken);
         var vehicle = await dbContext.Vehicles.AsNoTracking()
@@ -1176,6 +1222,13 @@ public sealed class TripService(
             trip.DestinationTareWeight,
             trip.DestinationNetWeight,
             trip.DestinationWeighbridgeReference,
+            trip.SourceWeightCaptureRequired,
+            trip.DestinationWeightCaptureRequired,
+            trip.ManualQuantityPermitted,
+            trip.ReconciledQuantity,
+            trip.ManualQuantity,
+            trip.ReconciliationStatus.ToString(),
+            trip.QuantitySource.ToString(),
             trip.IsReconciled,
             trip.HasRequiredDocuments,
             trip.Transitions.OrderBy(item => item.OccurredAtUtc)

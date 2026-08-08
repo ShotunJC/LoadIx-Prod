@@ -11,6 +11,10 @@ const routeSchema = z.object({
   sourceLocationName: z.string(),
   destinationLocationId: identifier,
   destinationLocationName: z.string(),
+  sourceWeightCaptureRequired: z.boolean().default(true),
+  destinationWeightCaptureRequired: z.boolean().default(true),
+  collectionInstructions: z.string().nullable().default(null),
+  deliveryInstructions: z.string().nullable().default(null),
 })
 
 const rateSchema = z.object({
@@ -48,6 +52,7 @@ const detailSchema = listItemSchema
   .extend({
     paymentTermsDays: z.number(),
     weightTolerancePercent: z.number(),
+    manualQuantityPermitted: z.boolean().default(false),
     notes: z.string().nullable(),
     routes: z.array(routeSchema),
     rates: z.array(rateSchema),
@@ -148,6 +153,21 @@ export async function createContract(request: Requester, payload: unknown) {
   return result(
     await request('/api/v1/contracts', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+    detailSchema,
+  )
+}
+
+export async function updateContract(
+  request: Requester,
+  id: string,
+  payload: unknown,
+) {
+  return result(
+    await request(`/api/v1/contracts/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }),

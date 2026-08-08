@@ -113,6 +113,13 @@ public sealed record TripDetail(
     decimal? DestinationTareWeight,
     decimal? DestinationNetWeight,
     string? DestinationWeighbridgeReference,
+    bool SourceWeightCaptureRequired,
+    bool DestinationWeightCaptureRequired,
+    bool ManualQuantityPermitted,
+    decimal? ReconciledQuantity,
+    decimal? ManualQuantity,
+    string ReconciliationStatus,
+    string QuantitySource,
     bool IsReconciled,
     bool HasRequiredDocuments,
     IReadOnlyList<TripTransitionModel> Transitions,
@@ -141,6 +148,11 @@ public sealed record TripWeighbridgeModel(
     decimal TareWeight,
     string Reference,
     string? Reason = null);
+
+public sealed record TripManualQuantityModel(
+    string Version,
+    decimal Quantity,
+    string Reason);
 
 public sealed record TripNoteModel(string Version, string Note);
 

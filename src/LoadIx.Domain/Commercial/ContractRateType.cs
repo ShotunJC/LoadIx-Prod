@@ -7,4 +7,5 @@ public enum ContractRateType
     DestinationNetTonne,
     ReconciledTonne,
     BasePlusPerTonne,
+    ManualQuantityPerTonne,
 }

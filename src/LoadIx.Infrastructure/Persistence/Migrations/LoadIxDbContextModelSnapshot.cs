@@ -17,7 +17,7 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -183,8 +183,19 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CollectionInstructions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DeliveryInstructions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<Guid>("DestinationLocationId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("DestinationWeightCaptureRequired")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Reference")
                         .IsRequired()
@@ -194,6 +205,9 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("SourceLocationId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("SourceWeightCaptureRequired")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -244,6 +258,9 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
+
+                    b.Property<bool>("ManualQuantityPermitted")
+                        .HasColumnType("bit");
 
                     b.Property<DateTimeOffset>("ModifiedAtUtc")
                         .HasPrecision(7)
@@ -2351,6 +2368,9 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
+                    b.Property<bool>("DestinationWeightCaptureRequired")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset?>("DispatchedAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -2371,6 +2391,13 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("LoadingStartedAtUtc")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal?>("ManualQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<bool>("ManualQuantityPermitted")
+                        .HasColumnType("bit");
 
                     b.Property<DateTimeOffset>("ModifiedAtUtc")
                         .HasPrecision(7)
@@ -2394,11 +2421,27 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
 
+                    b.Property<string>("QuantitySource")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<string>("QuantityUnit")
                         .IsRequired()
                         .HasMaxLength(20)
                         .IsUnicode(false)
                         .HasColumnType("varchar(20)");
+
+                    b.Property<decimal?>("ReconciledQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("ReconciliationStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
 
                     b.Property<DateTimeOffset?>("ReconciliationSubmittedAtUtc")
                         .HasColumnType("datetimeoffset");
@@ -2430,6 +2473,9 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
+                    b.Property<bool>("SourceWeightCaptureRequired")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -2459,6 +2505,10 @@ namespace LoadIx.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("VehicleId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("WeightTolerancePercent")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("decimal(9,4)");
 
                     b.HasKey("Id");
 

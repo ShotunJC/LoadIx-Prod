@@ -44,6 +44,24 @@ describe('driver offline command queue', () => {
     expect(await store.list()).toEqual([])
   })
 
+  it('preserves the original key when an ambiguous online request is queued', async () => {
+    const store = memoryStore()
+    const queue = createOfflineQueue(store)
+    const originalKey = 'driver-original-request-key'
+
+    const command = await queue.enqueue(
+      'location',
+      {
+        url: '/api/v1/trips/trip-1/location',
+        method: 'POST',
+        body: { version: 'version' },
+      },
+      originalKey,
+    )
+
+    expect(command.idempotencyKey).toBe(originalKey)
+  })
+
   it('keeps conflicts visible instead of silently dropping a submission', async () => {
     const store = memoryStore()
     const queue = createOfflineQueue(store)

@@ -74,6 +74,24 @@ public sealed class ContractRate : Entity<Guid>, ITenantOwned
             : Result<ContractRate>.Failure(error);
     }
 
+    internal Result Update(ContractRateDefinition definition)
+    {
+        var candidate = Create(Id, TenantId, definition);
+        if (candidate.IsFailure) return Result.Failure(candidate.Error!);
+        ContractRouteId = candidate.Value.ContractRouteId;
+        RateType = candidate.Value.RateType;
+        EffectiveFrom = candidate.Value.EffectiveFrom;
+        EffectiveTo = candidate.Value.EffectiveTo;
+        FixedAmount = candidate.Value.FixedAmount;
+        BaseFee = candidate.Value.BaseFee;
+        PerTonneAmount = candidate.Value.PerTonneAmount;
+        MinimumCharge = candidate.Value.MinimumCharge;
+        FuelSurchargePercent = candidate.Value.FuelSurchargePercent;
+        RoundingDecimalPlaces = candidate.Value.RoundingDecimalPlaces;
+        RoundingMode = candidate.Value.RoundingMode;
+        return Result.Success();
+    }
+
     private static DomainError? Validate(ContractRateDefinition definition)
     {
         if (!Enum.IsDefined(definition.RateType))

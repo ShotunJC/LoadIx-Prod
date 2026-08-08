@@ -35,11 +35,12 @@ export function createOfflineQueue(store: QueueStore, now = () => new Date()) {
     async enqueue(
       kind: string,
       request: QueuedCommand['request'],
+      idempotencyKey = newIdempotencyKey(),
     ): Promise<QueuedCommand> {
       const timestamp = now().toISOString()
       const command: QueuedCommand = {
         id: crypto.randomUUID(),
-        idempotencyKey: newIdempotencyKey(),
+        idempotencyKey,
         kind,
         request,
         createdAt: timestamp,

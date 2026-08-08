@@ -1,3 +1,4 @@
+using LoadIx.Domain.Commercial;
 using LoadIx.Domain.Common;
 
 namespace LoadIx.Domain.Trips;
@@ -22,6 +23,9 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
         TenantId = tenantId;
         ApplyDefinition(definition);
         RateSnapshot = rateSnapshot;
+        QuantitySource = rateSnapshot.RateType == ContractRateType.FixedPerTrip
+            ? TripQuantitySource.Fixed
+            : TripQuantitySource.Pending;
         Status = TripStatus.Planned;
     }
 
@@ -119,6 +123,22 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
 
     public bool HasRequiredDocuments { get; private set; }
 
+    public bool SourceWeightCaptureRequired { get; private set; }
+
+    public bool DestinationWeightCaptureRequired { get; private set; }
+
+    public bool ManualQuantityPermitted { get; private set; }
+
+    public decimal WeightTolerancePercent { get; private set; }
+
+    public decimal? ReconciledQuantity { get; private set; }
+
+    public decimal? ManualQuantity { get; private set; }
+
+    public TripReconciliationStatus ReconciliationStatus { get; private set; }
+
+    public TripQuantitySource QuantitySource { get; private set; }
+
     public IReadOnlyCollection<TripTransition> Transitions =>
         _transitions.AsReadOnly();
 
@@ -213,7 +233,9 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
 
     public Result CompleteCollection(TripCommandContext context)
     {
-        if (!HasSourceWeighbridgeInformation && !context.IsManualOverride)
+        if (SourceWeightCaptureRequired
+            && !HasSourceWeighbridgeInformation
+            && !context.IsManualOverride)
         {
             return MissingEvidence("source weighbridge");
         }
@@ -232,7 +254,9 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
 
     public Result CompleteDelivery(TripCommandContext context)
     {
-        if (!HasDestinationWeighbridgeInformation && !context.IsManualOverride)
+        if (DestinationWeightCaptureRequired
+            && !HasDestinationWeighbridgeInformation
+            && !context.IsManualOverride)
         {
             return MissingEvidence("destination weighbridge");
         }
@@ -242,17 +266,66 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
 
     public Result SubmitForReconciliation(TripCommandContext context)
     {
-        if ((!HasSourceWeighbridgeInformation
-                || !HasDestinationWeighbridgeInformation)
+        if ((SourceWeightCaptureRequired && !HasSourceWeighbridgeInformation
+                || DestinationWeightCaptureRequired
+                    && !HasDestinationWeighbridgeInformation)
             && !context.IsManualOverride)
         {
             return MissingEvidence("source and destination weighbridge");
         }
 
-        return Transition(
+        if (!SourceWeightCaptureRequired && !DestinationWeightCaptureRequired
+            && RateSnapshot.RateType == ContractRateType.ManualQuantityPerTonne
+            && !ManualQuantity.HasValue)
+        {
+            return MissingEvidence("an authorised manual quantity");
+        }
+
+        var transition = Transition(
             TripStatus.DeliveryComplete,
             TripStatus.ReconciliationRequired,
             context);
+        if (transition.IsFailure) return transition;
+
+        if (!SourceWeightCaptureRequired && !DestinationWeightCaptureRequired)
+        {
+            ReconciliationStatus = ManualQuantity.HasValue
+                ? TripReconciliationStatus.ManualQuantity
+                : TripReconciliationStatus.NotApplicable;
+            QuantitySource = ManualQuantity.HasValue
+                ? TripQuantitySource.Manual
+                : TripQuantitySource.NonWeighed;
+            ReconciledQuantity = ManualQuantity;
+            IsReconciled = true;
+            return Result.Success();
+        }
+
+        ReconciledQuantity = DestinationNetWeight ?? SourceNetWeight;
+        QuantitySource = SourceWeightCaptureRequired
+            && DestinationWeightCaptureRequired
+                ? TripQuantitySource.ReconciledMeasured
+                : DestinationWeightCaptureRequired
+                    ? TripQuantitySource.DestinationMeasured
+                    : TripQuantitySource.SourceMeasured;
+        if (SourceWeightCaptureRequired && DestinationWeightCaptureRequired)
+        {
+            var baseline = Math.Max(SourceNetWeight!.Value, DestinationNetWeight!.Value);
+            var variance = baseline == 0m
+                ? 0m
+                : Math.Abs(SourceNetWeight.Value - DestinationNetWeight.Value)
+                    / baseline * 100m;
+            ReconciliationStatus = variance <= WeightTolerancePercent
+                ? TripReconciliationStatus.WithinTolerance
+                : TripReconciliationStatus.ExceptionReviewRequired;
+            IsReconciled = variance <= WeightTolerancePercent;
+        }
+        else
+        {
+            ReconciliationStatus = TripReconciliationStatus.SingleMeasurement;
+            IsReconciled = true;
+        }
+
+        return Result.Success();
     }
 
     public Result Complete(TripCommandContext context)
@@ -296,6 +369,13 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
         decimal tareWeight,
         string reference)
     {
+        if (IsTerminal)
+        {
+            return Result.Failure(new DomainError(
+                "trip.weighbridge_terminal",
+                "Weighbridge information cannot be changed after a trip is finalised."));
+        }
+
         var error = ValidateWeighbridge(grossWeight, tareWeight, reference);
         if (error is not null) return Result.Failure(error);
         SourceGrossWeight = RoundWeight(grossWeight);
@@ -309,6 +389,13 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
         decimal tareWeight,
         string reference)
     {
+        if (IsTerminal)
+        {
+            return Result.Failure(new DomainError(
+                "trip.weighbridge_terminal",
+                "Weighbridge information cannot be changed after a trip is finalised."));
+        }
+
         var error = ValidateWeighbridge(grossWeight, tareWeight, reference);
         if (error is not null) return Result.Failure(error);
         DestinationGrossWeight = RoundWeight(grossWeight);
@@ -327,10 +414,66 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
         }
 
         IsReconciled = true;
+        if (ReconciliationStatus == TripReconciliationStatus.ExceptionReviewRequired)
+        {
+            ReconciliationStatus = TripReconciliationStatus.ApprovedException;
+        }
+        return Result.Success();
+    }
+
+    public Result RecordManualQuantity(
+        decimal quantity,
+        TripCommandContext context)
+    {
+        if (!ManualQuantityPermitted || !context.IsManualOverride)
+        {
+            return Result.Failure(new DomainError(
+                "trip.manual_quantity_permission_required",
+                "Manual quantity capture requires contract approval and explicit override authority."));
+        }
+
+        if (IsTerminal || quantity <= 0m)
+        {
+            return Result.Failure(new DomainError(
+                "trip.manual_quantity_invalid",
+                "Manual quantity must be positive and cannot change a finalised trip."));
+        }
+
+        ManualQuantity = RoundWeight(quantity);
+        QuantitySource = TripQuantitySource.Manual;
+        ReconciliationStatus = TripReconciliationStatus.ManualQuantity;
         return Result.Success();
     }
 
     public void ConfirmRequiredDocuments() => HasRequiredDocuments = true;
+
+    public Result<decimal> ResolveBillableTonnes()
+    {
+        decimal? measuredQuantity = RateSnapshot.RateType switch
+        {
+            ContractRateType.FixedPerTrip => 0m,
+            ContractRateType.SourceNetTonne => SourceNetWeight,
+            ContractRateType.DestinationNetTonne => DestinationNetWeight,
+            ContractRateType.ReconciledTonne or ContractRateType.BasePlusPerTonne =>
+                ReconciledQuantity,
+            ContractRateType.ManualQuantityPerTonne => ManualQuantity,
+            _ => null,
+        };
+        if (!measuredQuantity.HasValue)
+        {
+            return Result<decimal>.Failure(new DomainError(
+                "finance.billable_weight_missing",
+                "The weight required by the trip rate is unavailable."));
+        }
+
+        var tonnes = QuantityUnit == WeightUnit.Kilograms
+            ? measuredQuantity.Value / 1000m
+            : measuredQuantity.Value;
+        return Result<decimal>.Success(decimal.Round(
+            tonnes,
+            3,
+            MidpointRounding.AwayFromZero));
+    }
 
     public Result AddOperationalNote(string note)
     {
@@ -380,6 +523,10 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
         && DestinationTareWeight.HasValue
         && !string.IsNullOrWhiteSpace(DestinationWeighbridgeReference);
 
+    private bool IsTerminal => Status is TripStatus.Completed
+        or TripStatus.Cancelled
+        or TripStatus.Rejected;
+
     private Result ApplyAssignment(
         Guid driverId,
         Guid vehicleId,
@@ -390,11 +537,11 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
         if (driverId == Guid.Empty || vehicleId == Guid.Empty
             || trailerIds.Any(id => id == Guid.Empty)
             || trailerIds.Distinct().Count() != trailerIds.Count
-            || trailerIds.Count > 3)
+            || trailerIds.Count > 2)
         {
             return Result.Failure(new DomainError(
                 "trip.assignment_invalid",
-                "Assignments require a driver, vehicle, and up to three distinct trailers."));
+                "Assignments require a driver, vehicle, and up to two distinct trailers."));
         }
 
         _assignments.LastOrDefault(item => item.EndedAtUtc is null)
@@ -521,6 +668,12 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
             definition.PlannedCollectionAtUtc.ToUniversalTime();
         PlannedDeliveryAtUtc =
             definition.PlannedDeliveryAtUtc.ToUniversalTime();
+        SourceWeightCaptureRequired = definition.SourceWeightCaptureRequired;
+        DestinationWeightCaptureRequired = definition.DestinationWeightCaptureRequired;
+        ManualQuantityPermitted = definition.ManualQuantityPermitted;
+        WeightTolerancePercent = definition.WeightTolerancePercent;
+        ReconciliationStatus = TripReconciliationStatus.Pending;
+        QuantitySource = TripQuantitySource.Pending;
     }
 
     private static DomainError? Validate(
@@ -563,6 +716,13 @@ public sealed class Trip : AggregateRoot<Guid>, ITenantOwned
             return new DomainError(
                 "trip.planned_dates_invalid",
                 "Planned delivery cannot precede collection.");
+        }
+
+        if (definition.WeightTolerancePercent is < 0m or > 100m)
+        {
+            return new DomainError(
+                "trip.tolerance_invalid",
+                "Trip weight tolerance must be between 0 and 100 percent.");
         }
 
         return null;
@@ -611,7 +771,33 @@ public sealed record TripDefinition(
     decimal PlannedQuantity,
     WeightUnit QuantityUnit,
     DateTimeOffset PlannedCollectionAtUtc,
-    DateTimeOffset PlannedDeliveryAtUtc);
+    DateTimeOffset PlannedDeliveryAtUtc,
+    bool SourceWeightCaptureRequired = true,
+    bool DestinationWeightCaptureRequired = true,
+    bool ManualQuantityPermitted = false,
+    decimal WeightTolerancePercent = 0m);
+
+public enum TripReconciliationStatus
+{
+    Pending,
+    NotApplicable,
+    SingleMeasurement,
+    WithinTolerance,
+    ExceptionReviewRequired,
+    ApprovedException,
+    ManualQuantity,
+}
+
+public enum TripQuantitySource
+{
+    Pending,
+    Fixed,
+    SourceMeasured,
+    DestinationMeasured,
+    ReconciledMeasured,
+    Manual,
+    NonWeighed,
+}
 
 public sealed record TripCommandContext(
     Guid ActorUserId,

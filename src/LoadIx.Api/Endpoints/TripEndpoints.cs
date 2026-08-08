@@ -140,6 +140,17 @@ public static class TripEndpoints
             Weighbridge(
                 id, false, model, context, service, cancellationToken))
             .RequireAuthorization();
+        group.MapPost("/{id:guid}/manual-quantity", async (
+            Guid id,
+            TripManualQuantityModel model,
+            HttpContext context,
+            ITripService service,
+            CancellationToken cancellationToken) =>
+            ToItemResult(
+                await service.RecordManualQuantityAsync(
+                    id, model, IdempotencyKey(context), cancellationToken),
+                context))
+            .RequireAuthorization(LoadIxPermissions.TripOverride);
         group.MapPost("/{id:guid}/notes", async (
             Guid id,
             TripNoteModel model,

@@ -26,8 +26,11 @@ test('creates and plans a load instruction', async ({ page }) => {
   await page.getByLabel('Permitted commodity').selectOption({ index: 1 })
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByLabel('Fixed amount', { exact: true }).fill('1000')
-  await page.getByRole('button', { name: 'Create draft contract' }).click()
-  await page.getByRole('button', { name: 'Activate contract' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Save and activate' }).click()
+  await expect(
+    page.getByRole('heading', { name: contractNumber }),
+  ).toBeVisible()
   await expect(page.getByText('Active', { exact: true })).toBeVisible()
 
   await page.getByRole('link', { name: 'Load instructions' }).click()
@@ -52,12 +55,11 @@ test('creates and plans a load instruction', async ({ page }) => {
   await page
     .getByLabel('Special instructions')
     .fill('Synthetic Playwright instruction')
-  await page.getByRole('button', { name: 'Create draft instruction' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Plan load' }).click()
 
   await expect(
     page.getByRole('heading', { name: instructionNumber }),
   ).toBeVisible()
-  await expect(page.getByText('Draft', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Plan instruction' }).click()
   await expect(page.getByText('Planned', { exact: true }).first()).toBeVisible()
 })

@@ -10,6 +10,7 @@ using LoadIx.Domain.Common;
 using LoadIx.Domain.Instructions;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoadIx.Infrastructure.Instructions;
@@ -19,7 +20,8 @@ public sealed class LoadInstructionService(
     ICurrentRequestContext requestContext,
     SecurityAuditWriter auditWriter,
     TimeProvider timeProvider,
-    ITripService tripService) : ILoadInstructionService
+    ITripService tripService,
+    TenantClock tenantClock) : ILoadInstructionService
 {
     private const int MaximumPageSize = 100;
 
@@ -430,10 +432,12 @@ public sealed class LoadInstructionService(
                 "The instruction requires an active contract for the selected customer.");
         }
 
-        var collectionDate = DateOnly.FromDateTime(
-            definition.CollectionWindowStart.UtcDateTime);
-        var deliveryDate = DateOnly.FromDateTime(
-            definition.DeliveryWindowEnd.UtcDateTime);
+        var collectionDate = await tenantClock.LocalDateAsync(
+            definition.CollectionWindowStart,
+            cancellationToken);
+        var deliveryDate = await tenantClock.LocalDateAsync(
+            definition.DeliveryWindowEnd,
+            cancellationToken);
         if (collectionDate < contract.StartDate
             || deliveryDate < contract.StartDate
             || contract.EndDate is not null

@@ -79,6 +79,19 @@ public sealed class TripEndpointTests(
             .Should().Be(HttpStatusCode.BadRequest);
 
         var resources = await ResourcesAsync(client);
+        var thirdTrailerAttempt = Request(
+            $"/api/v1/trips/{trip.Id}/assign",
+            new AssignTripModel(
+                trip.Version,
+                resources.DriverIds[0],
+                resources.VehicleIds[0],
+                [resources.TrailerIds[0], resources.TrailerIds[1], Guid.NewGuid()]),
+            "assign-trip-third-trailer-001");
+        var thirdTrailerResponse = await client.SendAsync(thirdTrailerAttempt);
+        thirdTrailerResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await thirdTrailerResponse.Content.ReadAsStringAsync())
+            .Should().Contain("trip.trailers_invalid");
+
         var assignment = new AssignTripModel(
             trip.Version,
             resources.DriverIds[0],

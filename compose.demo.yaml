@@ -102,7 +102,7 @@ services:
 
   migrate:
     profiles: ["tools"]
-    image: mcr.microsoft.com/dotnet/sdk:10.0.103
+    image: mcr.microsoft.com/dotnet/sdk:10.0.302
     working_dir: /workspace
 
     environment:
@@ -192,7 +192,7 @@ services:
         echo "Database migrations completed."
   seed-demo:
     profiles: ["tools"]
-    image: mcr.microsoft.com/dotnet/sdk:10.0.103
+    image: mcr.microsoft.com/dotnet/sdk:10.0.302
     working_dir: /workspace
 
     environment:

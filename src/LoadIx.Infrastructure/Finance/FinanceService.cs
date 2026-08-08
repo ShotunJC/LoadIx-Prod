@@ -8,6 +8,7 @@ using LoadIx.Domain.Finance;
 using LoadIx.Domain.Trips;
 using LoadIx.Infrastructure.Identity;
 using LoadIx.Infrastructure.Persistence;
+using LoadIx.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoadIx.Infrastructure.Finance;
@@ -16,7 +17,8 @@ public sealed class FinanceService(
     LoadIxDbContext dbContext,
     ICurrentRequestContext requestContext,
     SecurityAuditWriter auditWriter,
-    TimeProvider timeProvider) : IFinanceService
+    TimeProvider timeProvider,
+    TenantClock tenantClock) : IFinanceService
 {
     private const int MaximumPageSize = 100;
 
@@ -303,8 +305,10 @@ public sealed class FinanceService(
         if (tax is null || !tax.IsReviewed)
             return (null, Fail<TripFinancialsDetail>(FinanceFailure.Validation, "finance.tax_not_reviewed", "Tenant tax configuration must be explicitly reviewed before calculation."));
         var customerName = await dbContext.Customers.AsNoTracking().Where(item => item.Id == trip.CustomerId).Select(item => item.TradingName).SingleAsync(cancellationToken);
-        var billableTonnes = trip.DestinationNetWeight ?? trip.SourceNetWeight ?? trip.PlannedQuantity;
-        var created = TripFinancials.Create(Guid.NewGuid(), trip.TenantId, trip.Id, trip.TripNumber, trip.CustomerId, customerName, trip.TransportContractId, trip.ContractNumber, trip.RateSnapshot, billableTonnes, tax.DefaultTaxTreatment, tax.TaxRatePercent, timeProvider.GetUtcNow().ToUniversalTime());
+        var billableTonnes = trip.ResolveBillableTonnes();
+        if (billableTonnes.IsFailure)
+            return (null, Validation<TripFinancialsDetail>(billableTonnes.Error!));
+        var created = TripFinancials.Create(Guid.NewGuid(), trip.TenantId, trip.Id, trip.TripNumber, trip.CustomerId, customerName, trip.TransportContractId, trip.ContractNumber, trip.RateSnapshot, billableTonnes.Value, tax.DefaultTaxTreatment, tax.TaxRatePercent, timeProvider.GetUtcNow().ToUniversalTime());
         return created.IsFailure ? (null, Validation<TripFinancialsDetail>(created.Error!)) : (created.Value, null);
     }
 
@@ -330,7 +334,8 @@ public sealed class FinanceService(
 
     private async Task<string> NextBatchNumberAsync(CancellationToken cancellationToken)
     {
-        var today = timeProvider.GetUtcNow().UtcDateTime.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+        var today = (await tenantClock.TodayAsync(cancellationToken))
+            .ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         var count = await dbContext.InvoiceBatches.CountAsync(cancellationToken) + 1;
         return $"INV-{today}-{count:0000}";
     }

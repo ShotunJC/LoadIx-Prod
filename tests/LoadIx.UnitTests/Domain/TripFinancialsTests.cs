@@ -140,6 +140,19 @@ public sealed class TripFinancialsTests
         financials.AttachInvoiceBatch(Guid.NewGuid()).IsFailure.Should().BeTrue();
     }
 
+    [Fact]
+    public void ResolvesBillableTonnesFromTheRateSourceAndConvertsKilograms()
+    {
+        var trip = CreateTrip(
+            ContractRateType.SourceNetTonne,
+            WeightUnit.Kilograms,
+            30_000m);
+        trip.RecordSourceWeighbridge(42_000m, 12_000m, "SOURCE");
+        trip.RecordDestinationWeighbridge(41_500m, 12_000m, "DESTINATION");
+
+        trip.ResolveBillableTonnes().Value.Should().Be(30m);
+    }
+
     private static TripFinancials CreateFinancials(
         ContractRateType rateType,
         decimal billableTonnes,
@@ -207,8 +220,31 @@ public sealed class TripFinancialsTests
 
         var result = ContractRateCalculator.Calculate(
             contract.Rates.Single(),
-            new RateCalculationInput(null, null, 12.345m, Today),
+            new RateCalculationInput(12.345m, 12.345m, 12.345m, Today),
             "ZAR");
         return TripRateSnapshot.Create(result.Value.RateSnapshot);
     }
+
+    private static Trip CreateTrip(
+        ContractRateType rateType,
+        WeightUnit unit,
+        decimal plannedQuantity) =>
+        Trip.Create(
+            Guid.NewGuid(),
+            Tenant,
+            new TripDefinition(
+                "TRIP-BILLABLE",
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "CTR-001",
+                "version",
+                Guid.NewGuid(),
+                "ROUTE",
+                Guid.NewGuid(),
+                plannedQuantity,
+                unit,
+                Now,
+                Now.AddHours(1)),
+            Snapshot(rateType, perTonne: 100m)).Value;
 }

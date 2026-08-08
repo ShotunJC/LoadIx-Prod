@@ -152,6 +152,10 @@ public sealed class ContractEndpointTests(
         updateResponse.StatusCode.Should().Be(
             HttpStatusCode.OK,
             await updateResponse.Content.ReadAsStringAsync());
+        var updated = (await updateResponse.Content
+            .ReadFromJsonAsync<ContractDetail>())!;
+        updated.Routes.Single().Id.Should().Be(created.Routes.Single().Id);
+        updated.Rates.Single().Id.Should().Be(created.Rates.Single().Id);
         (await client.PutAsJsonAsync(
             $"/api/v1/contracts/{created.Id}", update))
             .StatusCode.Should().Be(HttpStatusCode.Conflict);

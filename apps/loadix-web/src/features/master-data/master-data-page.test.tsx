@@ -57,5 +57,11 @@ describe('MasterDataPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Legal name')).toBeInTheDocument()
     expect(screen.getByLabelText('Contact category')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Help for Legal name' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Help for Contact category' }),
+    ).toBeInTheDocument()
   })
 })

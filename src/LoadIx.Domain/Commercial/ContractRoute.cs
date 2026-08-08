@@ -9,13 +9,21 @@ public sealed class ContractRoute : Entity<Guid>, ITenantOwned
         TenantId tenantId,
         Guid sourceLocationId,
         Guid destinationLocationId,
-        string reference)
+        string reference,
+        bool sourceWeightCaptureRequired,
+        bool destinationWeightCaptureRequired,
+        string? collectionInstructions,
+        string? deliveryInstructions)
         : base(id)
     {
         TenantId = tenantId;
         SourceLocationId = sourceLocationId;
         DestinationLocationId = destinationLocationId;
         Reference = reference;
+        SourceWeightCaptureRequired = sourceWeightCaptureRequired;
+        DestinationWeightCaptureRequired = destinationWeightCaptureRequired;
+        CollectionInstructions = collectionInstructions;
+        DeliveryInstructions = deliveryInstructions;
     }
 
     private ContractRoute()
@@ -33,12 +41,24 @@ public sealed class ContractRoute : Entity<Guid>, ITenantOwned
 
     public string Reference { get; private set; }
 
+    public bool SourceWeightCaptureRequired { get; private set; }
+
+    public bool DestinationWeightCaptureRequired { get; private set; }
+
+    public string? CollectionInstructions { get; private set; }
+
+    public string? DeliveryInstructions { get; private set; }
+
     internal static Result<ContractRoute> Create(
         Guid id,
         TenantId tenantId,
         Guid sourceLocationId,
         Guid destinationLocationId,
-        string reference)
+        string reference,
+        bool sourceWeightCaptureRequired = true,
+        bool destinationWeightCaptureRequired = true,
+        string? collectionInstructions = null,
+        string? deliveryInstructions = null)
     {
         var error = DomainValidation.Required(reference, "contract.route_reference", 80);
         if (id == Guid.Empty || tenantId.IsEmpty
@@ -55,11 +75,44 @@ public sealed class ContractRoute : Entity<Guid>, ITenantOwned
                 "Source and destination locations must be different.");
         }
 
+        if (collectionInstructions?.Trim().Length > 1000
+            || deliveryInstructions?.Trim().Length > 1000)
+        {
+            error = new DomainError(
+                "contract.route_instructions_too_long",
+                "Collection and delivery instructions cannot exceed 1000 characters.");
+        }
+
         return error is null
             ? Result<ContractRoute>.Success(new ContractRoute(
                 id, tenantId, sourceLocationId, destinationLocationId,
-                reference.Trim().ToUpperInvariant()))
+                reference.Trim().ToUpperInvariant(),
+                sourceWeightCaptureRequired,
+                destinationWeightCaptureRequired,
+                string.IsNullOrWhiteSpace(collectionInstructions)
+                    ? null : collectionInstructions.Trim(),
+                string.IsNullOrWhiteSpace(deliveryInstructions)
+                    ? null : deliveryInstructions.Trim()))
             : Result<ContractRoute>.Failure(error);
+    }
+
+    internal Result Update(ContractRouteDefinition definition)
+    {
+        var candidate = Create(
+            Id, TenantId, definition.SourceLocationId,
+            definition.DestinationLocationId, definition.Reference,
+            definition.SourceWeightCaptureRequired,
+            definition.DestinationWeightCaptureRequired,
+            definition.CollectionInstructions, definition.DeliveryInstructions);
+        if (candidate.IsFailure) return Result.Failure(candidate.Error!);
+        SourceLocationId = candidate.Value.SourceLocationId;
+        DestinationLocationId = candidate.Value.DestinationLocationId;
+        Reference = candidate.Value.Reference;
+        SourceWeightCaptureRequired = candidate.Value.SourceWeightCaptureRequired;
+        DestinationWeightCaptureRequired = candidate.Value.DestinationWeightCaptureRequired;
+        CollectionInstructions = candidate.Value.CollectionInstructions;
+        DeliveryInstructions = candidate.Value.DeliveryInstructions;
+        return Result.Success();
     }
 }
 
@@ -67,4 +120,8 @@ public sealed record ContractRouteDefinition(
     Guid? Id,
     Guid SourceLocationId,
     Guid DestinationLocationId,
-    string Reference);
+    string Reference,
+    bool SourceWeightCaptureRequired = true,
+    bool DestinationWeightCaptureRequired = true,
+    string? CollectionInstructions = null,
+    string? DeliveryInstructions = null);

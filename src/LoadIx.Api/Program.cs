@@ -671,10 +671,10 @@ app.UseMiddleware<TraceCorrelationMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors(webCorsPolicy);
 app.UseRateLimiter();
-app.UseMiddleware<EdgeDeviceRateLimitingMiddleware>();
 app.UseAuthentication();
-app.UseAuthorization();
+app.UseMiddleware<EdgeDeviceRateLimitingMiddleware>();
 app.UseMiddleware<TenantContextMiddleware>();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {

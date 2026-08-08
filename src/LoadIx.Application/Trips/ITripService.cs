@@ -42,6 +42,12 @@ public interface ITripService
         string idempotencyKey,
         CancellationToken cancellationToken);
 
+    Task<TripResult<TripDetail>> RecordManualQuantityAsync(
+        Guid id,
+        TripManualQuantityModel model,
+        string idempotencyKey,
+        CancellationToken cancellationToken);
+
     Task<TripResult<TripDetail>> AddNoteAsync(
         Guid id,
         TripNoteModel model,

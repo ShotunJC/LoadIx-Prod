@@ -1,5 +1,10 @@
 # LoadIx Product Scope
 
+> Workflow update: contract creation/editing is a five-step guided flow with
+> inline master-data creation; load creation is a four-step draft/plan flow.
+> Routes may require collection weighing, delivery weighing, both, or neither.
+> See `docs/workflow-improvements.md`.
+
 ## Purpose
 
 LoadIx is a business-to-business, multi-tenant logistics management platform for

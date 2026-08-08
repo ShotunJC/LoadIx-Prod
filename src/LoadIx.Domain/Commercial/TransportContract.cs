@@ -64,6 +64,8 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
 
     public string? Notes { get; private set; }
 
+    public bool ManualQuantityPermitted { get; private set; }
+
     public IReadOnlyCollection<ContractRoute> Routes => _routes.AsReadOnly();
 
     public IReadOnlyCollection<ContractRate> Rates => _rates.AsReadOnly();
@@ -85,7 +87,8 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
         string? notes,
         IReadOnlyCollection<ContractRouteDefinition> routes,
         IReadOnlyCollection<Guid> commodityIds,
-        IReadOnlyCollection<ContractRateDefinition> rates)
+        IReadOnlyCollection<ContractRateDefinition> rates,
+        bool manualQuantityPermitted = false)
     {
         var validation = ValidateHeader(
             id, tenantId, customerId, contractNumber, name, startDate, endDate,
@@ -107,6 +110,7 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
             paymentTermsDays,
             weightTolerancePercent,
             string.IsNullOrWhiteSpace(notes) ? null : notes.Trim());
+        contract.ManualQuantityPermitted = manualQuantityPermitted;
         var children = contract.ReplaceChildren(routes, commodityIds, rates);
         return children.IsFailure
             ? Result<TransportContract>.Failure(children.Error!)
@@ -125,7 +129,8 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
         string? notes,
         IReadOnlyCollection<ContractRouteDefinition> routes,
         IReadOnlyCollection<Guid> commodityIds,
-        IReadOnlyCollection<ContractRateDefinition> rates)
+        IReadOnlyCollection<ContractRateDefinition> rates,
+        bool manualQuantityPermitted = false)
     {
         if (Status == ContractStatus.Archived)
         {
@@ -137,7 +142,7 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
         var candidate = Create(
             Id, TenantId, customerId, contractNumber, name, startDate, endDate,
             defaultCurrency, paymentTermsDays, weightTolerancePercent, notes,
-            routes, commodityIds, rates);
+            routes, commodityIds, rates, manualQuantityPermitted);
         if (candidate.IsFailure)
         {
             return Result.Failure(candidate.Error!);
@@ -152,12 +157,32 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
         PaymentTermsDays = candidate.Value.PaymentTermsDays;
         WeightTolerancePercent = candidate.Value.WeightTolerancePercent;
         Notes = candidate.Value.Notes;
-        _routes.Clear();
-        _routes.AddRange(candidate.Value._routes);
-        _rates.Clear();
-        _rates.AddRange(candidate.Value._rates);
-        _commodities.Clear();
-        _commodities.AddRange(candidate.Value._commodities);
+        ManualQuantityPermitted = candidate.Value.ManualQuantityPermitted;
+        var routeDefinitions = routes.ToDictionary(item => item.Id!.Value);
+        _routes.RemoveAll(item => !routeDefinitions.ContainsKey(item.Id));
+        foreach (var route in _routes)
+        {
+            var updated = route.Update(routeDefinitions[route.Id]);
+            if (updated.IsFailure) return updated;
+        }
+        _routes.AddRange(candidate.Value._routes.Where(candidateRoute =>
+            _routes.All(existing => existing.Id != candidateRoute.Id)));
+
+        var rateDefinitions = rates.ToDictionary(item => item.Id!.Value);
+        _rates.RemoveAll(item => !rateDefinitions.ContainsKey(item.Id));
+        foreach (var rate in _rates)
+        {
+            var updated = rate.Update(rateDefinitions[rate.Id]);
+            if (updated.IsFailure) return updated;
+        }
+        _rates.AddRange(candidate.Value._rates.Where(candidateRate =>
+            _rates.All(existing => existing.Id != candidateRate.Id)));
+
+        var commoditySet = commodityIds.ToHashSet();
+        _commodities.RemoveAll(item => !commoditySet.Contains(item.CommodityId));
+        _commodities.AddRange(candidate.Value._commodities.Where(candidateCommodity =>
+            _commodities.All(existing =>
+                existing.CommodityId != candidateCommodity.CommodityId)));
         return Result.Success();
     }
 
@@ -182,6 +207,29 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
             return Result.Failure(new DomainError(
                 "contract.activation_route_rate_missing",
                 "Every contract route must have at least one rate."));
+        }
+
+        foreach (var rate in _rates)
+        {
+            var route = _routes.Single(item => item.Id == rate.ContractRouteId);
+            var weightSourceAvailable = rate.RateType switch
+            {
+                ContractRateType.FixedPerTrip => true,
+                ContractRateType.SourceNetTonne => route.SourceWeightCaptureRequired,
+                ContractRateType.DestinationNetTonne =>
+                    route.DestinationWeightCaptureRequired,
+                ContractRateType.ReconciledTonne or ContractRateType.BasePlusPerTonne =>
+                    route.SourceWeightCaptureRequired
+                    || route.DestinationWeightCaptureRequired,
+                ContractRateType.ManualQuantityPerTonne => ManualQuantityPermitted,
+                _ => false,
+            };
+            if (!weightSourceAvailable)
+            {
+                return Result.Failure(new DomainError(
+                    "contract.activation_quantity_source_missing",
+                    "A rate depends on a quantity source that its route does not capture."));
+            }
         }
 
         Status = ContractStatus.Active;
@@ -241,7 +289,11 @@ public sealed class TransportContract : AggregateRoot<Guid>, ITenantOwned
             var route = ContractRoute.Create(
                 definition.Id ?? Guid.NewGuid(), TenantId,
                 definition.SourceLocationId, definition.DestinationLocationId,
-                definition.Reference);
+                definition.Reference,
+                definition.SourceWeightCaptureRequired,
+                definition.DestinationWeightCaptureRequired,
+                definition.CollectionInstructions,
+                definition.DeliveryInstructions);
             if (route.IsFailure) return Result.Failure(route.Error!);
             _routes.Add(route.Value);
         }
