@@ -71,9 +71,13 @@ test('generates, assigns, and dispatches a trip', async ({ page }) => {
   await page.getByLabel('Permitted commodity').selectOption({ index: 1 })
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByLabel('Fixed amount', { exact: true }).fill('1500')
-  await page.getByRole('button', { name: 'Create draft contract' }).click()
-  await page.getByRole('button', { name: 'Activate contract' }).click()
-  await expect(page.getByText('Active', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Save and activate' }).click()
+  const contractHeading = page.getByRole('heading', { name: contractNumber })
+  await expect(contractHeading).toBeVisible()
+  await expect(
+    contractHeading.locator('..').getByText('Active', { exact: true }),
+  ).toBeVisible()
 
   await page.getByRole('link', { name: 'Load instructions' }).click()
   await page.getByRole('button', { name: 'New instruction' }).click()
@@ -96,8 +100,8 @@ test('generates, assigns, and dispatches a trip', async ({ page }) => {
   await page
     .getByLabel('Customer instruction reference')
     .fill(`CI-DSP-${suffix}`)
-  await page.getByRole('button', { name: 'Create draft instruction' }).click()
-  await page.getByRole('button', { name: 'Plan instruction' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Plan load' }).click()
   await page.getByLabel('Trip count').fill('1')
   await page.getByRole('button', { name: 'Generate trips' }).click()
   await expect(page.getByText(`${instructionNumber}-T001`)).toBeVisible()

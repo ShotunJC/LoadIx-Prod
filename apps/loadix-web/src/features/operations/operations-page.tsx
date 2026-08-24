@@ -93,6 +93,14 @@ const emptyFilters: Filters = {
   exceptionOnly: false,
 }
 
+const filterLabels = {
+  customerId: 'customers',
+  branchId: 'branches',
+  driverId: 'drivers',
+  vehicleId: 'vehicles',
+  commodityId: 'commodities',
+} as const
+
 export function OperationsPage() {
   const auth = useAuth()
   const getAccessToken = auth.getAccessToken
@@ -294,6 +302,7 @@ function FilterBar({
         ] as const
       ).map((key) => (
         <select
+          aria-label={`${filterLabels[key]} filter`}
           className="min-h-11 rounded-md border px-3"
           key={key}
           onChange={(event) => {
@@ -304,7 +313,7 @@ function FilterBar({
           }}
           value={filters[key]}
         >
-          <option value="">All {key.replace('Id', '').toLowerCase()}s</option>
+          <option value="">All {filterLabels[key]}</option>
           {(options[key] ?? []).map((option) => (
             <option key={option.id} value={option.id}>
               {option.label}

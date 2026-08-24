@@ -58,10 +58,16 @@ describe('MasterDataPage', () => {
     expect(screen.getByLabelText('Legal name')).toBeInTheDocument()
     expect(screen.getByLabelText('Contact category')).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Help for Legal name' }),
+      screen.getByRole('button', {
+        name: 'Help',
+        description: 'Legal name guidance',
+      }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Help for Contact category' }),
+      screen.getByRole('button', {
+        name: 'Help',
+        description: 'Contact category guidance',
+      }),
     ).toBeInTheDocument()
   })
 })

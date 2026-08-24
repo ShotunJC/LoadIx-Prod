@@ -14,6 +14,7 @@ const tooltipWidth = 256
 
 export function FieldHelp({ label, text }: { label: string; text: string }) {
   const id = useId()
+  const contextId = `${id}-context`
   const triggerRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLSpanElement>(null)
   const [open, setOpen] = useState(false)
@@ -76,9 +77,9 @@ export function FieldHelp({ label, text }: { label: string; text: string }) {
   return (
     <>
       <button
-        aria-describedby={open ? id : undefined}
+        aria-describedby={open ? `${contextId} ${id}` : contextId}
         aria-expanded={open}
-        aria-label={`Help for ${label}`}
+        aria-label="Help"
         className="ml-1 inline-flex size-6 items-center justify-center rounded-full text-slate-500 outline-none hover:bg-slate-100 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-emerald-600"
         onBlur={close}
         onClick={() => {
@@ -105,6 +106,9 @@ export function FieldHelp({ label, text }: { label: string; text: string }) {
       >
         <CircleHelp aria-hidden="true" size={16} />
       </button>
+      <span className="sr-only" id={contextId}>
+        {label} guidance
+      </span>
       {open
         ? createPortal(
             <span
