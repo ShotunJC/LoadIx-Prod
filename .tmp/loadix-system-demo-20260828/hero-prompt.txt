@@ -1,0 +1,11 @@
+Use case: photorealistic-natural
+Asset type: PowerPoint cover hero image for a logistics management software demo
+Primary request: a premium editorial photograph of South African bulk transport operations at a modern weighbridge, showing a clean side-angle view of a tipper truck and articulated bulk-haul trailers moving through an industrial mining or agricultural logistics site
+Scene/backdrop: dry Highveld landscape and understated industrial infrastructure, realistic South African setting without visible company branding
+Subject: one prominent modern bulk transport truck, weighbridge lane, subtle operational activity in the distance
+Style/medium: high-end natural commercial photography, realistic materials and proportions, not a 3D render
+Composition/framing: near-square composition, truck positioned slightly right of center with clear visual depth; enough breathing room around the vehicle for a clean rounded-rectangle crop
+Lighting/mood: warm early-morning light, confident, controlled, operationally precise
+Color palette: charcoal, pale concrete, muted earth tones with restrained teal accents where naturally plausible
+Constraints: no people in close-up, no logos, no license-plate text, no UI overlays, no embedded words, no watermark
+Avoid: futuristic vehicles, excessive dust, dramatic disaster imagery, unsafe scenes, crowded composition

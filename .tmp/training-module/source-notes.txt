@@ -1,0 +1,25 @@
+Primary internal sources used for training content:
+- C:/Users/shotg/Documents/LoadIx-Prod/docs/product-scope.md
+- C:/Users/shotg/Documents/LoadIx-Prod/docs/domain-glossary.md
+- C:/Users/shotg/Documents/LoadIx-Prod/docs/workflow-improvements.md
+- C:/Users/shotg/Documents/LoadIx-Prod/docs/demo-guide.md
+- C:/Users/shotg/Documents/LoadIx-Prod/README.md
+- Current LoadIx web UI at http://localhost:5173/ using deterministic synthetic demo data.
+
+Local interface screenshots captured 2026-08-24 from the synthetic LoadIx Demo Transport tenant:
+- screens/dashboard.png
+- screens/operations.png
+- screens/customers.png
+- screens/contracts.png
+- screens/contract-wizard.png
+- screens/instructions.png
+- screens/instruction-wizard.png
+- screens/trips.png
+- screens/trip-detail.png
+- screens/finance.png
+- screens/finance-queue.png
+- screens/reports.png
+- screens/notifications.png
+- screens/onboarding.png
+
+No external research or third-party visual assets were used.

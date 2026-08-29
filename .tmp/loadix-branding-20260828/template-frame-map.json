@@ -1,0 +1,104 @@
+{
+  "outputSlides": [
+    {
+      "outputSlide": 1,
+      "sourceSlide": 1,
+      "narrativeRole": "opening thesis",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/fu94fe98", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementId": "sh/7qp4be9c", "reason": "Apply the official orange brand accent." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 34, "width": 250, "height": 65 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 2,
+      "sourceSlide": 2,
+      "narrativeRole": "problem framing",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/do3q9szq", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementIds": ["sh/r65knqtk", "sh/mtwrmxg7", "sh/ahwrqhgj"], "reason": "Apply the official blue brand accent." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 3,
+      "sourceSlide": 3,
+      "narrativeRole": "connected workflow",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/y14jehgj", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementIds": ["sh/a9kfadwn", "sh/z2d07mh4"], "reason": "Apply blue/orange brand emphasis to the workflow endpoint and audit message." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 4,
+      "sourceSlide": 4,
+      "narrativeRole": "role workspaces",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/g36tgryd", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementIds": ["sh/sna103ap", "sh/kbm987y5", "sh/jadsz2xk"], "reason": "Apply the official blue brand accent." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 5,
+      "sourceSlide": 5,
+      "narrativeRole": "exception management",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/tcfel0vu", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementIds": ["sh/n6dcr65o", "sh/ahkvi1cb", "sh/i54fmlc7"], "reason": "Apply the official blue brand accent." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 6,
+      "sourceSlide": 6,
+      "narrativeRole": "trust and control",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/u1kbu1ov", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementId": "sh/ml07i9sv", "reason": "Apply the official blue brand accent." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 7,
+      "sourceSlide": 7,
+      "narrativeRole": "finance preparation",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/id4ju1oz", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementId": "sh/p8fih03e", "reason": "Apply the official orange brand emphasis to the approved endpoint." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 8,
+      "sourceSlide": 8,
+      "narrativeRole": "pilot foundation",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/lgbepgvm", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementIds": ["sh/sjix0zy1", "sh/o7ydoret", "sh/n6pwfmd8", "sh/kfixwbe1"], "reason": "Apply the official blue brand accent." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    },
+    {
+      "outputSlide": 9,
+      "sourceSlide": 9,
+      "narrativeRole": "live demo handoff",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [
+        { "action": "delete", "sourceElementId": "sh/u9sja98z", "reason": "Replace the text-only mark with the official supplied logo." },
+        { "action": "rewrite", "sourceElementIds": ["sh/ofq5svm5", "sh/ah8nu54b", "sh/oza1gfyh", "sh/3y107axw", "sh/qlcjipgn", "sh/lsn2h4fa", "sh/76h0zup8", "sh/wba1cjqp"], "reason": "Apply the official orange, blue and navy brand palette." },
+        { "action": "add", "newPrimitiveAllowed": true, "zone": { "left": 58, "top": 14, "width": 132, "height": 35 }, "reason": "Insert the authentic official logo into the existing brand header zone.", "mustNotOverlapInherited": true }
+      ]
+    }
+  ],
+  "omittedSourceSlides": []
+}

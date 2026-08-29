@@ -1,0 +1,19 @@
+Source deck: C:/Users/shotg/Documents/LoadIx-Prod/LoadIx-System-Demo-Overview.pptx
+
+Structure:
+- 9 slides, one imported slide master and one child slide layout.
+- Content is primarily slide-local editable textboxes, shapes and images.
+- Existing speaker notes contain presenter cues and [Sources] blocks.
+- No unresolved visible PowerPoint prompt text or empty structural placeholders was found in the artifact inspection.
+
+Reusable visual rules:
+- White 16:9 canvas, black headline typography, gray explanatory copy.
+- Compact brand position in the upper-left corner; section label upper-right.
+- Thin footer rule and two-digit slide number.
+- Teal was previously used as the single accent for progression and callouts.
+
+Brand insertion contract:
+- Replace only the existing upper-left LOADIX text mark with the authentic user-provided horizontal logo.
+- Keep all narrative copy, layout geometry, typography, speaker notes, page markers and hero imagery unchanged.
+- Recolor the existing accent primitives to logo-derived blue, with orange reserved for forward/end-state emphasis.
+- Use the supplied logo exactly; do not recreate or redraw it.

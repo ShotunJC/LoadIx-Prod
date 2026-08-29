@@ -1,0 +1,187 @@
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"One operating","textShapes":3}
+{"kind":"textbox","id":"sh/547294r6","slide":1,"name":"cover-title","text":"One operating\nrecord\nfor every load","textPreview":"One operating | record | for every load","textChars":35,"textLines":3,"bbox":[58,142,540,220]}
+{"kind":"textbox","id":"sh/k3yl0zql","slide":1,"name":"cover-subtitle","text":"From contract and dispatch to weight evidence, reconciliation and invoice preparation.","textPreview":"From contract and dispatch to weight evidence, reconciliation and invoice preparation.","textChars":86,"textLines":1,"bbox":[58,388,500,105]}
+{"kind":"shape","id":"sh/7qp4be9c","slide":1,"name":"cover-accent","bbox":[58,540,94,6]}
+{"kind":"textbox","id":"sh/65g3298r","slide":1,"name":"cover-context","text":"System overview · Demo meeting","textPreview":"System overview · Demo meeting","textChars":30,"textLines":1,"bbox":[58,566,420,30]}
+{"kind":"shape","id":"sh/ts7md4r2","slide":1,"name":"cover-image-backing","bbox":[646,34,576,620]}
+{"kind":"image","id":"im/7mp0jixo","slide":1,"name":"","geometry":"roundRect","bbox":[646,34,576,620]}
+{"kind":"image","id":"im/jqxw72dk","slide":1,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,34,250,65]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":"Open with the outcome: LoadIx is the operating record that connects commercial intent, physical execution and financial preparation. Keep this to about 30 seconds before moving to the problem.\n\n[Sources]\n- Repository: docs/product-scope.md — purpose, product outcomes and MVP flow.\n- Asset: AI-generated LoadIx cover hero; prompt recorded in .tmp/loadix-system-demo-20260828/hero-prompt.txt.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"WHY LOADIX","textShapes":10}
+{"kind":"textbox","id":"sh/9072xkry","slide":2,"name":"section-2","text":"WHY LOADIX","textPreview":"WHY LOADIX","textChars":10,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/ozy1ofad","slide":2,"name":"footer-rule-2","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/b29kza94","slide":2,"name":"slide-number-2","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/a10jqpsj","slide":2,"name":"title-2","text":"Fragmented tools break the operating story","textPreview":"Fragmented tools break the operating story","textChars":42,"textLines":1,"bbox":[58,72,1164,68]}
+{"kind":"textbox","id":"sh/x4r21kru","slide":2,"name":"problem-intro","text":"When commercial rules, live execution and finance evidence live apart, every handoff creates another version of the truth.","textPreview":"When commercial rules, live execution and finance evidence live apart, every handoff creates another version of the truth.","textChars":122,"textLines":1,"bbox":[58,158,1120,62]}
+{"kind":"shape","id":"sh/w3i1sfa9","slide":2,"name":"callout-panel-2a","bbox":[58,270,350,326]}
+{"kind":"shape","id":"sh/r65knqtk","slide":2,"name":"callout-accent-2a","bbox":[82,294,42,6]}
+{"kind":"textbox","id":"sh/q5wjelsz","slide":2,"name":"callout-title-2a","text":"Commercial intent","textPreview":"Commercial intent","textChars":17,"textLines":1,"bbox":[82,322,302,62]}
+{"kind":"textbox","id":"sh/ove9o7yd","slide":2,"name":"callout-body-2a","text":"Routes, rates, quantities and tolerances need to remain connected to the work they govern.","textPreview":"Routes, rates, quantities and tolerances need to remain connected to the work they govern.","textChars":90,"textLines":1,"bbox":[82,390,302,184]}
+{"kind":"shape","id":"sh/9wnqhczy","slide":2,"name":"callout-panel-2b","bbox":[465,270,350,326]}
+{"kind":"shape","id":"sh/mtwrmxg7","slide":2,"name":"callout-accent-2b","bbox":[489,294,42,6]}
+{"kind":"textbox","id":"sh/nu58f2hs","slide":2,"name":"callout-title-2b","text":"Operational proof","textPreview":"Operational proof","textChars":17,"textLines":1,"bbox":[489,322,302,62]}
+{"kind":"textbox","id":"sh/wjy9sry9","slide":2,"name":"callout-body-2b","text":"Assignments, milestones, weights, documents and exceptions need one current operational record.","textPreview":"Assignments, milestones, weights, documents and exceptions need one current operational record.","textChars":95,"textLines":1,"bbox":[489,390,302,184]}
+{"kind":"shape","id":"sh/xk7qlczu","slide":2,"name":"callout-panel-2c","bbox":[872,270,350,326]}
+{"kind":"shape","id":"sh/ahwrqhgj","slide":2,"name":"callout-accent-2c","bbox":[896,294,42,6]}
+{"kind":"textbox","id":"sh/bip8jmho","slide":2,"name":"callout-title-2c","text":"Financial confidence","textPreview":"Financial confidence","textChars":20,"textLines":1,"bbox":[896,322,302,62]}
+{"kind":"textbox","id":"sh/cnupgny5","slide":2,"name":"callout-body-2c","text":"Revenue, cost and invoice preparation should start from approved trip facts—not reconstructed evidence.","textPreview":"Revenue, cost and invoice preparation should start from approved trip facts—not reconstructed evidence.","textChars":103,"textLines":1,"bbox":[896,390,302,184]}
+{"kind":"image","id":"im/mpcv2l0b","slide":2,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":"Frame this as the coordination problem LoadIx solves. Avoid claiming a quantified saving; the point is that the same load should not be reassembled across separate commercial, operational and finance records.\n\n[Sources]\n- Repository: docs/product-scope.md — product outcomes, personas and auditable end-to-end flow.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"CONNECTED WORKFLOW","textShapes":23}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"section-3","text":"CONNECTED WORKFLOW","textPreview":"CONNECTED WORKFLOW","textChars":18,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/d0jax03i","slide":3,"name":"footer-rule-3","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/298ryl4v","slide":3,"name":"slide-number-3","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/3ah8rqlg","slide":3,"name":"title-3","text":"LoadIx keeps one record from contract to cash","textPreview":"LoadIx keeps one record from contract to cash","textChars":45,"textLines":1,"bbox":[58,72,1164,68]}
+{"kind":"textbox","id":"sh/obq90bml","slide":3,"name":"workflow-intro","text":"Rules are snapshotted into operational work, evidence follows the trip, and approved facts flow forward.","textPreview":"Rules are snapshotted into operational work, evidence follows the trip, and approved facts flow forward.","textChars":104,"textLines":1,"bbox":[58,154,1110,52]}
+{"kind":"shape","id":"sh/qpczuhc7","slide":3,"name":"workflow-connector","bbox":[92,344,1092,0]}
+{"kind":"shape","id":"sh/m5cra54z","slide":3,"name":"workflow-node-1","bbox":[78,320,50,50]}
+{"kind":"textbox","id":"sh/n6ls3alk","slide":3,"name":"workflow-number-1","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[78,333,50,24]}
+{"kind":"textbox","id":"sh/n2l4fq98","slide":3,"name":"workflow-title-1","text":"Contract","textPreview":"Contract","textChars":8,"textLines":1,"bbox":[64,396,158,36]}
+{"kind":"textbox","id":"sh/m1c3mlsn","slide":3,"name":"workflow-body-1","text":"Route, rate and tolerance","textPreview":"Route, rate and tolerance","textChars":25,"textLines":1,"bbox":[64,440,166,92]}
+{"kind":"shape","id":"sh/943mhgre","slide":3,"name":"workflow-node-2","bbox":[287,320,50,50]}
+{"kind":"textbox","id":"sh/83ulovat","slide":3,"name":"workflow-number-2","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[287,333,50,24]}
+{"kind":"textbox","id":"sh/v6l4jq94","slide":3,"name":"workflow-title-2","text":"Instruction","textPreview":"Instruction","textChars":11,"textLines":1,"bbox":[273,396,158,36]}
+{"kind":"textbox","id":"sh/a5c3ql8z","slide":3,"name":"workflow-body-2","text":"Demand and timing","textPreview":"Demand and timing","textChars":17,"textLines":1,"bbox":[273,440,166,92]}
+{"kind":"shape","id":"sh/x8nml0ra","slide":3,"name":"workflow-node-3","bbox":[496,320,50,50]}
+{"kind":"textbox","id":"sh/w7ulsvqp","slide":3,"name":"workflow-number-3","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[496,333,50,24]}
+{"kind":"textbox","id":"sh/ja54na9g","slide":3,"name":"workflow-title-3","text":"Plan","textPreview":"Plan","textChars":4,"textLines":1,"bbox":[482,396,158,36]}
+{"kind":"textbox","id":"sh/i9w3u58v","slide":3,"name":"workflow-body-3","text":"Driver, truck and trailers","textPreview":"Driver, truck and trailers","textChars":26,"textLines":1,"bbox":[482,440,166,92]}
+{"kind":"shape","id":"sh/e10f2twf","slide":3,"name":"workflow-node-4","bbox":[705,320,50,50]}
+{"kind":"textbox","id":"sh/f29gbyx0","slide":3,"name":"workflow-number-4","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[705,333,50,24]}
+{"kind":"textbox","id":"sh/03ix43e5","slide":3,"name":"workflow-title-4","text":"Execute","textPreview":"Execute","textChars":7,"textLines":1,"bbox":[691,396,158,36]}
+{"kind":"textbox","id":"sh/14ryd8fq","slide":3,"name":"workflow-body-4","text":"Milestones, weights and POD","textPreview":"Milestones, weights and POD","textChars":27,"textLines":1,"bbox":[691,440,166,92]}
+{"kind":"shape","id":"sh/6d0fytg3","slide":3,"name":"workflow-node-5","bbox":[914,320,50,50]}
+{"kind":"textbox","id":"sh/re9g7yxo","slide":3,"name":"workflow-number-5","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[914,333,50,24]}
+{"kind":"textbox","id":"sh/sfix03y9","slide":3,"name":"workflow-title-5","text":"Reconcile","textPreview":"Reconcile","textChars":9,"textLines":1,"bbox":[900,396,158,36]}
+{"kind":"textbox","id":"sh/tgry9ofu","slide":3,"name":"workflow-body-5","text":"Quantity and exceptions","textPreview":"Quantity and exceptions","textChars":23,"textLines":1,"bbox":[900,440,166,92]}
+{"kind":"shape","id":"sh/a9kfadwn","slide":3,"name":"workflow-node-6","bbox":[1123,320,50,50]}
+{"kind":"textbox","id":"sh/batgjixs","slide":3,"name":"workflow-number-6","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1123,333,50,24]}
+{"kind":"textbox","id":"sh/l4fi9cza","slide":3,"name":"workflow-title-6","text":"Prepare","textPreview":"Prepare","textChars":7,"textLines":1,"bbox":[1109,396,158,36]}
+{"kind":"textbox","id":"sh/k3m1g7yp","slide":3,"name":"workflow-body-6","text":"Profitability and invoice batch","textPreview":"Profitability and invoice batch","textChars":31,"textLines":1,"bbox":[1109,440,166,92]}
+{"kind":"textbox","id":"sh/z2d07mh4","slide":3,"name":"workflow-audit","text":"One tenant-scoped audit trail","textPreview":"One tenant-scoped audit trail","textChars":29,"textLines":1,"bbox":[420,576,440,40]}
+{"kind":"image","id":"im/czep0bm9","slide":3,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":"Walk left to right. Emphasize that trip snapshots protect operational history: later contract edits affect future work, not trips already generated. This is the bridge from the problem to the system.\n\n[Sources]\n- Repository: docs/product-scope.md — 13-step MVP business flow.\n- Repository: docs/workflow-improvements.md — contract/load workflows and immutable route-specific weight snapshots.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"ROLE-BASED EXPERIENCE","textShapes":10}
+{"kind":"textbox","id":"sh/1cj2d8b6","slide":4,"name":"section-4","text":"ROLE-BASED EXPERIENCE","textPreview":"ROLE-BASED EXPERIENCE","textChars":21,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/0ba143al","slide":4,"name":"footer-rule-4","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/rm1k7yt4","slide":4,"name":"slide-number-4","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/ql8jytsj","slide":4,"name":"title-4","text":"Each role sees the work that matters","textPreview":"Each role sees the work that matters","textChars":36,"textLines":1,"bbox":[58,72,1164,68]}
+{"kind":"textbox","id":"sh/doj29oba","slide":4,"name":"roles-intro","text":"A shared record does not mean a shared screen. LoadIx presents the same facts through purpose-built workspaces.","textPreview":"A shared record does not mean a shared screen. LoadIx presents the same facts through purpose-built workspaces.","textChars":111,"textLines":1,"bbox":[58,154,1110,54]}
+{"kind":"shape","id":"sh/sna103ap","slide":4,"name":"callout-accent-4a","bbox":[82,288,42,6]}
+{"kind":"textbox","id":"sh/3ihk3et8","slide":4,"name":"callout-title-4a","text":"Controllers","textPreview":"Controllers","textChars":11,"textLines":1,"bbox":[82,316,302,62]}
+{"kind":"textbox","id":"sh/ih8ju9sn","slide":4,"name":"callout-body-4a","text":"Plan and assign trips, move work through legal states, monitor the live board and resolve exceptions.","textPreview":"Plan and assign trips, move work through legal states, monitor the live board and resolve exceptions.","textChars":101,"textLines":1,"bbox":[82,384,302,184]}
+{"kind":"shape","id":"sh/kbm987y5","slide":4,"name":"callout-accent-4b","bbox":[489,288,42,6]}
+{"kind":"textbox","id":"sh/5cva1cfq","slide":4,"name":"callout-title-4b","text":"Drivers","textPreview":"Drivers","textChars":7,"textLines":1,"bbox":[489,316,302,62]}
+{"kind":"textbox","id":"sh/i94r6xgz","slide":4,"name":"callout-body-4b","text":"Use a touch-first PWA for next actions, weights, location updates and camera-friendly document capture—even with intermittent connectivity.","textPreview":"Use a touch-first PWA for next actions, weights, location updates and camera-friendly document capture—even with intermittent connectivity.","textChars":139,"textLines":1,"bbox":[489,384,302,184]}
+{"kind":"shape","id":"sh/jadsz2xk","slide":4,"name":"callout-accent-4c","bbox":[896,288,42,6]}
+{"kind":"textbox","id":"sh/w72947yt","slide":4,"name":"callout-title-4c","text":"Finance & management","textPreview":"Finance & management","textChars":20,"textLines":1,"bbox":[896,316,302,62]}
+{"kind":"textbox","id":"sh/x8vaxsfe","slide":4,"name":"callout-body-4c","text":"Review reconciliation, charges, costs, estimated profitability, reports and invoice-preparation batches.","textPreview":"Review reconciliation, charges, costs, estimated profitability, reports and invoice-preparation batches.","textChars":104,"textLines":1,"bbox":[896,384,302,184]}
+{"kind":"shape","id":"sh/a5kr2xg3","slide":4,"name":"roles-divider-1","bbox":[438,274,1,270]}
+{"kind":"shape","id":"sh/v6tsv2xo","slide":4,"name":"roles-divider-2","bbox":[845,274,1,270]}
+{"kind":"image","id":"im/b6xofahg","slide":4,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":"Use this slide to orient the audience before the live demo login. Mention that permissions shape what each user can see and do; the demo can therefore move between operations, driver and finance perspectives without changing the underlying trip story.\n\n[Sources]\n- Repository: docs/product-scope.md — personas and primary needs.\n- Repository: README.md and apps/loadix-web/src/router.tsx — current Operations, Driver, Finance, Reports and administration workspaces.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"OPERATIONS & RECONCILIATION","textShapes":10}
+{"kind":"textbox","id":"sh/dgbulwnm","slide":5,"name":"section-5","text":"OPERATIONS & RECONCILIATION","textPreview":"OPERATIONS & RECONCILIATION","textChars":27,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/cf2tcr61","slide":5,"name":"footer-rule-5","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/z2tcnm5s","slide":5,"name":"slide-number-5","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/yhkbe1o7","slide":5,"name":"title-5","text":"Exceptions surface before billing","textPreview":"Exceptions surface before billing","textChars":33,"textLines":1,"bbox":[58,72,1164,68]}
+{"kind":"textbox","id":"sh/l4bupwny","slide":5,"name":"exceptions-intro","text":"LoadIx keeps operational state, quantity evidence and review context together, so issues remain visible and explainable.","textPreview":"LoadIx keeps operational state, quantity evidence and review context together, so issues remain visible and explainable.","textChars":120,"textLines":1,"bbox":[58,154,1110,56]}
+{"kind":"shape","id":"sh/032tgr6d","slide":5,"name":"callout-panel-5a","bbox":[58,266,350,330]}
+{"kind":"shape","id":"sh/n6dcr65o","slide":5,"name":"callout-accent-5a","bbox":[82,290,42,6]}
+{"kind":"textbox","id":"sh/m5kbi1oj","slide":5,"name":"callout-title-5a","text":"See the state","textPreview":"See the state","textChars":13,"textLines":1,"bbox":[82,318,302,62]}
+{"kind":"textbox","id":"sh/w32dkbuh","slide":5,"name":"callout-body-5a","text":"The live operations board groups active trips by stage, exposes freshness and supports delayed or exception-only views.","textPreview":"The live operations board groups active trips by stage, exposes freshness and supports delayed or exception-only views.","textChars":119,"textLines":1,"bbox":[82,386,302,188]}
+{"kind":"shape","id":"sh/x4vedgvm","slide":5,"name":"callout-panel-5b","bbox":[465,266,350,330]}
+{"kind":"shape","id":"sh/ahkvi1cb","slide":5,"name":"callout-accent-5b","bbox":[489,290,42,6]}
+{"kind":"textbox","id":"sh/v2twb6dw","slide":5,"name":"callout-title-5b","text":"Trust the quantity","textPreview":"Trust the quantity","textChars":18,"textLines":1,"bbox":[489,318,302,62]}
+{"kind":"textbox","id":"sh/k7mxovud","slide":5,"name":"callout-body-5b","text":"Route-specific weighing, explicit quantity sources and snapshotted tolerance rules make reconciliation reproducible.","textPreview":"Route-specific weighing, explicit quantity sources and snapshotted tolerance rules make reconciliation reproducible.","textChars":116,"textLines":1,"bbox":[489,386,302,188]}
+{"kind":"shape","id":"sh/58vehgvy","slide":5,"name":"callout-panel-5c","bbox":[872,266,350,330]}
+{"kind":"shape","id":"sh/i54fmlc7","slide":5,"name":"callout-accent-5c","bbox":[896,290,42,6]}
+{"kind":"textbox","id":"sh/j6dwfqds","slide":5,"name":"callout-title-5c","text":"Resolve with context","textPreview":"Resolve with context","textChars":20,"textLines":1,"bbox":[896,318,302,62]}
+{"kind":"textbox","id":"sh/sb6xsvu9","slide":5,"name":"callout-body-5c","text":"Reasoned reviews and overrides preserve the actor, time and decision trail instead of hiding the exception.","textPreview":"Reasoned reviews and overrides preserve the actor, time and decision trail instead of hiding the exception.","textChars":107,"textLines":1,"bbox":[896,386,302,188]}
+{"kind":"image","id":"im/uhkvq14z","slide":5,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/i107q5of","slide":5,"text":"This is a key demo promise: do not only show the happy path. Point out how stale positions, quantity sources, tolerance outcomes and reasoned overrides remain visible rather than being silently normalized.\n\n[Sources]\n- Repository: README.md — Operations control tower and trip lifecycle sections.\n- Repository: docs/workflow-improvements.md — route-specific capture, tolerance outcomes and manual quantity controls.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"TRUST & CONTROL","textShapes":8}
+{"kind":"textbox","id":"sh/yhg7epsj","slide":6,"name":"section-6","text":"TRUST & CONTROL","textPreview":"TRUST & CONTROL","textChars":15,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/zi98nu94","slide":6,"name":"footer-rule-6","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/87ipkzal","slide":6,"name":"slide-number-6","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/98rqt4r6","slide":6,"name":"title-6","text":"Control is part of every workflow","textPreview":"Control is part of every workflow","textChars":33,"textLines":1,"bbox":[58,72,1164,68]}
+{"kind":"shape","id":"sh/ml07i9sv","slide":6,"name":"control-rail","bbox":[58,186,12,392]}
+{"kind":"textbox","id":"sh/7m98ru9g","slide":6,"name":"control-message","text":"The system protects the record at the moment work happens—not as a clean-up exercise after the fact.","textPreview":"The system protects the record at the moment work happens—not as a clean-up exercise after the fact.","textChars":100,"textLines":1,"bbox":[104,188,530,126]}
+{"kind":"textbox","id":"sh/oryp8fah","slide":6,"name":"control-1-title","text":"Tenant-scoped access, server-side permissions and explicit support boundaries","textPreview":"Tenant-scoped access, server-side permissions and explicit support boundaries","textChars":77,"textLines":1,"bbox":[704,190,478,68]}
+{"kind":"textbox","id":"sh/pc76hkr2","slide":6,"name":"control-1-body","text":"Optimistic concurrency prevents stale edits from silently overwriting newer decisions.","textPreview":"Optimistic concurrency prevents stale edits from silently overwriting newer decisions.","textChars":86,"textLines":1,"bbox":[704,274,478,68]}
+{"kind":"shape","id":"sh/h4bupgn6","slide":6,"name":"control-divider","bbox":[704,366,478,1]}
+{"kind":"textbox","id":"sh/w32twb6l","slide":6,"name":"control-2-title","text":"Idempotent commands, immutable events and reasoned overrides","textPreview":"Idempotent commands, immutable events and reasoned overrides","textChars":60,"textLines":1,"bbox":[704,394,478,68]}
+{"kind":"textbox","id":"sh/v2tcn650","slide":6,"name":"control-2-body","text":"Retries produce one business outcome; sensitive operational and financial actions remain traceable.","textPreview":"Retries produce one business outcome; sensitive operational and financial actions remain traceable.","textChars":99,"textLines":1,"bbox":[704,482,478,76]}
+{"kind":"image","id":"im/t03ulobq","slide":6,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":"Keep this audience-facing. The architecture details matter because they change confidence in the demo: tenant identity is trusted from authentication, editable records reject stale versions, retry-prone commands are replay-safe, and material changes leave audit evidence.\n\n[Sources]\n- Repository: docs/product-scope.md — assurance, security/privacy and resilience requirements.\n- Repository: docs/architecture.md — tenancy, authorization, concurrency, idempotency and audit design.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"FINANCE PREPARATION","textShapes":13}
+{"kind":"textbox","id":"sh/cb2tkvap","slide":7,"name":"section-7","text":"FINANCE PREPARATION","textPreview":"FINANCE PREPARATION","textChars":19,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/dcbud0ra","slide":7,"name":"footer-rule-7","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/ydkbm5sv","slide":7,"name":"slide-number-7","text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/zedcfa9g","slide":7,"name":"title-7","text":"Finance starts with a trusted trip","textPreview":"Finance starts with a trusted trip","textChars":34,"textLines":1,"bbox":[58,72,1164,68]}
+{"kind":"textbox","id":"sh/kzmdova1","slide":7,"name":"finance-intro","text":"Completed work moves forward only when its operational evidence and quantity outcome are ready for financial review.","textPreview":"Completed work moves forward only when its operational evidence and quantity outcome are ready for financial review.","textChars":116,"textLines":1,"bbox":[58,154,1110,52]}
+{"kind":"shape","id":"sh/2x8nqp83","slide":7,"name":"finance-connector","bbox":[136,350,1000,0]}
+{"kind":"shape","id":"sh/eh0ba1sr","slide":7,"name":"finance-node-1","bbox":[104,326,48,48]}
+{"kind":"textbox","id":"sh/fi9c369c","slide":7,"name":"finance-number-1","text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[104,338,48,22]}
+{"kind":"textbox","id":"sh/baxkjqlk","slide":7,"name":"finance-title-1","text":"Operational evidence","textPreview":"Operational evidence","textChars":20,"textLines":1,"bbox":[102,404,330,42]}
+{"kind":"textbox","id":"sh/a9ojq5kz","slide":7,"name":"finance-body-1","text":"Reconciled quantity, required documents and immutable rate snapshot","textPreview":"Reconciled quantity, required documents and immutable rate snapshot","textChars":67,"textLines":1,"bbox":[102,458,330,96]}
+{"kind":"shape","id":"sh/xcz2l03q","slide":7,"name":"finance-node-2","bbox":[509,326,48,48]}
+{"kind":"textbox","id":"sh/cbq1sv25","slide":7,"name":"finance-number-2","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[509,338,48,22]}
+{"kind":"textbox","id":"sh/n6x0fqlo","slide":7,"name":"finance-title-2","text":"Financial review","textPreview":"Financial review","textChars":16,"textLines":1,"bbox":[507,404,330,42]}
+{"kind":"textbox","id":"sh/25ojml43","slide":7,"name":"finance-body-2","text":"Revenue, explicit costs, tax treatment and estimated profitability","textPreview":"Revenue, explicit costs, tax treatment and estimated profitability","textChars":66,"textLines":1,"bbox":[507,458,330,96]}
+{"kind":"shape","id":"sh/p8fih03e","slide":7,"name":"finance-node-3","bbox":[914,326,48,48]}
+{"kind":"textbox","id":"sh/o761ov2t","slide":7,"name":"finance-number-3","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[914,338,48,22]}
+{"kind":"textbox","id":"sh/f2d0b6lc","slide":7,"name":"finance-title-3","text":"Approved output","textPreview":"Approved output","textChars":15,"textLines":1,"bbox":[912,404,330,42]}
+{"kind":"textbox","id":"sh/eh4jil4r","slide":7,"name":"finance-body-3","text":"Customer-grouped invoice batch with CSV/PDF handoff","textPreview":"Customer-grouped invoice batch with CSV/PDF handoff","textChars":51,"textLines":1,"bbox":[912,458,330,96]}
+{"kind":"image","id":"im/ydg3m54v","slide":7,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":"Clarify the boundary: LoadIx prepares an approved and auditable invoice batch; it does not replace the accounting ledger. In the live demo, connect the completed trip to its rate snapshot, costs, approval and export-ready batch.\n\n[Sources]\n- Repository: docs/product-scope.md — finance preparation boundary and explicit MVP exclusions.\n- Repository: README.md — financial calculation and invoice preparation endpoints and controls.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"PILOT FOUNDATION","textShapes":11}
+{"kind":"textbox","id":"sh/18byd4zy","slide":8,"name":"section-8","text":"PILOT FOUNDATION","textPreview":"PILOT FOUNDATION","textChars":16,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/g72x4zyd","slide":8,"name":"footer-rule-8","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/ri9g7uhw","slide":8,"name":"slide-number-8","text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/6h0fypgb","slide":8,"name":"title-8","text":"Built for pilot operations","textPreview":"Built for pilot operations","textChars":26,"textLines":1,"bbox":[58,72,1164,68]}
+{"kind":"textbox","id":"sh/tkby9kzm","slide":8,"name":"pilot-intro","text":"The demo sits on the same domain model, permissions and infrastructure boundaries intended for the pilot path.","textPreview":"The demo sits on the same domain model, permissions and infrastructure boundaries intended for the pilot path.","textChars":110,"textLines":1,"bbox":[58,154,1110,54]}
+{"kind":"shape","id":"sh/sjix0zy1","slide":8,"name":"callout-accent-8a","bbox":[82,288,42,6]}
+{"kind":"textbox","id":"sh/je9g3ahk","slide":8,"name":"callout-title-8a","text":"Deployable","textPreview":"Deployable","textChars":10,"textLines":1,"bbox":[82,316,302,62]}
+{"kind":"textbox","id":"sh/id0fu50z","slide":8,"name":"callout-body-8a","text":"A modular monolith with a documented dedicated-server deployment path, database migrations and health checks.","textPreview":"A modular monolith with a documented dedicated-server deployment path, database migrations and health checks.","textChars":109,"textLines":1,"bbox":[82,384,302,184]}
+{"kind":"shape","id":"sh/o7ydoret","slide":8,"name":"callout-accent-8b","bbox":[489,288,42,6]}
+{"kind":"textbox","id":"sh/98rehwve","slide":8,"name":"callout-title-8b","text":"Observable & recoverable","textPreview":"Observable & recoverable","textChars":24,"textLines":1,"bbox":[489,316,302,62]}
+{"kind":"textbox","id":"sh/m5gvmhwn","slide":8,"name":"callout-body-8b","text":"Structured telemetry, durable background work, reporting queues, backups and rollback guidance support pilot operation.","textPreview":"Structured telemetry, durable background work, reporting queues, backups and rollback guidance support pilot operation.","textChars":119,"textLines":1,"bbox":[489,384,302,184]}
+{"kind":"shape","id":"sh/n6pwfmd8","slide":8,"name":"callout-accent-8c","bbox":[896,288,42,6]}
+{"kind":"textbox","id":"sh/0jydkreh","slide":8,"name":"callout-title-8c","text":"Integration-ready","textPreview":"Integration-ready","textChars":17,"textLines":1,"bbox":[896,316,302,62]}
+{"kind":"textbox","id":"sh/1k7edwv2","slide":8,"name":"callout-body-8c","text":"Versioned APIs and events, object storage, notifications and an edge-device/weighbridge foundation preserve clear boundaries.","textPreview":"Versioned APIs and events, object storage, notifications and an edge-device/weighbridge foundation preserve clear boundaries.","textChars":125,"textLines":1,"bbox":[896,384,302,184]}
+{"kind":"shape","id":"sh/ehgvihwr","slide":8,"name":"pilot-divider-1","bbox":[438,274,1,270]}
+{"kind":"shape","id":"sh/zipwbmdc","slide":8,"name":"pilot-divider-2","bbox":[845,274,1,270]}
+{"kind":"textbox","id":"sh/kfixwbe1","slide":8,"name":"pilot-demo-note","text":"Deterministic synthetic data makes the demo repeatable without creating a separate fake product.","textPreview":"Deterministic synthetic data makes the demo repeatable without creating a separate fake product.","textChars":96,"textLines":1,"bbox":[58,602,1080,34]}
+{"kind":"image","id":"im/mt47qt0z","slide":8,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":"Use this as credibility, not an infrastructure deep dive. The important point is that the repeatable demo uses normal domain rules and a deterministic synthetic tenant; it is not a disconnected click-through prototype.\n\n[Sources]\n- Repository: docs/architecture.md — modular monolith and deterministic demonstration environment.\n- Repository: docs/milestones.md — M16 security/governance, M17 reliability, M18 pilot deployment and M19 demonstration environment.\n- Repository: README.md — dedicated-server pilot deployment and edge-device foundation.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"LIVE DEMO","textShapes":17}
+{"kind":"textbox","id":"sh/1cfmhgne","slide":9,"name":"section-9","text":"LIVE DEMO","textPreview":"LIVE DEMO","textChars":9,"textLines":1,"bbox":[910,29,300,22]}
+{"kind":"shape","id":"sh/0b65obm9","slide":9,"name":"footer-rule-9","bbox":[58,674,1164,1]}
+{"kind":"textbox","id":"sh/nex4jq5k","slide":9,"name":"slide-number-9","text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1168,682,54,20]}
+{"kind":"textbox","id":"sh/mdonql4z","slide":9,"name":"handoff-title","text":"Now, let’s follow\none load end-to-end","textPreview":"Now, let’s follow | one load end-to-end","textChars":37,"textLines":2,"bbox":[58,112,520,154]}
+{"kind":"textbox","id":"sh/9gzml0nq","slide":9,"name":"handoff-subtitle","text":"Watch how rules, evidence, exceptions and approvals remain connected as the load moves.","textPreview":"Watch how rules, evidence, exceptions and approvals remain connected as the load moves.","textChars":87,"textLines":1,"bbox":[58,304,500,90]}
+{"kind":"shape","id":"sh/ofq5svm5","slide":9,"name":"handoff-accent","bbox":[58,470,92,6]}
+{"kind":"textbox","id":"sh/bih4na5w","slide":9,"name":"handoff-path","text":"Contract → load instruction → trip → driver → reconciliation → finance","textPreview":"Contract → load instruction → trip → driver → reconciliation → finance","textChars":70,"textLines":1,"bbox":[58,500,505,76]}
+{"kind":"shape","id":"sh/ah8nu54b","slide":9,"name":"handoff-panel","bbox":[646,82,576,536]}
+{"kind":"textbox","id":"sh/oza1gfyh","slide":9,"name":"demo-step-number-1","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[686,124,42,28]}
+{"kind":"textbox","id":"sh/p0ji9kf2","slide":9,"name":"demo-step-1","text":"Create and activate the commercial agreement","textPreview":"Create and activate the commercial agreement","textChars":44,"textLines":1,"bbox":[746,121,420,50]}
+{"kind":"shape","id":"sh/2xsjepgb","slide":9,"name":"demo-step-rule-1","bbox":[686,176,480,1]}
+{"kind":"textbox","id":"sh/3y107axw","slide":9,"name":"demo-step-number-2","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[686,200,42,28]}
+{"kind":"textbox","id":"sh/cnu1kzyd","slide":9,"name":"demo-step-2","text":"Plan the customer load instruction","textPreview":"Plan the customer load instruction","textChars":34,"textLines":1,"bbox":[746,197,420,50]}
+{"kind":"shape","id":"sh/do3id4fy","slide":9,"name":"demo-step-rule-2","bbox":[686,252,480,1]}
+{"kind":"textbox","id":"sh/qlcjipgn","slide":9,"name":"demo-step-number-3","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[686,276,42,28]}
+{"kind":"textbox","id":"sh/bml0buxs","slide":9,"name":"demo-step-3","text":"Generate, assign and dispatch a trip","textPreview":"Generate, assign and dispatch a trip","textChars":36,"textLines":1,"bbox":[746,273,420,50]}
+{"kind":"shape","id":"sh/0ru1ozyp","slide":9,"name":"demo-step-rule-3","bbox":[686,328,480,1]}
+{"kind":"textbox","id":"sh/lsn2h4fa","slide":9,"name":"demo-step-number-4","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[686,352,42,28]}
+{"kind":"textbox","id":"sh/98ji147e","slide":9,"name":"demo-step-4","text":"Capture driver milestones, weights and POD","textPreview":"Capture driver milestones, weights and POD","textChars":42,"textLines":1,"bbox":[746,349,420,50]}
+{"kind":"shape","id":"sh/87a18zqt","slide":9,"name":"demo-step-rule-4","bbox":[686,404,480,1]}
+{"kind":"textbox","id":"sh/76h0zup8","slide":9,"name":"demo-step-number-5","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[686,428,42,28]}
+{"kind":"textbox","id":"sh/ml8j6p8n","slide":9,"name":"demo-step-5","text":"Review quantity outcome and exceptions","textPreview":"Review quantity outcome and exceptions","textChars":38,"textLines":1,"bbox":[746,425,420,50]}
+{"kind":"shape","id":"sh/hcji5o7a","slide":9,"name":"demo-step-rule-5","bbox":[686,480,480,1]}
+{"kind":"textbox","id":"sh/wba1cjqp","slide":9,"name":"demo-step-number-6","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[686,504,42,28]}
+{"kind":"textbox","id":"sh/va103ep4","slide":9,"name":"demo-step-6","text":"Approve profitability and invoice preparation","textPreview":"Approve profitability and invoice preparation","textChars":45,"textLines":1,"bbox":[746,501,420,50]}
+{"kind":"image","id":"im/xkfqd0fm","slide":9,"name":"","alt":"Official LoadIx logo supplied by the owner","bbox":[58,14,132,35]}
+{"kind":"notes","id":"nt/udsvah03","slide":9,"text":"Pause here, then switch to the live system. The audience now knows what to watch for: inherited commercial rules, visible operational state, evidence-led reconciliation, and controlled finance preparation.\n\n[Sources]\n- Repository: docs/product-scope.md — MVP business flow.\n- Repository: docs/workflow-improvements.md — guided contract and load flows.\n\n- User-provided official LoadIx logo: G:/BackUp/Documents/LoadIX/LoadIx r1-01.png."}

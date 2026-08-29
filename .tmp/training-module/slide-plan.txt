@@ -1,0 +1,8 @@
+Communication job: By the end, new LoadIx administrators, controllers, operations managers, fleet users, and finance users should be able to move synthetic work from setup through invoice-ready reporting because they understand the sequence, controls, and handoffs in the system.
+
+Narrative: orient -> configure -> contract -> plan -> dispatch -> execute -> reconcile -> finance/report -> practise.
+
+Visual route: Codex Grid composition reference, using cover-image, agenda/table, checklist/two-column, and timeline silhouettes. White canvas, black hierarchy, pale gray structure, blue highlight, actual LoadIx interface screenshots as the evidence layer.
+
+Planned slides:
+1 cover; 2 outcomes; 3 lifecycle; 4 sign-in/security; 5 navigation; 6 roles; 7 onboarding; 8 master-data order; 9 master-data actions; 10 contract overview; 11 contract wizard; 12 load overview; 13 load wizard; 14 plan/generate trips; 15 dispatch; 16 lifecycle controls; 17 trip workspace; 18 weights/reconciliation; 19 documents; 20 operations board; 21 driver/offline; 22 notifications; 23 finance; 24 reports; 25 daily routine; 26 troubleshooting; 27 practice lab; 28 knowledge check and readiness.
