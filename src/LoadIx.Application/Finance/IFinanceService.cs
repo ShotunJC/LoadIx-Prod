@@ -62,6 +62,10 @@ public interface IFinanceService
         Guid id,
         CancellationToken cancellationToken);
 
+    Task<FinanceResult<byte[]>> ExportInvoiceBatchPastelAsync(
+        Guid id,
+        CancellationToken cancellationToken);
+
     Task<FinanceResult<byte[]>> ExportInvoiceBatchPdfAsync(
         Guid id,
         CancellationToken cancellationToken);

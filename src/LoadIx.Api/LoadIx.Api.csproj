@@ -8,13 +8,17 @@
     <EnableDefaultRazorComponentItems>false</EnableDefaultRazorComponentItems>
   </PropertyGroup>
 
-  <Import
-    Project="$(LoadIxApiCompileManifest)"
-    Condition="'$(LoadIxApiCompileManifest)' != '' and Exists('$(LoadIxApiCompileManifest)')" />
+  <Import Project="$(LoadIxApiCompileManifest)" Condition="'$(LoadIxApiCompileManifest)' != '' and Exists('$(LoadIxApiCompileManifest)')" />
 
   <ItemGroup Condition="'$(LoadIxApiCompileManifest)' != '' and '$(LoadIxApiIncludeConfigurationFiles)' != 'false'">
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="binDebug\**" />
+    <Content Remove="binDebug\**" />
+    <None Remove="binDebug\**" />
   </ItemGroup>
 
   <ItemGroup>

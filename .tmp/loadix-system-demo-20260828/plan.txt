@@ -1,0 +1,12 @@
+Communication job: By the end, prospective customers and operational/finance stakeholders should understand why the live LoadIx demo matters because the system keeps one auditable operating record from contract through invoice preparation.
+
+Narrative arc:
+1. Establish the fragmented-workflow problem.
+2. Show the connected LoadIx operating record.
+3. Explain role-specific workspaces and exception handling.
+4. Demonstrate embedded control, finance readiness, and pilot credibility.
+5. Hand directly into the live end-to-end demo.
+
+Visual route: Codex Grid composition reference with LoadIx teal as the single deliberate accent. Selected layout families: cover image field (slide 08), three-callout message (slide 09), and process timeline (slide 17).
+
+Target length: nine slides; approximately six to eight minutes before the live system walkthrough.

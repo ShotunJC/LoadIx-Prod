@@ -30,6 +30,9 @@ internal sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
         builder.Property(entity => entity.EmergencyContactNumber)
             .HasMaxLength(40)
             .IsRequired();
+        builder.Property(entity => entity.EmployeeNumber)
+            .HasMaxLength(50)
+            .IsRequired(false);
         builder.Ignore(entity => entity.DisplayName);
         builder.HasIndex(entity => new
         {
@@ -41,6 +44,11 @@ internal sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
             entity.TenantId,
             entity.LicenceNumber,
         }).IsUnique();
+        builder.HasIndex(entity => new
+        {
+            entity.TenantId,
+            entity.EmployeeNumber,
+        }).IsUnique().HasFilter("[EmployeeNumber] IS NOT NULL");
         builder.HasIndex(entity => new
         {
             entity.TenantId,

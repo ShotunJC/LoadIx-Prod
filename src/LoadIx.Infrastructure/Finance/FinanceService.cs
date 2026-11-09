@@ -242,6 +242,29 @@ public sealed class FinanceService(
         return FinanceResult<byte[]>.Success(content);
     }
 
+    public async Task<FinanceResult<byte[]>> ExportInvoiceBatchPastelAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var batch = await GetInvoiceBatchAsync(id, cancellationToken);
+        if (!batch.IsSuccess) return FinanceResult<byte[]>.Fail(batch.Failure, batch.Code, batch.Message);
+        var content = PastelInvoiceBatchFormatter.Format(batch.Value!);
+        await auditWriter.WriteAsync(
+            "Finance.Export",
+            "Succeeded",
+            "InvoiceBatch",
+            id.ToString(),
+            requestContext.TenantId,
+            requestContext.UserId,
+            requestContext.IsSupportContext,
+            null,
+            cancellationToken,
+            afterSummaryJson: AuditSummary.Serialize(new
+            {
+                format = "pastel_invoice",
+                byteCount = content.Length,
+            }));
+        return FinanceResult<byte[]>.Success(content);
+    }
+
     public async Task<FinanceResult<byte[]>> ExportInvoiceBatchPdfAsync(Guid id, CancellationToken cancellationToken)
     {
         var batch = await GetInvoiceBatchAsync(id, cancellationToken);

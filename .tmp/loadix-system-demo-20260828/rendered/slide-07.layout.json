@@ -1,0 +1,1096 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/q6wmsv",
+    "id": "q6wmsv",
+    "slide": 7,
+    "layoutId": "a637b376-1df5-42c5-a42c-17b95c79f0b0",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "738eb8d9-7331-4029-be9c-8c82ae00d575",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "a637b376-1df5-42c5-a42c-17b95c79f0b0",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "738eb8d9-7331-4029-be9c-8c82ae00d575",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "738eb8d9-7331-4029-be9c-8c82ae00d575",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8z210nq1",
+      "id": "1",
+      "name": "brand-7",
+      "bbox": [
+        58,
+        28,
+        120,
+        24
+      ],
+      "geometry": "rect",
+      "text": "LOADIX",
+      "textPreview": "LOADIX",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#087E60",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "LOADIX"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "LOADIX",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#087E60",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "LOADIX",
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#087E60",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7ytkr29g",
+      "id": "2",
+      "name": "section-7",
+      "bbox": [
+        910,
+        29,
+        300,
+        22
+      ],
+      "geometry": "rect",
+      "text": "FINANCE PREPARATION",
+      "textPreview": "FINANCE PREPARATION",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5B676C",
+        "bold": true,
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "FINANCE PREPARATION"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "FINANCE PREPARATION",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5B676C",
+            "bold": true,
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "FINANCE PREPARATION",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5B676C",
+              "bold": true,
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mdkjyx8v",
+      "id": "3",
+      "name": "footer-rule-7",
+      "bbox": [
+        58,
+        674,
+        1164,
+        1
+      ],
+      "geometry": "rect",
+      "fillColor": "#CBD5D1",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/h4v2xcri",
+      "id": "4",
+      "name": "slide-number-7",
+      "bbox": [
+        1168,
+        682,
+        54,
+        20
+      ],
+      "geometry": "rect",
+      "text": "07",
+      "textPreview": "07",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5B676C",
+        "bold": true,
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "07"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "07",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5B676C",
+            "bold": true,
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "07",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5B676C",
+              "bold": true,
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/w32147qx",
+      "id": "5",
+      "name": "title-7",
+      "bbox": [
+        58,
+        72,
+        1164,
+        68
+      ],
+      "geometry": "rect",
+      "text": "Finance starts with a trusted trip",
+      "textPreview": "Finance starts with a trusted trip",
+      "resolvedFontSize": 48,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#0B1215",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Finance starts with a trusted trip"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Finance starts with a trusted trip",
+          "resolvedTextStyle": {
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Finance starts with a trusted trip",
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v2tkv29c",
+      "id": "6",
+      "name": "finance-intro",
+      "bbox": [
+        58,
+        154,
+        1110,
+        52
+      ],
+      "geometry": "rect",
+      "text": "Completed work moves forward only when its operational evidence and quantity outcome are ready for financial review.",
+      "textPreview": "Completed work moves forward only when its operational evidence and quantity outcome are ready for financial review.",
+      "resolvedFontSize": 23,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 23,
+        "typeface": "Arial",
+        "color": "#5B676C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Completed work moves forward only when its operational evidence and quantity outcome are ready for"
+          },
+          {
+            "index": 2,
+            "text": "financial review."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Completed work moves forward only when its operational evidence and quantity outcome are ready for financial review.",
+          "resolvedTextStyle": {
+            "fontSize": 23,
+            "typeface": "Arial",
+            "color": "#5B676C"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Completed work moves forward only when its operational evidence and quantity outcome are ready for financial review.",
+              "fontSize": 23,
+              "typeface": "Arial",
+              "color": "#5B676C"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u1kj2x87",
+      "id": "7",
+      "name": "finance-connector",
+      "bbox": [
+        136,
+        350,
+        1000,
+        0
+      ],
+      "geometry": "straightConnector1",
+      "lineColor": "#CBD5D1",
+      "lineWidth": 3
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/x8r2l8re",
+      "id": "8",
+      "name": "finance-node-1",
+      "bbox": [
+        104,
+        326,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#0B1215",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c7i1s3qt",
+      "id": "9",
+      "name": "finance-number-1",
+      "bbox": [
+        104,
+        338,
+        48,
+        22
+      ],
+      "geometry": "rect",
+      "text": "1",
+      "textPreview": "1",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "1"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "1",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "bold": true,
+            "alignment": "center"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "1",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "bold": true,
+              "alignment": "center"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u18f2507",
+      "id": "10",
+      "name": "finance-title-1",
+      "bbox": [
+        102,
+        404,
+        330,
+        42
+      ],
+      "geometry": "rect",
+      "text": "Operational evidence",
+      "textPreview": "Operational evidence",
+      "resolvedFontSize": 27,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 27,
+        "typeface": "Arial",
+        "color": "#0B1215",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Operational evidence"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Operational evidence",
+          "resolvedTextStyle": {
+            "fontSize": 27,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Operational evidence",
+              "fontSize": 27,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v2hwba1s",
+      "id": "11",
+      "name": "finance-body-1",
+      "bbox": [
+        102,
+        458,
+        330,
+        96
+      ],
+      "geometry": "rect",
+      "text": "Reconciled quantity, required documents and immutable rate snapshot",
+      "textPreview": "Reconciled quantity, required documents and immutable rate snapshot",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#5B676C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Reconciled quantity, required"
+          },
+          {
+            "index": 2,
+            "text": "documents and immutable rate"
+          },
+          {
+            "index": 3,
+            "text": "snapshot"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Reconciled quantity, required documents and immutable rate snapshot",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#5B676C"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Reconciled quantity, required documents and immutable rate snapshot",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#5B676C"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gnqx4fid",
+      "id": "12",
+      "name": "finance-node-2",
+      "bbox": [
+        509,
+        326,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#0B1215",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hozydkjy",
+      "id": "13",
+      "name": "finance-number-2",
+      "bbox": [
+        509,
+        338,
+        48,
+        22
+      ],
+      "geometry": "rect",
+      "text": "2",
+      "textPreview": "2",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "2"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "2",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "bold": true,
+            "alignment": "center"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "2",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "bold": true,
+              "alignment": "center"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ip8f6p0j",
+      "id": "14",
+      "name": "finance-title-2",
+      "bbox": [
+        507,
+        404,
+        330,
+        42
+      ],
+      "geometry": "rect",
+      "text": "Financial review",
+      "textPreview": "Financial review",
+      "resolvedFontSize": 27,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 27,
+        "typeface": "Arial",
+        "color": "#0B1215",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Financial review"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Financial review",
+          "resolvedTextStyle": {
+            "fontSize": 27,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Financial review",
+              "fontSize": 27,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3qhgfu14",
+      "id": "15",
+      "name": "finance-body-2",
+      "bbox": [
+        507,
+        458,
+        330,
+        96
+      ],
+      "geometry": "rect",
+      "text": "Revenue, explicit costs, tax treatment and estimated profitability",
+      "textPreview": "Revenue, explicit costs, tax treatment and estimated profitability",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#5B676C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Revenue, explicit costs, tax"
+          },
+          {
+            "index": 2,
+            "text": "treatment and estimated"
+          },
+          {
+            "index": 3,
+            "text": "profitability"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Revenue, explicit costs, tax treatment and estimated profitability",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#5B676C"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Revenue, explicit costs, tax treatment and estimated profitability",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#5B676C"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4rqx8fi9",
+      "id": "16",
+      "name": "finance-node-3",
+      "bbox": [
+        914,
+        326,
+        48,
+        48
+      ],
+      "geometry": "ellipse",
+      "fillColor": "#0F9F77",
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5szyhkju",
+      "id": "17",
+      "name": "finance-number-3",
+      "bbox": [
+        914,
+        338,
+        48,
+        22
+      ],
+      "geometry": "rect",
+      "text": "3",
+      "textPreview": "3",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 2,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "middle",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "3"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "3",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "bold": true,
+            "alignment": "center"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "3",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "bold": true,
+              "alignment": "center"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qtsfap0f",
+      "id": "18",
+      "name": "finance-title-3",
+      "bbox": [
+        912,
+        404,
+        330,
+        42
+      ],
+      "geometry": "rect",
+      "text": "Approved output",
+      "textPreview": "Approved output",
+      "resolvedFontSize": 27,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 27,
+        "typeface": "Arial",
+        "color": "#0B1215",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Approved output"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Approved output",
+          "resolvedTextStyle": {
+            "fontSize": 27,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Approved output",
+              "fontSize": 27,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ru1gju10",
+      "id": "19",
+      "name": "finance-body-3",
+      "bbox": [
+        912,
+        458,
+        330,
+        96
+      ],
+      "geometry": "rect",
+      "text": "Customer-grouped invoice batch with CSV/PDF handoff",
+      "textPreview": "Customer-grouped invoice batch with CSV/PDF handoff",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#5B676C",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Customer-grouped invoice batch"
+          },
+          {
+            "index": 2,
+            "text": "with CSV/PDF handoff"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Customer-grouped invoice batch with CSV/PDF handoff",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#5B676C"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Customer-grouped invoice batch with CSV/PDF handoff",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#5B676C"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

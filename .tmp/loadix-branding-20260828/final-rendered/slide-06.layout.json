@@ -1,0 +1,710 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/x8f69ofe",
+    "id": "x8f69ofe",
+    "slide": 6,
+    "layoutId": "/ppt/slideLayouts/slideLayout1.xml",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "fontScheme": {
+      "name": "Office",
+      "majorFont": {
+        "latinTypeface": "Calibri Light",
+        "eastAsianTypeface": "Calibri Light",
+        "complexScriptTypeface": "Calibri Light"
+      },
+      "minorFont": {
+        "latinTypeface": "Calibri",
+        "eastAsianTypeface": "Calibri",
+        "complexScriptTypeface": "Calibri"
+      }
+    },
+    "typefaces": [
+      "Arial",
+      "Calibri",
+      "Calibri Light"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "/ppt/slideLayouts/slideLayout1.xml",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yhg7epsj",
+      "id": "2",
+      "name": "section-6",
+      "bbox": [
+        910,
+        29,
+        300,
+        22
+      ],
+      "geometry": "rect",
+      "text": "TRUST & CONTROL",
+      "textPreview": "TRUST & CONTROL",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "TRUST & CONTROL"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "TRUST & CONTROL",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5B676C",
+            "bold": true,
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "TRUST & CONTROL",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5B676C",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zi98nu94",
+      "id": "3",
+      "name": "footer-rule-6",
+      "bbox": [
+        58,
+        674,
+        1164,
+        1
+      ],
+      "geometry": "rect",
+      "fillColor": "#CBD5D1",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/87ipkzal",
+      "id": "4",
+      "name": "slide-number-6",
+      "bbox": [
+        1168,
+        682,
+        54,
+        20
+      ],
+      "geometry": "rect",
+      "text": "06",
+      "textPreview": "06",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "06"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "06",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5B676C",
+            "bold": true,
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "06",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5B676C",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/98rqt4r6",
+      "id": "5",
+      "name": "title-6",
+      "bbox": [
+        58,
+        72,
+        1164,
+        68
+      ],
+      "geometry": "rect",
+      "text": "Control is part of every workflow",
+      "textPreview": "Control is part of every workflow",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Control is part of every workflow"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Control is part of every workflow",
+          "resolvedTextStyle": {
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Control is part of every workflow",
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ml07i9sv",
+      "id": "6",
+      "name": "control-rail",
+      "bbox": [
+        58,
+        186,
+        12,
+        392
+      ],
+      "geometry": "rect",
+      "fillColor": "#2A78BE",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7m98ru9g",
+      "id": "7",
+      "name": "control-message",
+      "bbox": [
+        104,
+        188,
+        530,
+        126
+      ],
+      "geometry": "rect",
+      "text": "The system protects the record at the moment work happens—not as a clean-up exercise after the fact.",
+      "textPreview": "The system protects the record at the moment work happens—not as a clean-up exercise after the fact.",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 4,
+        "lines": [
+          {
+            "index": 1,
+            "text": "The system protects the record"
+          },
+          {
+            "index": 2,
+            "text": "at the moment work"
+          },
+          {
+            "index": 3,
+            "text": "happens—not as a clean-up"
+          },
+          {
+            "index": 4,
+            "text": "exercise after the fact."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "The system protects the record at the moment work happens—not as a clean-up exercise after the fact.",
+          "resolvedTextStyle": {
+            "fontSize": 34,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "The system protects the record at the moment work happens—not as a clean-up exercise after the fact.",
+              "fontSize": 34,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/oryp8fah",
+      "id": "8",
+      "name": "control-1-title",
+      "bbox": [
+        704,
+        190,
+        478,
+        68
+      ],
+      "geometry": "rect",
+      "text": "Tenant-scoped access, server-side permissions and explicit support boundaries",
+      "textPreview": "Tenant-scoped access, server-side permissions and explicit support boundaries",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Tenant-scoped access, server-side"
+          },
+          {
+            "index": 2,
+            "text": "permissions and explicit support"
+          },
+          {
+            "index": 3,
+            "text": "boundaries"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Tenant-scoped access, server-side permissions and explicit support boundaries",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Tenant-scoped access, server-side permissions and explicit support boundaries",
+              "fontSize": 25,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pc76hkr2",
+      "id": "9",
+      "name": "control-1-body",
+      "bbox": [
+        704,
+        274,
+        478,
+        68
+      ],
+      "geometry": "rect",
+      "text": "Optimistic concurrency prevents stale edits from silently overwriting newer decisions.",
+      "textPreview": "Optimistic concurrency prevents stale edits from silently overwriting newer decisions.",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Optimistic concurrency prevents stale edits from"
+          },
+          {
+            "index": 2,
+            "text": "silently overwriting newer decisions."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Optimistic concurrency prevents stale edits from silently overwriting newer decisions.",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#5B676C"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Optimistic concurrency prevents stale edits from silently overwriting newer decisions.",
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#5B676C"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/h4bupgn6",
+      "id": "10",
+      "name": "control-divider",
+      "bbox": [
+        704,
+        366,
+        478,
+        1
+      ],
+      "geometry": "rect",
+      "fillColor": "#CBD5D1",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/w32twb6l",
+      "id": "11",
+      "name": "control-2-title",
+      "bbox": [
+        704,
+        394,
+        478,
+        68
+      ],
+      "geometry": "rect",
+      "text": "Idempotent commands, immutable events and reasoned overrides",
+      "textPreview": "Idempotent commands, immutable events and reasoned overrides",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Idempotent commands, immutable"
+          },
+          {
+            "index": 2,
+            "text": "events and reasoned overrides"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Idempotent commands, immutable events and reasoned overrides",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "typeface": "Arial",
+            "color": "#0B1215",
+            "bold": true
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Idempotent commands, immutable events and reasoned overrides",
+              "fontSize": 25,
+              "typeface": "Arial",
+              "color": "#0B1215",
+              "bold": true
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v2tcn650",
+      "id": "12",
+      "name": "control-2-body",
+      "bbox": [
+        704,
+        482,
+        478,
+        76
+      ],
+      "geometry": "rect",
+      "text": "Retries produce one business outcome; sensitive operational and financial actions remain traceable.",
+      "textPreview": "Retries produce one business outcome; sensitive operational and financial actions remain traceable.",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Retries produce one business outcome; sensitive"
+          },
+          {
+            "index": 2,
+            "text": "operational and financial actions remain"
+          },
+          {
+            "index": 3,
+            "text": "traceable."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Retries produce one business outcome; sensitive operational and financial actions remain traceable.",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#5B676C"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Retries produce one business outcome; sensitive operational and financial actions remain traceable.",
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#5B676C"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/t03ulobq",
+      "id": "13",
+      "bbox": [
+        58,
+        14,
+        132,
+        35
+      ],
+      "alt": "Official LoadIx logo supplied by the owner",
+      "contentType": "image/png",
+      "imageFit": "contain",
+      "asset": {
+        "assetId": "489f2a92-d1c0-4870-aaf0-06f7c13b68cd",
+        "contentType": "image/png",
+        "byteLength": 160874
+      }
+    }
+  ],
+  "composeRuns": []
+}

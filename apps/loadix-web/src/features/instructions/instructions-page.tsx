@@ -228,7 +228,8 @@ export function InstructionsPage() {
                       {item.instructionNumber}
                     </button>
                     <span className="block text-xs text-slate-500">
-                      {item.commodityName} · {item.generatedTripCount} trips
+                      {item.commodityName} · {item.generatedTripCount}{' '}
+                      {item.generatedTripCount === 1 ? 'trip' : 'trips'}
                     </span>
                   </td>
                   <td className="p-4">

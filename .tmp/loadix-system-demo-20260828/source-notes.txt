@@ -1,0 +1,12 @@
+Repository sources used for audience-facing claims:
+- docs/product-scope.md: product purpose, outcomes, personas, MVP flow, capability boundaries, assurance and resilience requirements.
+- docs/workflow-improvements.md: guided contract/load flows, route-specific weighing, reconciliation quantity sources, trailer assignment and immutable trip snapshots.
+- docs/architecture.md: modular monolith, tenant-aware architecture, deterministic demo environment and integration boundaries.
+- docs/milestones.md: implemented milestones, security/governance, performance/reliability, pilot deployment foundation and deterministic demonstration environment.
+- README.md: implemented web workspaces, operations control tower, driver PWA, document controls, finance/invoice preparation, reporting and deployment path.
+- apps/loadix-web/src/router.tsx and apps/loadix-web/src/components/app-shell.tsx: current application workspaces and navigation.
+
+External asset provenance:
+- loadix-hero.png was generated with the built-in OpenAI ImageGen tool for this presentation. No external stock asset was used.
+
+No externally published market statistics, customer outcomes, testimonials or ROI figures are included.

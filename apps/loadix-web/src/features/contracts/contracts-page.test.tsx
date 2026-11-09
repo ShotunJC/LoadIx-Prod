@@ -85,10 +85,16 @@ describe('ContractsPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Contract number')).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Help for Contract number' }),
+      screen.getByRole('button', {
+        name: 'Help',
+        description: 'Contract number guidance',
+      }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Help for Customer' }),
+      screen.getByRole('button', {
+        name: 'Help',
+        description: 'Customer guidance',
+      }),
     ).toBeInTheDocument()
     expect(screen.getByText('Step 1 of 5')).toBeInTheDocument()
     expect(

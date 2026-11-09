@@ -16,7 +16,8 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
         string licenceNumber,
         DateOnly licenceExpiry,
         string emergencyContactName,
-        string emergencyContactNumber)
+        string emergencyContactNumber,
+        string? employeeNumber = null)
         : base(id)
     {
         TenantId = tenantId;
@@ -30,6 +31,7 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
         LicenceExpiry = licenceExpiry;
         EmergencyContactName = emergencyContactName;
         EmergencyContactNumber = emergencyContactNumber;
+        EmployeeNumber = string.IsNullOrWhiteSpace(employeeNumber) ? null : employeeNumber.Trim().ToUpperInvariant();
         IsActive = true;
     }
 
@@ -66,6 +68,8 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
 
     public string EmergencyContactNumber { get; private set; }
 
+    public string? EmployeeNumber { get; private set; }
+
     public bool IsActive { get; private set; }
 
     public Guid? UserId { get; private set; }
@@ -84,7 +88,8 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
         string licenceNumber,
         DateOnly licenceExpiry,
         string emergencyContactName,
-        string emergencyContactNumber)
+        string emergencyContactNumber,
+        string? employeeNumber = null)
     {
         var error = DomainValidation.Required(firstName, "driver.first_name", 100)
             ?? DomainValidation.Required(lastName, "driver.last_name", 100)
@@ -105,6 +110,13 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
                 emergencyContactNumber,
                 "driver.emergency_contact_number",
                 40);
+
+        if (error is null && !string.IsNullOrWhiteSpace(employeeNumber) && employeeNumber.Trim().Length > 50)
+        {
+            error = new DomainError(
+                "driver.employee_number_too_long",
+                "Employee number must be 50 characters or fewer.");
+        }
 
         if (id == Guid.Empty || tenantId.IsEmpty || branchId == Guid.Empty)
         {
@@ -133,7 +145,8 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
                 licenceNumber.Trim().ToUpperInvariant(),
                 licenceExpiry,
                 emergencyContactName.Trim(),
-                emergencyContactNumber.Trim()));
+                emergencyContactNumber.Trim(),
+                employeeNumber));
     }
 
     public void Activate() => IsActive = true;
@@ -165,7 +178,8 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
         string licenceNumber,
         DateOnly licenceExpiry,
         string emergencyContactName,
-        string emergencyContactNumber)
+        string emergencyContactNumber,
+        string? employeeNumber = null)
     {
         var candidate = Create(
             Id,
@@ -179,7 +193,8 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
             licenceNumber,
             licenceExpiry,
             emergencyContactName,
-            emergencyContactNumber);
+            emergencyContactNumber,
+            employeeNumber);
         if (candidate.IsFailure)
         {
             return Result.Failure(candidate.Error!);
@@ -195,6 +210,7 @@ public sealed class Driver : AggregateRoot<Guid>, ITenantOwned
         LicenceExpiry = candidate.Value.LicenceExpiry;
         EmergencyContactName = candidate.Value.EmergencyContactName;
         EmergencyContactNumber = candidate.Value.EmergencyContactNumber;
+        EmployeeNumber = candidate.Value.EmployeeNumber;
         return Result.Success();
     }
 }

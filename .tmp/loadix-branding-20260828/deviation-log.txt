@@ -1,0 +1,7 @@
+Intentional departures from the source deck:
+- Slides 1-9: existing text-only LOADIX corner mark is cleared and replaced in the same bounded header zone with the authentic user-provided raster logo.
+- Slides 1-9: teal accent primitives are recolored to logo-derived blue; selected end-state primitives use the logo orange.
+- Slide 9: the dark demo panel is shifted from near-black to a brand-aligned navy while preserving its frame and all text.
+- Speaker notes: logo provenance is appended to each slide's existing [Sources] block.
+
+No narrative copy, slide ordering, object geometry, typography, claims, or presenter cues are changed.

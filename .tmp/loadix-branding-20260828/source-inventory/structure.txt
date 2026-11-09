@@ -1,0 +1,6 @@
+slides=9
+masters=1
+layouts=2
+master[0]=/ppt/slideMasters/slideMaster1.xml
+layout[0]=/ppt/slideMasters/slideMaster1.xml;parent=
+layout[1]=/ppt/slideLayouts/slideLayout1.xml;parent=/ppt/slideMasters/slideMaster1.xml

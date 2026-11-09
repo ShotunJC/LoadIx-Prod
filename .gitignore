@@ -38,3 +38,7 @@ edge-simulator-state.json.pending
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local deployment and build output
+/deploy/
+/artifacts/

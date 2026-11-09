@@ -329,8 +329,10 @@ function ContractTable({
                   {contract.startDate} – {contract.endDate ?? 'Open-ended'}
                 </td>
                 <td className="px-4 py-3">
-                  {contract.routeCount} routes · {contract.commodityCount}{' '}
-                  commodities
+                  {contract.routeCount}{' '}
+                  {contract.routeCount === 1 ? 'route' : 'routes'} ·{' '}
+                  {contract.commodityCount}{' '}
+                  {contract.commodityCount === 1 ? 'commodity' : 'commodities'}
                 </td>
                 <td className="px-4 py-3">
                   <ContractStatus status={contract.status} />

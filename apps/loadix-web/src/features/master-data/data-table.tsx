@@ -13,6 +13,7 @@ interface Props {
   data: MasterDataPage | undefined
   loading: boolean
   onEdit: (item: MasterDataItem) => void
+  onDisciplinary?: ((item: MasterDataItem) => void) | undefined
   onPageChange: (page: number) => void
 }
 
@@ -21,6 +22,7 @@ export function DataTable({
   data,
   loading,
   onEdit,
+  onDisciplinary,
   onPageChange,
 }: Props) {
   if (loading) {
@@ -72,15 +74,29 @@ export function DataTable({
                   </td>
                 ))}
                 <td className="px-4 py-3 text-right">
-                  <Button
-                    onClick={() => {
-                      onEdit(item)
-                    }}
-                    type="button"
-                    variant="outline"
-                  >
-                    View / edit
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    {onDisciplinary ? (
+                      <Button
+                        className="min-h-8 px-2.5 text-xs text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                        onClick={() => {
+                          onDisciplinary(item)
+                        }}
+                        type="button"
+                        variant="ghost"
+                      >
+                        Disciplinary
+                      </Button>
+                    ) : null}
+                    <Button
+                      onClick={() => {
+                        onEdit(item)
+                      }}
+                      type="button"
+                      variant="outline"
+                    >
+                      View / edit
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -115,7 +115,8 @@ public sealed record DriverItem(
     string EmergencyContactNumber,
     bool IsActive,
     string Version,
-    DateTimeOffset ModifiedAtUtc)
+    DateTimeOffset ModifiedAtUtc,
+    string? EmployeeNumber = null)
     : MasterDataItem(Id, Reference, IsActive, Version, ModifiedAtUtc);
 
 public sealed record VehicleItem(
@@ -210,6 +211,7 @@ public sealed record DriverWriteModel(
     DateOnly LicenceExpiry,
     string EmergencyContactName,
     string EmergencyContactNumber,
+    string? EmployeeNumber = null,
     string? Version = null);
 
 public sealed record VehicleWriteModel(

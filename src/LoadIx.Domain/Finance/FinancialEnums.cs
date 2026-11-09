@@ -36,3 +36,19 @@ public enum InvoiceBatchStatus
     Exported,
     Cancelled,
 }
+
+public enum PayrollFrequency
+{
+    Monthly = 1,
+    Fortnightly = 2,
+    Weekly = 3,
+}
+
+public enum PayrollBatchStatus
+{
+    Draft = 1,
+    Approved = 2,
+    Exported = 3,
+    Cancelled = 4,
+}
+

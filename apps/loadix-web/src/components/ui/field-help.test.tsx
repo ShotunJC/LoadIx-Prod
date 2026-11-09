@@ -7,7 +7,7 @@ describe('FieldHelp', () => {
   it('opens operational help with a touch or pointer action', async () => {
     render(<FieldHelp label="Tare weight" text="The empty vehicle weight." />)
 
-    const trigger = screen.getByRole('button', { name: 'Help for Tare weight' })
+    const trigger = screen.getByRole('button', { name: 'Help' })
     await userEvent.click(trigger)
 
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
@@ -20,9 +20,7 @@ describe('FieldHelp', () => {
     render(<FieldHelp label="Rate type" text="How the trip is charged." />)
 
     await userEvent.tab()
-    expect(
-      screen.getByRole('button', { name: 'Help for Rate type' }),
-    ).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Help' })).toHaveFocus()
     await userEvent.keyboard('{Enter}')
 
     expect(screen.getByRole('tooltip')).toHaveTextContent(
@@ -32,7 +30,7 @@ describe('FieldHelp', () => {
 
   it('clamps the tooltip inside the right viewport edge', async () => {
     render(<FieldHelp label="Fuel" text="The fuel adjustment." />)
-    const trigger = screen.getByRole('button', { name: 'Help for Fuel' })
+    const trigger = screen.getByRole('button', { name: 'Help' })
     vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
       bottom: 40,
       height: 24,

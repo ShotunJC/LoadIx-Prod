@@ -107,6 +107,14 @@ public sealed class LoadIxDbContext(
 
     public DbSet<Driver> Drivers => Set<Driver>();
 
+    public DbSet<DriverWarning> DriverWarnings => Set<DriverWarning>();
+
+    public DbSet<DriverDeduction> DriverDeductions => Set<DriverDeduction>();
+
+    public DbSet<PayrollBatch> PayrollBatches => Set<PayrollBatch>();
+
+    public DbSet<PayrollBatchLine> PayrollBatchLines => Set<PayrollBatchLine>();
+
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
 
     public DbSet<Trailer> Trailers => Set<Trailer>();

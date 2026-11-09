@@ -1,0 +1,912 @@
+{"kind":"deck","id":"pr/snms62","name":"Deck"}
+{"kind":"layout","layoutId":"e94e95ef-774d-46ad-bcd2-d44311b2546b","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"e33380a6-fdab-40e2-8008-a8aefd654efd","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/pl314b","slide":1,"title":"LOADIX","textShapes":5}
+{"kind":"textbox","id":"sh/gnalkva9","slide":1,"text":"LOADIX","textPreview":"LOADIX","textChars":6,"textLines":1,"bbox":[54,40,240,24]}
+{"kind":"textbox","id":"sh/fm14rq9o","slide":1,"text":"Initial user\ntraining","textPreview":"Initial user | training","textChars":21,"textLines":2,"bbox":[54,132,485,150]}
+{"kind":"textbox","id":"sh/els3ils3","slide":1,"text":"A practical guide from tenant setup to invoice-ready operations","textPreview":"A practical guide from tenant setup to invoice-ready operations","textChars":63,"textLines":1,"bbox":[54,308,470,76]}
+{"kind":"shape","id":"sh/ps3mxkrq","slide":1,"bbox":[54,430,424,34]}
+{"kind":"textbox","id":"sh/orulofa5","slide":1,"text":"ADMIN • OPERATIONS • FLEET • FINANCE","textPreview":"ADMIN • OPERATIONS • FLEET • FINANCE","textChars":36,"textLines":1,"bbox":[64,437,404,20]}
+{"kind":"textbox","id":"sh/3ql4va9k","slide":1,"text":"Training environment: synthetic LoadIx Demo Transport tenant","textPreview":"Training environment: synthetic LoadIx Demo Transport tenant","textChars":60,"textLines":1,"bbox":[54,500,480,46]}
+{"kind":"shape","id":"sh/2pc3m5sz","slide":1,"bbox":[616,38,618,618]}
+{"kind":"image","id":"im/gjap0jap","slide":1,"name":"","geometry":"rect","alt":"LoadIx operations dashboard","bbox":[620,42,610,610]}
+{"kind":"notes","id":"nt/pl314b","slide":1,"text":"Set expectations: this is the first module. Demonstrate in the synthetic tenant and keep live customer data out of practice exercises.\n\n[Sources]\n- docs/product-scope.md\n- docs/demo-guide.md\n- Local LoadIx dashboard screenshot captured 2026-08-24"}
+{"kind":"slide","id":"sl/ccah4i","slide":2,"title":"MODULE OVERVIEW","textShapes":23}
+{"kind":"textbox","id":"sh/adc3utkf","slide":2,"text":"MODULE OVERVIEW","textPreview":"MODULE OVERVIEW","textChars":15,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/xg3258jq","slide":2,"text":"What you will be able to do","textPreview":"What you will be able to do","textChars":27,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/cfulw32l","slide":2,"text":"The module follows the same sequence as a real movement: configure, plan, execute, reconcile and prepare finance.","textPreview":"The module follows the same sequence as a real movement: configure, plan, execute, reconcile and prepare finance.","textChars":113,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/zi547i1w","slide":2,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/yhw3ydkb","slide":2,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/lknm98j2","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/kjel032h","slide":2,"bbox":[54,191,34,34]}
+{"kind":"textbox","id":"sh/fm1kve1s","slide":2,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,194,34,27]}
+{"kind":"textbox","id":"sh/els3m9k7","slide":2,"text":"Find the right workspace","textPreview":"Find the right workspace","textChars":24,"textLines":1,"bbox":[104,190,490,27]}
+{"kind":"textbox","id":"sh/sre9orex","slide":2,"text":"Use the sidebar, connection state, notifications and filters confidently.","textPreview":"Use the sidebar, connection state, notifications and filters confidently.","textChars":73,"textLines":1,"bbox":[104,219,490,47]}
+{"kind":"shape","id":"sh/tcnahwfi","slide":2,"bbox":[670,191,34,34]}
+{"kind":"textbox","id":"sh/6pwrm1wr","slide":2,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[670,194,34,27]}
+{"kind":"textbox","id":"sh/7q5sf6xc","slide":2,"text":"Prepare dependable master data","textPreview":"Prepare dependable master data","textChars":30,"textLines":1,"bbox":[720,190,490,27]}
+{"kind":"textbox","id":"sh/gfe9sbet","slide":2,"text":"Create and maintain customers, sites, commodities and fleet resources.","textPreview":"Create and maintain customers, sites, commodities and fleet resources.","textChars":70,"textLines":1,"bbox":[720,219,490,47]}
+{"kind":"shape","id":"sh/hg7algfe","slide":2,"bbox":[54,333,34,34]}
+{"kind":"textbox","id":"sh/udwrq1w3","slide":2,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,336,34,27]}
+{"kind":"textbox","id":"sh/fe5sj6x8","slide":2,"text":"Create commercial work","textPreview":"Create commercial work","textChars":22,"textLines":1,"bbox":[104,332,490,27]}
+{"kind":"textbox","id":"sh/wju9g7ep","slide":2,"text":"Build an active contract, then plan a load instruction against it.","textPreview":"Build an active contract, then plan a load instruction against it.","textChars":66,"textLines":1,"bbox":[104,361,490,47]}
+{"kind":"shape","id":"sh/xk3a9cfa","slide":2,"bbox":[670,333,34,34]}
+{"kind":"textbox","id":"sh/xgvqd87y","slide":2,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[670,336,34,27]}
+{"kind":"textbox","id":"sh/cfmp43qd","slide":2,"text":"Dispatch and control trips","textPreview":"Dispatch and control trips","textChars":26,"textLines":1,"bbox":[720,332,490,27]}
+{"kind":"textbox","id":"sh/bed8byps","slide":2,"text":"Assign eligible resources and move only through legal lifecycle actions.","textPreview":"Assign eligible resources and move only through legal lifecycle actions.","textChars":72,"textLines":1,"bbox":[720,361,490,47]}
+{"kind":"shape","id":"sh/qd472t8n","slide":2,"bbox":[54,475,34,34]}
+{"kind":"textbox","id":"sh/lkfqh87a","slide":2,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[54,478,34,27]}
+{"kind":"textbox","id":"sh/kjmp8nqp","slide":2,"text":"Complete evidence and reconciliation","textPreview":"Complete evidence and reconciliation","textChars":36,"textLines":1,"bbox":[104,474,490,27]}
+{"kind":"textbox","id":"sh/zid8fip4","slide":2,"text":"Capture weights, documents and reviewed exception decisions.","textPreview":"Capture weights, documents and reviewed exception decisions.","textChars":60,"textLines":1,"bbox":[104,503,490,47]}
+{"kind":"shape","id":"sh/yh476d8j","slide":2,"bbox":[670,475,34,34]}
+{"kind":"textbox","id":"sh/98fqls76","slide":2,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[670,478,34,27]}
+{"kind":"textbox","id":"sh/876pcnql","slide":2,"text":"Hand work to finance","textPreview":"Hand work to finance","textChars":20,"textLines":1,"bbox":[720,474,490,27]}
+{"kind":"textbox","id":"sh/6tgn6po3","slide":2,"text":"Approve eligible trips, build invoice batches and run operational reports.","textPreview":"Approve eligible trips, build invoice batches and run operational reports.","textChars":74,"textLines":1,"bbox":[720,503,490,47]}
+{"kind":"notes","id":"nt/ccah4i","slide":2,"text":"Ask learners which outcomes match their role. Emphasize that permissions may hide actions they do not own.\n\n[Sources]\n- docs/product-scope.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/v7xsik","slide":3,"title":"SYSTEM FLOW","textShapes":28}
+{"kind":"textbox","id":"sh/sfmlwj21","slide":3,"text":"SYSTEM FLOW","textPreview":"SYSTEM FLOW","textChars":11,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/7et43elw","slide":3,"text":"Every record supports one auditable movement","textPreview":"Every record supports one auditable movement","textChars":44,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/6tk3u9kb","slide":3,"text":"Work progresses from reusable setup through commercial planning, execution evidence and finance preparation.","textPreview":"Work progresses from reusable setup through commercial planning, execution evidence and finance preparation.","textChars":108,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/hkvm983y","slide":3,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/gjml032d","slide":3,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/fid47yls","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/uh43ytk7","slide":3,"bbox":[178,356,40,0]}
+{"kind":"shape","id":"sh/pofmd83u","slide":3,"bbox":[348,356,40,0]}
+{"kind":"shape","id":"sh/4n6l4329","slide":3,"bbox":[518,356,40,0]}
+{"kind":"shape","id":"sh/et8budwz","slide":3,"bbox":[688,356,40,0]}
+{"kind":"shape","id":"sh/fuhsnidk","slide":3,"bbox":[858,356,40,0]}
+{"kind":"shape","id":"sh/0vatwne5","slide":3,"bbox":[1028,356,40,0]}
+{"kind":"shape","id":"sh/1wjap8vq","slide":3,"bbox":[48,260,140,188]}
+{"kind":"textbox","id":"sh/2xsbydwb","slide":3,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[58,278,120,46]}
+{"kind":"textbox","id":"sh/ny1sridw","slide":3,"text":"Master data","textPreview":"Master data","textChars":11,"textLines":1,"bbox":[58,334,120,52]}
+{"kind":"textbox","id":"sh/ozat0neh","slide":3,"text":"customers • sites • fleet","textPreview":"customers • sites • fleet","textChars":25,"textLines":1,"bbox":[58,397,120,42]}
+{"kind":"shape","id":"sh/p0jatsv2","slide":3,"bbox":[218,260,140,188]}
+{"kind":"textbox","id":"sh/i1ormtw7","slide":3,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[228,278,120,46]}
+{"kind":"textbox","id":"sh/32xsfydc","slide":3,"text":"Contract","textPreview":"Contract","textChars":8,"textLines":1,"bbox":[228,334,120,52]}
+{"kind":"textbox","id":"sh/76d8nut4","slide":3,"text":"route • rate • tolerance","textPreview":"route • rate • tolerance","textChars":24,"textLines":1,"bbox":[228,397,120,42]}
+{"kind":"shape","id":"sh/6547upcz","slide":3,"bbox":[388,260,140,188]}
+{"kind":"textbox","id":"sh/t8vqp4ba","slide":3,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[398,278,120,46]}
+{"kind":"textbox","id":"sh/87mpwzup","slide":3,"text":"Load instruction","textPreview":"Load instruction","textChars":16,"textLines":1,"bbox":[398,334,120,52]}
+{"kind":"textbox","id":"sh/j2t8jat8","slide":3,"text":"quantity • windows • priority","textPreview":"quantity • windows • priority","textChars":29,"textLines":1,"bbox":[398,397,120,42]}
+{"kind":"shape","id":"sh/y1k7q5cn","slide":3,"bbox":[558,260,140,188]}
+{"kind":"textbox","id":"sh/l4bqlkbe","slide":3,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[568,278,120,46]}
+{"kind":"textbox","id":"sh/k32psfut","slide":3,"text":"Trips","textPreview":"Trips","textChars":5,"textLines":1,"bbox":[568,334,120,52]}
+{"kind":"textbox","id":"sh/3yx8vetc","slide":3,"text":"assign • dispatch • execute","textPreview":"assign • dispatch • execute","textChars":27,"textLines":1,"bbox":[568,397,120,42]}
+{"kind":"shape","id":"sh/ixo729cr","slide":3,"bbox":[728,260,140,188]}
+{"kind":"textbox","id":"sh/0jy5gba9","slide":3,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[738,278,120,46]}
+{"kind":"textbox","id":"sh/1k7mpgru","slide":3,"text":"Reconcile","textPreview":"Reconcile","textChars":9,"textLines":1,"bbox":[738,334,120,52]}
+{"kind":"textbox","id":"sh/ehgne1sj","slide":3,"text":"weights • variance • POD","textPreview":"weights • variance • POD","textChars":24,"textLines":1,"bbox":[738,397,120,42]}
+{"kind":"shape","id":"sh/fip4n694","slide":3,"bbox":[898,260,140,188]}
+{"kind":"textbox","id":"sh/o7i5kbal","slide":3,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[908,278,120,46]}
+{"kind":"textbox","id":"sh/98rmtgr6","slide":3,"text":"Finance","textPreview":"Finance","textChars":7,"textLines":1,"bbox":[908,334,120,52]}
+{"kind":"textbox","id":"sh/ml0ni1sf","slide":3,"text":"costs • approve • batch","textPreview":"costs • approve • batch","textChars":23,"textLines":1,"bbox":[908,397,120,42]}
+{"kind":"shape","id":"sh/nm94r690","slide":3,"bbox":[1068,260,140,188]}
+{"kind":"textbox","id":"sh/wbi5ovah","slide":3,"text":"7","textPreview":"7","textChars":1,"textLines":1,"bbox":[1078,278,120,46]}
+{"kind":"textbox","id":"sh/xcr6x0r2","slide":3,"text":"Reports","textPreview":"Reports","textChars":7,"textLines":1,"bbox":[1078,334,120,52]}
+{"kind":"textbox","id":"sh/x8zehwr6","slide":3,"text":"performance • exceptions","textPreview":"performance • exceptions","textChars":24,"textLines":1,"bbox":[1078,397,120,42]}
+{"kind":"textbox","id":"sh/w7qxoral","slide":3,"text":"Key rule","textPreview":"Key rule","textChars":8,"textLines":1,"bbox":[54,500,160,30]}
+{"kind":"textbox","id":"sh/v6hwfm90","slide":3,"text":"Never skip ahead by editing status directly. Use the named action for the current state so the timeline, permissions and audit trail remain correct.","textPreview":"Never skip ahead by editing status directly. Use the named action for the current state so the timeline, permissions and audit trail rema...","textChars":148,"textLines":1,"bbox":[210,500,990,72]}
+{"kind":"notes","id":"nt/v7xsik","slide":3,"text":"Use this slide as the mental model for the whole module. Each later slide zooms into one record or handoff.\n\n[Sources]\n- docs/product-scope.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/afi7ms","slide":4,"title":"ACCESS AND SECURITY","textShapes":31}
+{"kind":"textbox","id":"sh/vih0bil0","slide":4,"text":"ACCESS AND SECURITY","textPreview":"ACCESS AND SECURITY","textChars":19,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/wjq1432l","slide":4,"text":"Sign in with your own role and tenant context","textPreview":"Sign in with your own role and tenant context","textChars":45,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/h4zid836","slide":4,"text":"LoadIx is invitation-only. What you can view and change is controlled by tenant membership and permissions.","textPreview":"LoadIx is invitation-only. What you can view and change is controlled by tenant membership and permissions.","textChars":107,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/i58j6dkb","slide":4,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/3610filw","slide":4,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/47a18n2h","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"textbox","id":"sh/58jihs32","slide":4,"text":"Start safely","textPreview":"Start safely","textChars":12,"textLines":1,"bbox":[54,188,510,32]}
+{"kind":"textbox","id":"sh/y9ozutk7","slide":4,"text":"Session habits","textPreview":"Session habits","textChars":14,"textLines":1,"bbox":[690,188,510,32]}
+{"kind":"shape","id":"sh/zax03els","slide":4,"bbox":[640,188,0,400]}
+{"kind":"shape","id":"sh/rytcrydg","slide":4,"bbox":[54,244,34,34]}
+{"kind":"textbox","id":"sh/qxkvydcv","slide":4,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,247,34,27]}
+{"kind":"textbox","id":"sh/d0but8vm","slide":4,"text":"Open the approved LoadIx URL","textPreview":"Open the approved LoadIx URL","textChars":28,"textLines":1,"bbox":[104,243,470,27]}
+{"kind":"textbox","id":"sh/sz2d03u1","slide":4,"text":"Confirm the page says LoadIx and the expected environment.","textPreview":"Confirm the page says LoadIx and the expected environment.","textChars":58,"textLines":1,"bbox":[104,272,470,47]}
+{"kind":"shape","id":"sh/3u9cnyd4","slide":4,"bbox":[54,328,34,34]}
+{"kind":"textbox","id":"sh/it0vutcz","slide":4,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,331,34,27]}
+{"kind":"textbox","id":"sh/5wrup8va","slide":4,"text":"Enter your work email and password","textPreview":"Enter your work email and password","textChars":34,"textLines":1,"bbox":[104,327,470,27]}
+{"kind":"textbox","id":"sh/4vidw3up","slide":4,"text":"Use Forgot your password? when needed; never share credentials.","textPreview":"Use Forgot your password? when needed; never share credentials.","textChars":63,"textLines":1,"bbox":[104,356,470,47]}
+{"kind":"shape","id":"sh/v69cjed8","slide":4,"bbox":[54,412,34,34]}
+{"kind":"textbox","id":"sh/u50bqtcn","slide":4,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,415,34,27]}
+{"kind":"textbox","id":"sh/y1gv29gf","slide":4,"text":"Confirm the workspace","textPreview":"Confirm the workspace","textChars":21,"textLines":1,"bbox":[104,411,470,27]}
+{"kind":"textbox","id":"sh/j2pwvex0","slide":4,"text":"Check company/branch context, your name and API connected status.","textPreview":"Check company/branch context, your name and API connected status.","textChars":65,"textLines":1,"bbox":[104,440,470,47]}
+{"kind":"shape","id":"sh/k3yd4jyl","slide":4,"bbox":[54,496,34,34]}
+{"kind":"textbox","id":"sh/l47exof6","slide":4,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,499,34,27]}
+{"kind":"textbox","id":"sh/65gv6tgr","slide":4,"text":"Report unexpected access","textPreview":"Report unexpected access","textChars":24,"textLines":1,"bbox":[104,495,470,27]}
+{"kind":"textbox","id":"sh/769wzyxc","slide":4,"text":"Stop if another tenant, customer scope or role appears.","textPreview":"Stop if another tenant, customer scope or role appears.","textChars":55,"textLines":1,"bbox":[104,524,470,47]}
+{"kind":"shape","id":"sh/8rid83yx","slide":4,"bbox":[690,244,34,34]}
+{"kind":"textbox","id":"sh/tsre18f2","slide":4,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[690,247,34,27]}
+{"kind":"textbox","id":"sh/ut0vatgn","slide":4,"text":"Use one named account","textPreview":"Use one named account","textChars":21,"textLines":1,"bbox":[740,243,470,27]}
+{"kind":"textbox","id":"sh/vu9w3yx8","slide":4,"text":"Actions are actor-stamped; shared accounts destroy accountability.","textPreview":"Actions are actor-stamped; shared accounts destroy accountability.","textChars":66,"textLines":1,"bbox":[740,272,470,47]}
+{"kind":"shape","id":"sh/5obytsza","slide":4,"bbox":[690,328,34,34]}
+{"kind":"textbox","id":"sh/4n2h07i5","slide":4,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[690,331,34,27]}
+{"kind":"textbox","id":"sh/3mtgr2hk","slide":4,"text":"Keep browser data private","textPreview":"Keep browser data private","textChars":25,"textLines":1,"bbox":[740,327,470,27]}
+{"kind":"textbox","id":"sh/ilkfyx0z","slide":4,"text":"Do not paste tokens, documents or passwords into support tickets.","textPreview":"Do not paste tokens, documents or passwords into support tickets.","textChars":65,"textLines":1,"bbox":[740,356,470,47]}
+{"kind":"shape","id":"sh/dsvyxczm","slide":4,"bbox":[690,412,34,34]}
+{"kind":"textbox","id":"sh/srmh47i1","slide":4,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[690,415,34,27]}
+{"kind":"textbox","id":"sh/rqdgv2hg","slide":4,"text":"Expect permission boundaries","textPreview":"Expect permission boundaries","textChars":28,"textLines":1,"bbox":[740,411,470,27]}
+{"kind":"textbox","id":"sh/qp4z2x0v","slide":4,"text":"A missing or disabled action usually means role or state control.","textPreview":"A missing or disabled action usually means role or state control.","textChars":65,"textLines":1,"bbox":[740,440,470,47]}
+{"kind":"shape","id":"sh/1gfy1wzi","slide":4,"bbox":[690,496,34,34]}
+{"kind":"textbox","id":"sh/0vmh8ryx","slide":4,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[690,499,34,27]}
+{"kind":"textbox","id":"sh/wnatgf6h","slide":4,"text":"Sign out on shared devices","textPreview":"Sign out on shared devices","textChars":26,"textLines":1,"bbox":[740,495,470,27]}
+{"kind":"textbox","id":"sh/xojapkn2","slide":4,"text":"Logout clears the browser session and the driver's local queue.","textPreview":"Logout clears the browser session and the driver's local queue.","textChars":63,"textLines":1,"bbox":[740,524,470,47]}
+{"kind":"notes","id":"nt/afi7ms","slide":4,"text":"Demonstrate sign-in only with the local synthetic account. Do not place training passwords on the slide or distribute them outside the controlled environment.\n\n[Sources]\n- README.md\n- docs/product-scope.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/frvhj7","slide":5,"title":"NAVIGATION","textShapes":17}
+{"kind":"textbox","id":"sh/98ril4ry","slide":5,"text":"NAVIGATION","textPreview":"NAVIGATION","textChars":10,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/m50zqpsn","slide":5,"text":"Use the shell to orient before you act","textPreview":"Use the shell to orient before you act","textChars":38,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/n690ju98","slide":5,"text":"The sidebar chooses the business area; the header confirms context, connectivity and attention items.","textPreview":"The sidebar chooses the business area; the header confirms context, connectivity and attention items.","textChars":101,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/03yhofah","slide":5,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/l47yhkr2","slide":5,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/y1gzm5sb","slide":5,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/z2pgfa9w","slide":5,"bbox":[496,174,718,448]}
+{"kind":"shape","id":"sh/d07ydkrq","slide":5,"bbox":[54,186,34,34]}
+{"kind":"textbox","id":"sh/h4nexs7m","slide":5,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,189,34,27]}
+{"kind":"textbox","id":"sh/w3exon61","slide":5,"text":"Choose a business area","textPreview":"Choose a business area","textChars":22,"textLines":1,"bbox":[104,185,355,27]}
+{"kind":"textbox","id":"sh/v25wvipw","slide":5,"text":"Operations, Commercial, Fleet, Sites, Finance and Administration are grouped in the sidebar.","textPreview":"Operations, Commercial, Fleet, Sites, Finance and Administration are grouped in the sidebar.","textChars":92,"textLines":1,"bbox":[104,214,355,47]}
+{"kind":"shape","id":"sh/u1wfmdob","slide":5,"bbox":[54,286,34,34]}
+{"kind":"textbox","id":"sh/90nets7q","slide":5,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,289,34,27]}
+{"kind":"textbox","id":"sh/8zuxkn65","slide":5,"text":"Confirm workspace context","textPreview":"Confirm workspace context","textChars":25,"textLines":1,"bbox":[104,285,355,27]}
+{"kind":"textbox","id":"sh/nelwripk","slide":5,"text":"Read the branch/workspace label and synthetic/demo banner before editing.","textPreview":"Read the branch/workspace label and synthetic/demo banner before editing.","textChars":73,"textLines":1,"bbox":[104,314,355,47]}
+{"kind":"shape","id":"sh/mdcvidoz","slide":5,"bbox":[54,386,34,34]}
+{"kind":"textbox","id":"sh/lc3ep87e","slide":5,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,389,34,27]}
+{"kind":"textbox","id":"sh/0budg369","slide":5,"text":"Check API connected","textPreview":"Check API connected","textChars":19,"textLines":1,"bbox":[104,385,355,27]}
+{"kind":"textbox","id":"sh/cfyxw3ep","slide":5,"text":"If disconnected, pause mutations and follow the recovery path.","textPreview":"If disconnected, pause mutations and follow the recovery path.","textChars":62,"textLines":1,"bbox":[104,414,355,47]}
+{"kind":"shape","id":"sh/dg7e58fa","slide":5,"bbox":[54,486,34,34]}
+{"kind":"textbox","id":"sh/qtgfudwz","slide":5,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,489,34,27]}
+{"kind":"textbox","id":"sh/repw3ixk","slide":5,"text":"Open attention items","textPreview":"Open attention items","textChars":20,"textLines":1,"bbox":[104,485,355,27]}
+{"kind":"textbox","id":"sh/4rexs3et","slide":5,"text":"Use the notification bell and dashboard exception counts as your starting queue.","textPreview":"Use the notification bell and dashboard exception counts as your starting queue.","textChars":80,"textLines":1,"bbox":[104,514,355,47]}
+{"kind":"image","id":"im/987upw3e","slide":5,"name":"","geometry":"rect","alt":"LoadIx dashboard and navigation shell","bbox":[500,178,710,440]}
+{"kind":"notes","id":"nt/frvhj7","slide":5,"text":"Invite learners to point to the current tenant, branch, connection state and notification count before navigating away.\n\n[Sources]\n- Local LoadIx dashboard screenshot captured 2026-08-24\n- README.md"}
+{"kind":"slide","id":"sl/0rrfsu","slide":6,"title":"ROLES AND HANDOFFS","textShapes":26}
+{"kind":"textbox","id":"sh/ov6p83id","slide":6,"text":"ROLES AND HANDOFFS","textPreview":"ROLES AND HANDOFFS","textChars":18,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/nuxozy18","slide":6,"text":"Ownership changes as work moves through LoadIx","textPreview":"Ownership changes as work moves through LoadIx","textChars":46,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/2to76t0n","slide":6,"text":"Permissions protect high-impact actions; the next role receives a complete, traceable record rather than an informal message.","textPreview":"Permissions protect high-impact actions; the next role receives a complete, traceable record rather than an informal message.","textChars":125,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/xkz658ja","slide":6,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/cj6pc3ip","slide":6,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/bixo3i14","slide":6,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/axo7ad0j","slide":6,"bbox":[54,184,255,45]}
+{"kind":"textbox","id":"sh/dov6tojq","slide":6,"text":"ROLE","textPreview":"ROLE","textChars":4,"textLines":1,"bbox":[66,197,231,20]}
+{"kind":"shape","id":"sh/snm50jil","slide":6,"bbox":[309,184,425,45]}
+{"kind":"textbox","id":"sh/ux0vyts7","slide":6,"text":"PRIMARY RESPONSIBILITY","textPreview":"PRIMARY RESPONSIBILITY","textChars":22,"textLines":1,"bbox":[321,197,401,20]}
+{"kind":"shape","id":"sh/vy9wry9c","slide":6,"bbox":[734,184,490,45]}
+{"kind":"textbox","id":"sh/gzid03ax","slide":6,"text":"HANDOFF STANDARD","textPreview":"HANDOFF STANDARD","textChars":16,"textLines":1,"bbox":[746,197,466,20]}
+{"kind":"shape","id":"sh/h0ret8ri","slide":6,"bbox":[54,229,255,67]}
+{"kind":"textbox","id":"sh/i10v2ts3","slide":6,"text":"Tenant administrator","textPreview":"Tenant administrator","textChars":20,"textLines":1,"bbox":[66,239,231,48]}
+{"kind":"shape","id":"sh/329wvy9o","slide":6,"bbox":[309,229,425,67]}
+{"kind":"textbox","id":"sh/43id43a9","slide":6,"text":"Company, branches, users, policies, pilot configuration","textPreview":"Company, branches, users, policies, pilot configuration","textChars":55,"textLines":1,"bbox":[321,239,401,48]}
+{"kind":"shape","id":"sh/54bex8ru","slide":6,"bbox":[734,229,490,67]}
+{"kind":"textbox","id":"sh/q5kv6dsf","slide":6,"text":"Configured tenant and authorised users","textPreview":"Configured tenant and authorised users","textChars":38,"textLines":1,"bbox":[746,239,466,48]}
+{"kind":"shape","id":"sh/r6twzi9k","slide":6,"bbox":[54,296,255,67]}
+{"kind":"textbox","id":"sh/nutcnips","slide":6,"text":"Commercial / controller","textPreview":"Commercial / controller","textChars":23,"textLines":1,"bbox":[66,306,231,48]}
+{"kind":"shape","id":"sh/2tkvedo7","slide":6,"bbox":[309,296,425,67]}
+{"kind":"textbox","id":"sh/pwvups7y","slide":6,"text":"Customers, contracts, load instructions and trip generation","textPreview":"Customers, contracts, load instructions and trip generation","textChars":59,"textLines":1,"bbox":[321,306,401,48]}
+{"kind":"shape","id":"sh/ovmdgn6d","slide":6,"bbox":[734,296,490,67]}
+{"kind":"textbox","id":"sh/f6tcjipw","slide":6,"text":"Dispatchable trips with frozen commercial context","textPreview":"Dispatchable trips with frozen commercial context","textChars":49,"textLines":1,"bbox":[746,306,466,48]}
+{"kind":"shape","id":"sh/e5kvadob","slide":6,"bbox":[54,363,255,67]}
+{"kind":"textbox","id":"sh/18bul87m","slide":6,"text":"Fleet / controller","textPreview":"Fleet / controller","textChars":18,"textLines":1,"bbox":[66,373,231,48]}
+{"kind":"shape","id":"sh/072dc36h","slide":6,"bbox":[309,363,425,67]}
+{"kind":"textbox","id":"sh/r29cfypk","slide":6,"text":"Eligible drivers, trucks, trailers and assignments","textPreview":"Eligible drivers, trucks, trailers and assignments","textChars":50,"textLines":1,"bbox":[321,373,401,48]}
+{"kind":"shape","id":"sh/q10v6toz","slide":6,"bbox":[734,363,490,67]}
+{"kind":"textbox","id":"sh/g7y9gzmx","slide":6,"text":"A resource-valid assigned trip","textPreview":"A resource-valid assigned trip","textChars":30,"textLines":1,"bbox":[746,373,466,48]}
+{"kind":"shape","id":"sh/h87ap4ni","slide":6,"bbox":[54,430,255,67]}
+{"kind":"textbox","id":"sh/u5grep4r","slide":6,"text":"Driver / controller","textPreview":"Driver / controller","textChars":19,"textLines":1,"bbox":[66,440,231,48]}
+{"kind":"shape","id":"sh/v6psnu5c","slide":6,"bbox":[309,430,425,67]}
+{"kind":"textbox","id":"sh/4by9kzm9","slide":6,"text":"Milestones, weights, location evidence and POD","textPreview":"Milestones, weights, location evidence and POD","textChars":46,"textLines":1,"bbox":[321,440,401,48]}
+{"kind":"shape","id":"sh/5crat4ne","slide":6,"bbox":[734,430,490,67]}
+{"kind":"textbox","id":"sh/i9gri943","slide":6,"text":"A delivery-complete evidence record","textPreview":"A delivery-complete evidence record","textChars":35,"textLines":1,"bbox":[746,440,466,48]}
+{"kind":"shape","id":"sh/3apsre5o","slide":6,"bbox":[54,497,255,67]}
+{"kind":"textbox","id":"sh/kfe98fmp","slide":6,"text":"Operations manager","textPreview":"Operations manager","textChars":18,"textLines":1,"bbox":[66,507,231,48]}
+{"kind":"shape","id":"sh/lgnahkna","slide":6,"bbox":[309,497,425,67]}
+{"kind":"textbox","id":"sh/d8jad4rq","slide":6,"text":"Exceptions, overrides and reconciliation decisions","textPreview":"Exceptions, overrides and reconciliation decisions","textChars":50,"textLines":1,"bbox":[321,507,401,48]}
+{"kind":"shape","id":"sh/c7at4zq5","slide":6,"bbox":[734,497,490,67]}
+{"kind":"textbox","id":"sh/bm1sbe90","slide":6,"text":"Completed, reviewed trip","textPreview":"Completed, reviewed trip","textChars":24,"textLines":1,"bbox":[746,507,466,48]}
+{"kind":"shape","id":"sh/ql8b298f","slide":6,"bbox":[54,564,255,67]}
+{"kind":"textbox","id":"sh/pkza94ru","slide":6,"text":"Finance user","textPreview":"Finance user","textChars":12,"textLines":1,"bbox":[66,574,231,48]}
+{"kind":"shape","id":"sh/ojq90zq9","slide":6,"bbox":[309,564,425,67]}
+{"kind":"textbox","id":"sh/3ihs7u9o","slide":6,"text":"Costs, approvals, invoice batches and exports","textPreview":"Costs, approvals, invoice batches and exports","textChars":45,"textLines":1,"bbox":[321,574,401,48]}
+{"kind":"shape","id":"sh/2h8ryp83","slide":6,"bbox":[734,564,490,67]}
+{"kind":"textbox","id":"sh/1gza5kri","slide":6,"text":"Auditable invoice-preparation package","textPreview":"Auditable invoice-preparation package","textChars":37,"textLines":1,"bbox":[746,574,466,48]}
+{"kind":"notes","id":"nt/0rrfsu","slide":6,"text":"Explain segregation of duties using one trip: planning, execution review and finance approval are distinct responsibilities even when a small team holds multiple roles.\n\n[Sources]\n- docs/product-scope.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/3a46b4","slide":7,"title":"TENANT ADMINISTRATION","textShapes":17}
+{"kind":"textbox","id":"sh/elgv2po3","slide":7,"text":"TENANT ADMINISTRATION","textPreview":"TENANT ADMINISTRATION","textChars":21,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/1o7udk7u","slide":7,"text":"Complete onboarding in dependency order","textPreview":"Complete onboarding in dependency order","textChars":39,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/0nyd4z69","slide":7,"text":"The onboarding workspace groups 16 readiness steps and blocks activation until its checklist is satisfied.","textPreview":"The onboarding workspace groups 16 readiness steps and blocks activation until its checklist is satisfied.","textChars":106,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/nq9cfup0","slide":7,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/mp0v6pof","slide":7,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/9sruh47q","slide":7,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/orid8z6l","slide":7,"bbox":[546,174,668,438]}
+{"kind":"shape","id":"sh/2twbu5ob","slide":7,"bbox":[54,186,34,34]}
+{"kind":"textbox","id":"sh/4vuloje9","slide":7,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,189,34,27]}
+{"kind":"textbox","id":"sh/5w3mxofu","slide":7,"text":"Organisation","textPreview":"Organisation","textChars":12,"textLines":1,"bbox":[104,185,380,27]}
+{"kind":"textbox","id":"sh/itc3m9wj","slide":7,"text":"Company details, branches and users establish ownership and access.","textPreview":"Company details, branches and users establish ownership and access.","textChars":67,"textLines":1,"bbox":[104,214,380,47]}
+{"kind":"shape","id":"sh/jul4vex4","slide":7,"bbox":[54,286,34,34]}
+{"kind":"textbox","id":"sh/szelsjel","slide":7,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,289,34,27]}
+{"kind":"textbox","id":"sh/t0nm1of6","slide":7,"text":"Operational masters","textPreview":"Operational masters","textChars":19,"textLines":1,"bbox":[104,285,380,27]}
+{"kind":"textbox","id":"sh/6xc3qtwf","slide":7,"text":"Customers, locations, commodities and fleet records supply valid choices.","textPreview":"Customers, locations, commodities and fleet records supply valid choices.","textChars":73,"textLines":1,"bbox":[104,314,380,47]}
+{"kind":"shape","id":"sh/ryl4zyx0","slide":7,"bbox":[54,386,34,34]}
+{"kind":"textbox","id":"sh/83algzeh","slide":7,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,389,34,27]}
+{"kind":"textbox","id":"sh/94jmp4fm","slide":7,"text":"Configuration","textPreview":"Configuration","textChars":13,"textLines":1,"bbox":[104,385,380,27]}
+{"kind":"textbox","id":"sh/p8raxw3e","slide":7,"text":"Review weighbridge, Edge, notification, finance and document rules.","textPreview":"Review weighbridge, Edge, notification, finance and document rules.","textChars":67,"textLines":1,"bbox":[104,414,380,47]}
+{"kind":"shape","id":"sh/onit4r2t","slide":7,"bbox":[54,486,34,34]}
+{"kind":"textbox","id":"sh/3m9svml8","slide":7,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,489,34,27]}
+{"kind":"textbox","id":"sh/2l0b2h4n","slide":7,"text":"Scope and activate","textPreview":"Scope and activate","textChars":18,"textLines":1,"bbox":[104,485,380,27]}
+{"kind":"textbox","id":"sh/dcba1g3a","slide":7,"text":"Limit the pilot allow-list, review all gates, then activate once.","textPreview":"Limit the pilot allow-list, review all gates, then activate once.","textChars":65,"textLines":1,"bbox":[104,514,380,47]}
+{"kind":"image","id":"im/qt0ritcv","slide":7,"name":"","geometry":"rect","alt":"LoadIx pilot onboarding progress","bbox":[550,178,660,430]}
+{"kind":"notes","id":"nt/3a46b4","slide":7,"text":"Demonstrate that each onboarding card links to its management screen. Explain dry-run imports: review all errors, then confirm an all-or-nothing import.\n\n[Sources]\n- Local LoadIx onboarding screenshot captured 2026-08-24\n- apps/loadix-web/src/features/onboarding/onboarding-page.tsx\n- docs/product-scope.md"}
+{"kind":"slide","id":"sl/kqznur","slide":8,"title":"MASTER DATA","textShapes":22}
+{"kind":"textbox","id":"sh/36tova9w","slide":8,"text":"MASTER DATA","textPreview":"MASTER DATA","textChars":11,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/4725ofqh","slide":8,"text":"Create master data before commercial work","textPreview":"Create master data before commercial work","textChars":41,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/p8b6xk72","slide":8,"text":"Active contracts and trip assignments depend on clean, active records; deactivation protects history without deleting it.","textPreview":"Active contracts and trip assignments depend on clean, active records; deactivation protects history without deleting it.","textChars":121,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/q9knq58n","slide":8,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/ratozap8","slide":8,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/cb25sfqd","slide":8,"text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/dcb61k7y","slide":8,"bbox":[54,220,198,250]}
+{"kind":"textbox","id":"sh/6dgnel83","slide":8,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[70,238,40,40]}
+{"kind":"textbox","id":"sh/7e94nq9o","slide":8,"text":"Structure","textPreview":"Structure","textChars":9,"textLines":1,"bbox":[70,295,165,34]}
+{"kind":"textbox","id":"sh/76d8bmtw","slide":8,"text":"Branches\nUsers and roles","textPreview":"Branches | Users and roles","textChars":24,"textLines":2,"bbox":[70,350,165,94]}
+{"kind":"shape","id":"sh/654721sb","slide":8,"bbox":[284,220,198,250]}
+{"kind":"textbox","id":"sh/t8vqdwb2","slide":8,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[300,238,40,40]}
+{"kind":"textbox","id":"sh/s7mp4rah","slide":8,"text":"Commercial","textPreview":"Commercial","textChars":10,"textLines":1,"bbox":[300,295,165,34]}
+{"kind":"textbox","id":"sh/j2t87mt0","slide":8,"text":"Customers\nContacts","textPreview":"Customers | Contacts","textChars":18,"textLines":2,"bbox":[300,350,165,94]}
+{"kind":"shape","id":"sh/i1k7yhsf","slide":8,"bbox":[514,220,198,250]}
+{"kind":"textbox","id":"sh/54bq9wbq","slide":8,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[530,238,40,40]}
+{"kind":"textbox","id":"sh/k32p0ra5","slide":8,"text":"Movement","textPreview":"Movement","textChars":8,"textLines":1,"bbox":[530,295,165,34]}
+{"kind":"textbox","id":"sh/vyt832to","slide":8,"text":"Locations\nCommodities","textPreview":"Locations | Commodities","textChars":21,"textLines":2,"bbox":[530,350,165,94]}
+{"kind":"shape","id":"sh/ad07uhs3","slide":8,"bbox":[744,220,198,250]}
+{"kind":"textbox","id":"sh/y90r6xcb","slide":8,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[760,238,40,40]}
+{"kind":"textbox","id":"sh/za98f2dg","slide":8,"text":"Fleet","textPreview":"Fleet","textChars":5,"textLines":1,"bbox":[760,295,165,34]}
+{"kind":"textbox","id":"sh/0bi987u1","slide":8,"text":"Drivers\nTrucks\nTrailers","textPreview":"Drivers | Trucks | Trailers","textChars":23,"textLines":3,"bbox":[760,350,165,94]}
+{"kind":"shape","id":"sh/lwrqhcvm","slide":8,"bbox":[974,220,198,250]}
+{"kind":"textbox","id":"sh/mx0rahc7","slide":8,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[990,238,40,40]}
+{"kind":"textbox","id":"sh/nyt8jmds","slide":8,"text":"Controls","textPreview":"Controls","textChars":8,"textLines":1,"bbox":[990,295,165,34]}
+{"kind":"textbox","id":"sh/8z29crud","slide":8,"text":"Statuses\nCompliance\nAvailability","textPreview":"Statuses | Compliance | Availability","textChars":32,"textLines":3,"bbox":[990,350,165,94]}
+{"kind":"textbox","id":"sh/90balwvy","slide":8,"text":"Data quality gate","textPreview":"Data quality gate","textChars":17,"textLines":1,"bbox":[54,510,210,32]}
+{"kind":"textbox","id":"sh/a1krehc3","slide":8,"text":"Use business references people recognise—customer names, site codes, fleet numbers, registrations and licence numbers. Search before creating to avoid duplicates.","textPreview":"Use business references people recognise—customer names, site codes, fleet numbers, registrations and licence numbers. Search before crea...","textChars":162,"textLines":1,"bbox":[280,508,920,64]}
+{"kind":"notes","id":"nt/kqznur","slide":8,"text":"Explain that every tenant-owned record is isolated and status-controlled. Existing trip snapshots remain valid when future master data changes.\n\n[Sources]\n- README.md\n- docs/product-scope.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/g3jfoe","slide":9,"title":"MASTER DATA","textShapes":17}
+{"kind":"textbox","id":"sh/gnipwv2t","slide":9,"text":"MASTER DATA","textPreview":"MASTER DATA","textChars":11,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/fm9onql8","slide":9,"text":"Search, verify, then add or edit a record","textPreview":"Search, verify, then add or edit a record","textChars":41,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/el07u5kn","slide":9,"text":"The same safe pattern applies across customers, locations, commodities, drivers, trucks and trailers.","textPreview":"The same safe pattern applies across customers, locations, commodities, drivers, trucks and trailers.","textChars":101,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/psbqtk3a","slide":9,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/or2p0f2p","slide":9,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/3qt8ral4","slide":9,"text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/2pk7y5kj","slide":9,"bbox":[496,173,718,448]}
+{"kind":"shape","id":"sh/cf2p4f21","slide":9,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/y90zmdkb","slide":9,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/ja90filw","slide":9,"text":"Search first","textPreview":"Search first","textChars":12,"textLines":1,"bbox":[104,180,355,27]}
+{"kind":"textbox","id":"sh/kb2hon2h","slide":9,"text":"Use reference/name and status filters; confirm the record does not already exist.","textPreview":"Use reference/name and status filters; confirm the record does not already exist.","textChars":81,"textLines":1,"bbox":[104,209,355,47]}
+{"kind":"shape","id":"sh/lcbih83m","slide":9,"bbox":[54,279,34,34]}
+{"kind":"textbox","id":"sh/6dkzqdk7","slide":9,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,282,34,27]}
+{"kind":"textbox","id":"sh/7et0jils","slide":9,"text":"Add the minimum complete record","textPreview":"Add the minimum complete record","textChars":31,"textLines":1,"bbox":[104,278,355,27]}
+{"kind":"textbox","id":"sh/8z2hsn2d","slide":9,"text":"Enter the required legal/operational fields and a stable business reference.","textPreview":"Enter the required legal/operational fields and a stable business reference.","textChars":76,"textLines":1,"bbox":[104,307,355,47]}
+{"kind":"shape","id":"sh/t0bils3y","slide":9,"bbox":[54,377,34,34]}
+{"kind":"textbox","id":"sh/mhgzetk3","slide":9,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,380,34,27]}
+{"kind":"textbox","id":"sh/nipg7ylo","slide":9,"text":"Review and save","textPreview":"Review and save","textChars":15,"textLines":1,"bbox":[104,376,355,27]}
+{"kind":"textbox","id":"sh/ralozqx4","slide":9,"text":"Correct validation errors; confirm the success state and list result.","textPreview":"Correct validation errors; confirm the success state and list result.","textChars":69,"textLines":1,"bbox":[104,405,355,47]}
+{"kind":"shape","id":"sh/69cnqlwj","slide":9,"bbox":[54,475,34,34]}
+{"kind":"textbox","id":"sh/tc3610fa","slide":9,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,478,34,27]}
+{"kind":"textbox","id":"sh/sbu5svep","slide":9,"text":"Edit with the latest version","textPreview":"Edit with the latest version","textChars":28,"textLines":1,"bbox":[104,474,355,27]}
+{"kind":"textbox","id":"sh/j61ovqx8","slide":9,"text":"If a conflict appears, refresh and reapply only the intended change.","textPreview":"If a conflict appears, refresh and reapply only the intended change.","textChars":68,"textLines":1,"bbox":[104,503,355,47]}
+{"kind":"image","id":"im/sjml03ax","slide":9,"name":"","geometry":"rect","alt":"LoadIx customer list","bbox":[500,177,710,440]}
+{"kind":"notes","id":"nt/g3jfoe","slide":9,"text":"Open Customers, then repeat the pattern in one fleet screen. Stress that a 409 conflict protects another user's newer edit.\n\n[Sources]\n- Local LoadIx customers screenshot captured 2026-08-24\n- README.md"}
+{"kind":"slide","id":"sl/gjoqz9","slide":10,"title":"CONTRACTS","textShapes":22}
+{"kind":"textbox","id":"sh/2dgrq9kz","slide":10,"text":"CONTRACTS","textPreview":"CONTRACTS","textChars":9,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/p0rql43q","slide":10,"text":"A contract defines the commercial rules future trips will snapshot","textPreview":"A contract defines the commercial rules future trips will snapshot","textChars":66,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/4zy9sz25","slide":10,"text":"Use the five-step guided flow; save a draft for review or activate only when every route and rate is valid.","textPreview":"Use the five-step guided flow; save a draft for review or activate only when every route and rate is valid.","textChars":107,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/fap8ful8","slide":10,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/u9g7mpk3","slide":10,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/hc7qh43e","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/gbypoz2t","slide":10,"bbox":[54,210,202,280]}
+{"kind":"textbox","id":"sh/7658bulc","slide":10,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[69,228,45,45]}
+{"kind":"textbox","id":"sh/65w7ipkr","slide":10,"text":"Customer & details","textPreview":"Customer & details","textChars":18,"textLines":1,"bbox":[69,292,172,62]}
+{"kind":"textbox","id":"sh/sfatwvuh","slide":10,"text":"Number, name, period, currency, payment terms","textPreview":"Number, name, period, currency, payment terms","textChars":45,"textLines":1,"bbox":[69,370,172,87]}
+{"kind":"shape","id":"sh/dgjup0b2","slide":10,"bbox":[284,210,202,280]}
+{"kind":"textbox","id":"sh/qd8bulcb","slide":10,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[299,228,45,45]}
+{"kind":"textbox","id":"sh/re1cnqtw","slide":10,"text":"Route","textPreview":"Route","textChars":5,"textLines":1,"bbox":[299,292,172,62]}
+{"kind":"textbox","id":"sh/4bqtsbul","slide":10,"text":"Collection and delivery sites; weighbridge requirements","textPreview":"Collection and delivery sites; weighbridge requirements","textChars":55,"textLines":1,"bbox":[299,370,172,87]}
+{"kind":"shape","id":"sh/5czulgbq","slide":10,"bbox":[514,210,202,280]}
+{"kind":"textbox","id":"sh/i98bq1cf","slide":10,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[529,228,45,45]}
+{"kind":"textbox","id":"sh/3ahcj6t0","slide":10,"text":"Commodity & quantity","textPreview":"Commodity & quantity","textChars":20,"textLines":1,"bbox":[529,292,172,62]}
+{"kind":"textbox","id":"sh/o7udofup","slide":10,"text":"Permitted commodity, tolerance, manual-quantity policy","textPreview":"Permitted commodity, tolerance, manual-quantity policy","textChars":54,"textLines":1,"bbox":[529,370,172,87]}
+{"kind":"shape","id":"sh/p83uxkba","slide":10,"bbox":[744,210,202,280]}
+{"kind":"textbox","id":"sh/xozuh03e","slide":10,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[759,228,45,45]}
+{"kind":"textbox","id":"sh/wnqt8fmt","slide":10,"text":"Rates","textPreview":"Rates","textChars":5,"textLines":1,"bbox":[759,292,172,62]}
+{"kind":"textbox","id":"sh/bmhcfal8","slide":10,"text":"Typed pricing rule, effective dates, surcharge/minimum","textPreview":"Typed pricing rule, effective dates, surcharge/minimum","textChars":54,"textLines":1,"bbox":[759,370,172,87]}
+{"kind":"shape","id":"sh/a18b654n","slide":10,"bbox":[974,210,202,280]}
+{"kind":"textbox","id":"sh/90fud032","slide":10,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[989,228,45,45]}
+{"kind":"textbox","id":"sh/oz6t4vmx","slide":10,"text":"Review","textPreview":"Review","textChars":6,"textLines":1,"bbox":[989,292,172,62]}
+{"kind":"textbox","id":"sh/nyxcbqlc","slide":10,"text":"Validate summary, save draft or save and activate","textPreview":"Validate summary, save draft or save and activate","textChars":49,"textLines":1,"bbox":[989,370,172,87]}
+{"kind":"textbox","id":"sh/mxob2l4r","slide":10,"text":"Activation check","textPreview":"Activation check","textChars":16,"textLines":1,"bbox":[54,527,200,30]}
+{"kind":"textbox","id":"sh/1wfu9g36","slide":10,"text":"The effective period must be valid, every route needs a non-overlapping effective rate, and measured pricing must have its required quantity source.","textPreview":"The effective period must be valid, every route needs a non-overlapping effective rate, and measured pricing must have its required quant...","textChars":148,"textLines":1,"bbox":[270,524,930,64]}
+{"kind":"notes","id":"nt/gjoqz9","slide":10,"text":"Clarify that active contract edits affect future trips only. Existing route/rate snapshots are historical evidence and cannot be destructively rewritten.\n\n[Sources]\n- docs/workflow-improvements.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/v91dfg","slide":11,"title":"CONTRACTS","textShapes":17}
+{"kind":"textbox","id":"sh/z2hoz2xs","slide":11,"text":"CONTRACTS","textPreview":"CONTRACTS","textChars":9,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/03ap87yd","slide":11,"text":"Build and activate a contract step by step","textPreview":"Build and activate a contract step by step","textChars":42,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/l4j61cfi","slide":11,"text":"Inline creation keeps the wizard open when a permitted customer, location or commodity is missing.","textPreview":"Inline creation keeps the wizard open when a permitted customer, location or commodity is missing.","textChars":98,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/qx872xgv","slide":11,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/byhov2xg","slide":11,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/czqp47y1","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/d0z6xcfm","slide":11,"bbox":[541,171,673,452]}
+{"kind":"shape","id":"sh/vul87mx0","slide":11,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/72xwfm9c","slide":11,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/61ovmhs7","slide":11,"text":"Start in Contracts","textPreview":"Start in Contracts","textChars":18,"textLines":1,"bbox":[104,180,395,27]}
+{"kind":"textbox","id":"sh/t4fehwri","slide":11,"text":"Select New contract and choose the customer—or create it inline.","textPreview":"Select New contract and choose the customer—or create it inline.","textChars":64,"textLines":1,"bbox":[104,209,395,47]}
+{"kind":"shape","id":"sh/836d8rax","slide":11,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/v6hwjm9o","slide":11,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/u58va1s3","slide":11,"text":"Complete each guided page","textPreview":"Complete each guided page","textChars":25,"textLines":1,"bbox":[104,280,395,27]}
+{"kind":"textbox","id":"sh/h8zelwru","slide":11,"text":"Route, commodity/quantity rules and rates must align with how the movement is weighed and billed.","textPreview":"Route, commodity/quantity rules and rates must align with how the movement is weighed and billed.","textChars":97,"textLines":1,"bbox":[104,309,395,47]}
+{"kind":"shape","id":"sh/g7qdcra9","slide":11,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/3ahwn69k","slide":11,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/i98ve1sz","slide":11,"text":"Use review as a control","textPreview":"Use review as a control","textChars":23,"textLines":1,"bbox":[104,380,395,27]}
+{"kind":"textbox","id":"sh/e5czm5c7","slide":11,"text":"Check dates, currency, tolerance, quantity source, rounding and effective rates.","textPreview":"Check dates, currency, tolerance, quantity source, rounding and effective rates.","textChars":80,"textLines":1,"bbox":[104,409,395,47]}
+{"kind":"shape","id":"sh/z6lgfats","slide":11,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/0ruhofud","slide":11,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/1s3yhkby","slide":11,"text":"Choose the correct finish","textPreview":"Choose the correct finish","textChars":25,"textLines":1,"bbox":[104,480,395,27]}
+{"kind":"textbox","id":"sh/q1szilcb","slide":11,"text":"Save as draft for incomplete review; Save and activate only when ready for load planning.","textPreview":"Save as draft for incomplete review; Save and activate only when ready for load planning.","textChars":89,"textLines":1,"bbox":[104,509,395,47]}
+{"kind":"image","id":"im/n2103mpk","slide":11,"name":"","geometry":"rect","alt":"LoadIx five-step contract wizard","bbox":[545,175,665,444]}
+{"kind":"notes","id":"nt/v91dfg","slide":11,"text":"Demonstrate with Training Infrastructure, Demo Mine North to Midrand Customer Site, Aggregate, ZAR and a reconciled-tonne rate as described in the demo guide.\n\n[Sources]\n- Local LoadIx contract wizard screenshot captured 2026-08-24\n- docs/workflow-improvements.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/l5lg0w","slide":12,"title":"LOAD INSTRUCTIONS","textShapes":19}
+{"kind":"textbox","id":"sh/n298fqt8","slide":12,"text":"LOAD INSTRUCTIONS","textPreview":"LOAD INSTRUCTIONS","textChars":17,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/o3i98vat","slide":12,"text":"A load instruction turns customer demand into planned capacity","textPreview":"A load instruction turns customer demand into planned capacity","textChars":62,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/94rqh0be","slide":12,"text":"One active contract route and commodity anchor the request; one instruction can generate several trips.","textPreview":"One active contract route and commodity anchor the request; one instruction can generate several trips.","textChars":103,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/a50ra5sz","slide":12,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/b6t8jatk","slide":12,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/wr29cva5","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/xsbql0bq","slide":12,"bbox":[54,225,255,260]}
+{"kind":"textbox","id":"sh/ytkre5sb","slide":12,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[69,244,50,42]}
+{"kind":"textbox","id":"sh/jutsna9g","slide":12,"text":"Contract selection","textPreview":"Contract selection","textChars":18,"textLines":1,"bbox":[69,310,225,56]}
+{"kind":"textbox","id":"sh/3ulczq9c","slide":12,"text":"Instruction number, active contract, route and commodity","textPreview":"Instruction number, active contract, route and commodity","textChars":56,"textLines":1,"bbox":[69,385,225,77]}
+{"kind":"shape","id":"sh/2tcbq5sr","slide":12,"bbox":[344,225,255,260]}
+{"kind":"textbox","id":"sh/pw3u10r2","slide":12,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[359,244,50,42]}
+{"kind":"textbox","id":"sh/ovutsvax","slide":12,"text":"Requirements","textPreview":"Requirements","textChars":12,"textLines":1,"bbox":[359,310,225,56]}
+{"kind":"textbox","id":"sh/fq1cvq90","slide":12,"text":"Planned quantity, unit, trip guidance and windows","textPreview":"Planned quantity, unit, trip guidance and windows","textChars":49,"textLines":1,"bbox":[359,385,225,77]}
+{"kind":"shape","id":"sh/epsbmlsf","slide":12,"bbox":[634,225,255,260]}
+{"kind":"textbox","id":"sh/1sjux0r6","slide":12,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[649,244,50,42]}
+{"kind":"textbox","id":"sh/gratoval","slide":12,"text":"Operations","textPreview":"Operations","textChars":10,"textLines":1,"bbox":[649,310,225,56]}
+{"kind":"textbox","id":"sh/zm5c7a9k","slide":12,"text":"Customer PO/reference, priority and special instructions","textPreview":"Customer PO/reference, priority and special instructions","textChars":56,"textLines":1,"bbox":[649,385,225,77]}
+{"kind":"shape","id":"sh/ylwvypsz","slide":12,"bbox":[924,225,255,260]}
+{"kind":"textbox","id":"sh/ahgfq9c7","slide":12,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[939,244,50,42]}
+{"kind":"textbox","id":"sh/vipwzets","slide":12,"text":"Review","textPreview":"Review","textChars":6,"textLines":1,"bbox":[939,310,225,56]}
+{"kind":"textbox","id":"sh/wjyxsjux","slide":12,"text":"Save draft or Plan load for trip generation","textPreview":"Save draft or Plan load for trip generation","textChars":43,"textLines":1,"bbox":[939,385,225,77]}
+{"kind":"textbox","id":"sh/xkre1obi","slide":12,"text":"Planning rule","textPreview":"Planning rule","textChars":13,"textLines":1,"bbox":[54,525,180,30]}
+{"kind":"textbox","id":"sh/il0futc3","slide":12,"text":"Draft remains editable. Plan load confirms the request. Generate trips only after quantity, windows, priority and references have been checked.","textPreview":"Draft remains editable. Plan load confirms the request. Generate trips only after quantity, windows, priority and references have been ch...","textChars":143,"textLines":1,"bbox":[250,522,950,66]}
+{"kind":"notes","id":"nt/l5lg0w","slide":12,"text":"Explain the difference between customer demand (instruction) and execution units (trips). The instruction remains the fulfilment summary.\n\n[Sources]\n- docs/workflow-improvements.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/g18mji","slide":13,"title":"LOAD INSTRUCTIONS","textShapes":17}
+{"kind":"textbox","id":"sh/wbi147ux","slide":13,"text":"LOAD INSTRUCTIONS","textPreview":"LOAD INSTRUCTIONS","textChars":17,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/ba90b2dc","slide":13,"text":"Create a load instruction with complete operational context","textPreview":"Create a load instruction with complete operational context","textChars":59,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/a90j2xc7","slide":13,"text":"The selected contract controls available routes, commodities and commercial rules.","textPreview":"The selected contract controls available routes, commodities and commercial rules.","textChars":82,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/l0r2hcvu","slide":13,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/kfi187u9","slide":13,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/je9kf2do","slide":13,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/yd0j6xc3","slide":13,"bbox":[541,171,673,452]}
+{"kind":"shape","id":"sh/0jy1wnup","slide":13,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/ehs3qlgz","slide":13,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/fi14jqxk","slide":13,"text":"Select the active contract","textPreview":"Select the active contract","textChars":26,"textLines":1,"bbox":[104,180,395,27]}
+{"kind":"textbox","id":"sh/gjalsvy5","slide":13,"text":"Choose its route and allowed commodity; do not substitute a similar record.","textPreview":"Choose its route and allowed commodity; do not substitute a similar record.","textChars":75,"textLines":1,"bbox":[104,209,395,47]}
+{"kind":"shape","id":"sh/1kjml0fq","slide":13,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/2ls3u5gv","slide":13,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/3ml4naxg","slide":13,"text":"Enter quantity and timing","textPreview":"Enter quantity and timing","textChars":25,"textLines":1,"bbox":[104,280,395,27]}
+{"kind":"textbox","id":"sh/onulwvy1","slide":13,"text":"Use the explicit unit, realistic trip count and collection/delivery windows.","textPreview":"Use the explicit unit, realistic trip count and collection/delivery windows.","textChars":76,"textLines":1,"bbox":[104,309,395,47]}
+{"kind":"shape","id":"sh/po3mp0fm","slide":13,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/q9c3y5w7","slide":13,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/bal4raxs","slide":13,"text":"Add dispatch context","textPreview":"Add dispatch context","textChars":20,"textLines":1,"bbox":[104,380,395,27]}
+{"kind":"textbox","id":"sh/ne5kfad0","slide":13,"text":"Capture customer reference, priority and actionable special instructions.","textPreview":"Capture customer reference, priority and actionable special instructions.","textChars":73,"textLines":1,"bbox":[104,409,395,47]}
+{"kind":"shape","id":"sh/mdw3m5cf","slide":13,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/9gn2hkvq","slide":13,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/8felofu5","slide":13,"text":"Review the plan","textPreview":"Review the plan","textChars":15,"textLines":1,"bbox":[104,480,395,27]}
+{"kind":"textbox","id":"sh/zqlkbado","slide":13,"text":"Save draft if uncertain; Plan load only when the request is authorised.","textPreview":"Save draft if uncertain; Plan load only when the request is authorised.","textChars":71,"textLines":1,"bbox":[104,509,395,47]}
+{"kind":"image","id":"im/4vi58jy9","slide":13,"name":"","geometry":"rect","alt":"LoadIx four-step load instruction wizard","bbox":[545,175,665,444]}
+{"kind":"notes","id":"nt/g18mji","slide":13,"text":"Use the demo guide example: 136 tonnes, four trips, fictional PO and current collection/delivery windows.\n\n[Sources]\n- Local LoadIx load instruction wizard screenshot captured 2026-08-24\n- docs/workflow-improvements.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/cd16sw","slide":14,"title":"LOAD INSTRUCTIONS","textShapes":31}
+{"kind":"textbox","id":"sh/gbedwval","slide":14,"text":"LOAD INSTRUCTIONS","textPreview":"LOAD INSTRUCTIONS","textChars":17,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/fq5w3at0","slide":14,"text":"Plan first; generate trips once","textPreview":"Plan first; generate trips once","textChars":31,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/epwvu5sf","slide":14,"text":"Trip generation divides remaining quantity and creates stable operational references while protecting retries from duplicates.","textPreview":"Trip generation divides remaining quantity and creates stable operational references while protecting retries from duplicates.","textChars":126,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/pg7e9kb2","slide":14,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/ofyx0fah","slide":14,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/3epw7atw","slide":14,"text":"14","textPreview":"14","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"textbox","id":"sh/2dgfy5sr","slide":14,"text":"Before generation","textPreview":"Before generation","textChars":17,"textLines":1,"bbox":[54,180,510,32]}
+{"kind":"textbox","id":"sh/5knexgby","slide":14,"text":"After generation","textPreview":"After generation","textChars":16,"textLines":1,"bbox":[690,180,510,32]}
+{"kind":"shape","id":"sh/4judobad","slide":14,"bbox":[640,180,0,400]}
+{"kind":"shape","id":"sh/mt4fel0n","slide":14,"bbox":[54,236,34,34]}
+{"kind":"textbox","id":"sh/7udgnqh8","slide":14,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,239,34,27]}
+{"kind":"textbox","id":"sh/8vmxgbid","slide":14,"text":"Open the instruction","textPreview":"Open the instruction","textChars":20,"textLines":1,"bbox":[104,235,470,27]}
+{"kind":"textbox","id":"sh/9wvypgzy","slide":14,"text":"Confirm status, requested quantity, unit and remaining quantity.","textPreview":"Confirm status, requested quantity, unit and remaining quantity.","textChars":64,"textLines":1,"bbox":[104,264,470,47]}
+{"kind":"shape","id":"sh/ux4fil0j","slide":14,"bbox":[54,320,34,34]}
+{"kind":"textbox","id":"sh/vyxgrqh4","slide":14,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,323,34,27]}
+{"kind":"textbox","id":"sh/wz6xkvip","slide":14,"text":"Review fulfilment inputs","textPreview":"Review fulfilment inputs","textChars":24,"textLines":1,"bbox":[104,319,470,27]}
+{"kind":"textbox","id":"sh/h0fyt0za","slide":14,"text":"Check trip-count guidance, windows, priority and customer reference.","textPreview":"Check trip-count guidance, windows, priority and customer reference.","textChars":68,"textLines":1,"bbox":[104,348,470,47]}
+{"kind":"shape","id":"sh/i1ofm50v","slide":14,"bbox":[54,404,34,34]}
+{"kind":"textbox","id":"sh/j2xgvahg","slide":14,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,407,34,27]}
+{"kind":"textbox","id":"sh/fqhw3ax8","slide":14,"text":"Select Plan load","textPreview":"Select Plan load","textChars":16,"textLines":1,"bbox":[104,403,470,27]}
+{"kind":"textbox","id":"sh/e58fa5wn","slide":14,"text":"This confirms the instruction for operational generation.","textPreview":"This confirms the instruction for operational generation.","textChars":57,"textLines":1,"bbox":[104,432,470,47]}
+{"kind":"shape","id":"sh/1sze50fe","slide":14,"bbox":[54,488,34,34]}
+{"kind":"textbox","id":"sh/grqxcfet","slide":14,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,491,34,27]}
+{"kind":"textbox","id":"sh/r2xwzqxc","slide":14,"text":"Choose the trip count","textPreview":"Choose the trip count","textChars":21,"textLines":1,"bbox":[104,487,470,27]}
+{"kind":"textbox","id":"sh/61of6lgr","slide":14,"text":"Use capacity and shift realities; generated quantities total the remaining amount.","textPreview":"Use capacity and shift realities; generated quantities total the remaining amount.","textChars":82,"textLines":1,"bbox":[104,516,470,47]}
+{"kind":"shape","id":"sh/t4fe10fi","slide":14,"bbox":[690,236,34,34]}
+{"kind":"textbox","id":"sh/s36x8vyx","slide":14,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[690,239,34,27]}
+{"kind":"textbox","id":"sh/jyxwvqx0","slide":14,"text":"Confirm references","textPreview":"Confirm references","textChars":18,"textLines":1,"bbox":[740,235,470,27]}
+{"kind":"textbox","id":"sh/ix4v2lgv","slide":14,"text":"Generated trips appear under the instruction with stable LI-…-T… identifiers.","textPreview":"Generated trips appear under the instruction with stable LI-…-T… identifiers.","textChars":77,"textLines":1,"bbox":[740,264,470,47]}
+{"kind":"shape","id":"sh/832tcred","slide":14,"bbox":[690,320,34,34]}
+{"kind":"textbox","id":"sh/94bu5wvy","slide":14,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[690,323,34,27]}
+{"kind":"textbox","id":"sh/m1kbahwn","slide":14,"text":"Check planned totals","textPreview":"Check planned totals","textChars":20,"textLines":1,"bbox":[740,319,470,27]}
+{"kind":"textbox","id":"sh/72tc3mds","slide":14,"text":"Requested, planned and remaining quantities must reconcile.","textPreview":"Requested, planned and remaining quantities must reconcile.","textChars":59,"textLines":1,"bbox":[740,348,470,47]}
+{"kind":"shape","id":"sh/w7mtgrup","slide":14,"bbox":[690,404,34,34]}
+{"kind":"textbox","id":"sh/h8vu9wva","slide":14,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[690,407,34,27]}
+{"kind":"textbox","id":"sh/u5kbehwj","slide":14,"text":"Do not double-submit","textPreview":"Do not double-submit","textChars":20,"textLines":1,"bbox":[740,403,470,27]}
+{"kind":"textbox","id":"sh/v6dc7md4","slide":14,"text":"A repeated safe request returns the prior result; conflicting reuse is blocked.","textPreview":"A repeated safe request returns the prior result; conflicting reuse is blocked.","textChars":79,"textLines":1,"bbox":[740,432,470,47]}
+{"kind":"shape","id":"sh/cbit47e5","slide":14,"bbox":[690,488,34,34]}
+{"kind":"textbox","id":"sh/xcraxcvq","slide":14,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[690,491,34,27]}
+{"kind":"textbox","id":"sh/5s3mdsva","slide":14,"text":"Continue in Trips","textPreview":"Continue in Trips","textChars":17,"textLines":1,"bbox":[740,487,470,27]}
+{"kind":"textbox","id":"sh/47ul47ep","slide":14,"text":"Assignments and execution now happen on each trip, not on the instruction.","textPreview":"Assignments and execution now happen on each trip, not on the instruction.","textChars":74,"textLines":1,"bbox":[740,516,470,47]}
+{"kind":"notes","id":"nt/cd16sw","slide":14,"text":"Explain idempotency in plain language: retrying the same action should not create duplicate trips. If the first response is uncertain, refresh before trying a different count.\n\n[Sources]\n- README.md\n- docs/product-scope.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/bnwnz1","slide":15,"title":"TRIPS","textShapes":17}
+{"kind":"textbox","id":"sh/qtknu9or","slide":15,"text":"TRIPS","textPreview":"TRIPS","textChars":5,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/dgbm547i","slide":15,"text":"Dispatch only eligible resources","textPreview":"Dispatch only eligible resources","textChars":32,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/sf25wz6x","slide":15,"text":"The system checks active, available and compliant drivers, trucks and up to two distinct trailers against overlapping work.","textPreview":"The system checks active, available and compliant drivers, trucks and up to two distinct trailers against overlapping work.","textChars":123,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/fit47epo","slide":15,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/ehkny9o3","slide":15,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/1kvm9o7e","slide":15,"text":"15","textPreview":"15","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/0j250j6t","slide":15,"bbox":[516,171,698,452]}
+{"kind":"shape","id":"sh/ul03mp8j","slide":15,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/gby9w3at","slide":15,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/1crap8re","slide":15,"text":"Filter to Planned","textPreview":"Filter to Planned","textChars":17,"textLines":1,"bbox":[104,180,370,27]}
+{"kind":"textbox","id":"sh/epgrutsn","slide":15,"text":"Search by trip, contract or route and open the correct operational record.","textPreview":"Search by trip, contract or route and open the correct operational record.","textChars":74,"textLines":1,"bbox":[104,209,370,47]}
+{"kind":"shape","id":"sh/fapsny98","slide":15,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/ofi903a5","slide":15,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/pgrat8ra","slide":15,"text":"Assign resources","textPreview":"Assign resources","textChars":16,"textLines":1,"bbox":[104,280,370,27]}
+{"kind":"textbox","id":"sh/2d0rydsz","slide":15,"text":"Select an eligible driver, truck and zero to two trailers; check the planned window.","textPreview":"Select an eligible driver, truck and zero to two trailers; check the planned window.","textChars":84,"textLines":1,"bbox":[104,309,370,47]}
+{"kind":"shape","id":"sh/3e9sri9k","slide":15,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/4je9ojal","slide":15,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/5knahor6","slide":15,"text":"Confirm the assignment","textPreview":"Confirm the assignment","textChars":22,"textLines":1,"bbox":[104,380,370,27]}
+{"kind":"textbox","id":"sh/lgfqlkju","slide":15,"text":"Verify names, registrations/fleet numbers and the audit/timeline update.","textPreview":"Verify names, registrations/fleet numbers and the audit/timeline update.","textChars":72,"textLines":1,"bbox":[104,409,370,47]}
+{"kind":"shape","id":"sh/kf6pcf2p","slide":15,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/jex8ja14","slide":15,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/ydo7a5kj","slide":15,"text":"Dispatch","textPreview":"Dispatch","textChars":8,"textLines":1,"bbox":[104,480,370,27]}
+{"kind":"textbox","id":"sh/t4zqpkj6","slide":15,"text":"Use Dispatch only when the driver and equipment are genuinely ready to begin.","textPreview":"Use Dispatch only when the driver and equipment are genuinely ready to begin.","textChars":77,"textLines":1,"bbox":[104,509,370,47]}
+{"kind":"image","id":"im/yx0rqlob","slide":15,"name":"","geometry":"rect","alt":"LoadIx trips list","bbox":[520,175,690,444]}
+{"kind":"notes","id":"nt/bnwnz1","slide":15,"text":"Demonstrate a planned synthetic trip. Do not use a post-dispatch reassignment to fix ordinary data-entry mistakes; it requires override permission and a reason.\n\n[Sources]\n- Local LoadIx trips screenshot captured 2026-08-24\n- docs/workflow-improvements.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/yz7hta","slide":16,"title":"TRIP EXECUTION","textShapes":20}
+{"kind":"textbox","id":"sh/vu1obut0","slide":16,"text":"TRIP EXECUTION","textPreview":"TRIP EXECUTION","textChars":14,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/wvapkzal","slide":16,"text":"Use only the next legal lifecycle action","textPreview":"Use only the next legal lifecycle action","textChars":40,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/xwj6d4b6","slide":16,"text":" The API enforces the same state machine as the screen; cancellation and rejection are reasoned terminal branches.","textPreview":"The API enforces the same state machine as the screen; cancellation and rejection are reasoned terminal branches.","textChars":114,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/mp8nepcj","slide":16,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/nqho7at4","slide":16,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/8rqpgfup","slide":16,"text":"16","textPreview":"16","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/9sj69kba","slide":16,"bbox":[155,291,70,0]}
+{"kind":"shape","id":"sh/6lc7q9sn","slide":16,"bbox":[155,485,70,0]}
+{"kind":"shape","id":"sh/7mlojet8","slide":16,"bbox":[360,291,70,0]}
+{"kind":"shape","id":"sh/vmtg3elk","slide":16,"bbox":[360,485,70,0]}
+{"kind":"shape","id":"sh/ulkza94z","slide":16,"bbox":[565,291,70,0]}
+{"kind":"shape","id":"sh/hovy543q","slide":16,"bbox":[565,485,70,0]}
+{"kind":"shape","id":"sh/wn2hcjm5","slide":16,"bbox":[770,291,70,0]}
+{"kind":"shape","id":"sh/jqdg7elg","slide":16,"bbox":[770,485,70,0]}
+{"kind":"shape","id":"sh/ip4ze94v","slide":16,"bbox":[975,291,70,0]}
+{"kind":"shape","id":"sh/5svy9o3m","slide":16,"bbox":[975,485,70,0]}
+{"kind":"shape","id":"sh/4rmhgjm1","slide":16,"bbox":[1125,291,0,80]}
+{"kind":"shape","id":"sh/redgbyls","slide":16,"bbox":[155,371,970,0]}
+{"kind":"shape","id":"sh/6t4zit47","slide":16,"bbox":[155,371,0,45]}
+{"kind":"shape","id":"sh/298jaxof","slide":16,"bbox":[54,250,170,82]}
+{"kind":"textbox","id":"sh/nahkj250","slide":16,"text":"Planned","textPreview":"Planned","textChars":7,"textLines":1,"bbox":[64,273,150,40]}
+{"kind":"shape","id":"sh/obq1c76l","slide":16,"bbox":[259,250,170,82]}
+{"kind":"textbox","id":"sh/pcz2lsnq","slide":16,"text":"Assigned","textPreview":"Assigned","textChars":8,"textLines":1,"bbox":[269,273,150,40]}
+{"kind":"shape","id":"sh/eloj6do3","slide":16,"bbox":[464,250,170,82]}
+{"kind":"textbox","id":"sh/fmx0fi5o","slide":16,"text":"Dispatched","textPreview":"Dispatched","textChars":10,"textLines":1,"bbox":[474,273,150,40]}
+{"kind":"shape","id":"sh/0nq18n69","slide":16,"bbox":[669,250,170,82]}
+{"kind":"textbox","id":"sh/18z2hsnu","slide":16,"text":"At collection","textPreview":"At collection","textChars":13,"textLines":1,"bbox":[679,273,150,40]}
+{"kind":"shape","id":"sh/yhsjihon","slide":16,"bbox":[874,250,170,82]}
+{"kind":"textbox","id":"sh/zi1krm58","slide":16,"text":"Loading","textPreview":"Loading","textChars":7,"textLines":1,"bbox":[884,273,150,40]}
+{"kind":"shape","id":"sh/9c3mhg7a","slide":16,"bbox":[1079,250,170,82]}
+{"kind":"textbox","id":"sh/8bu58bqp","slide":16,"text":"Collection complete","textPreview":"Collection complete","textChars":19,"textLines":1,"bbox":[1089,273,150,40]}
+{"kind":"shape","id":"sh/7al4f6p4","slide":16,"bbox":[54,444,170,82]}
+{"kind":"textbox","id":"sh/m9c3618j","slide":16,"text":"In transit","textPreview":"In transit","textChars":10,"textLines":1,"bbox":[64,465,150,42]}
+{"kind":"shape","id":"sh/l83mdw7y","slide":16,"bbox":[259,444,170,82]}
+{"kind":"textbox","id":"sh/k7ul4rqt","slide":16,"text":"At delivery","textPreview":"At delivery","textChars":11,"textLines":1,"bbox":[269,465,150,42]}
+{"kind":"shape","id":"sh/z6l4b6p8","slide":16,"bbox":[464,444,170,82]}
+{"kind":"textbox","id":"sh/y5s3218n","slide":16,"text":"Unloading","textPreview":"Unloading","textChars":9,"textLines":1,"bbox":[474,465,150,42]}
+{"kind":"shape","id":"sh/54nmp07i","slide":16,"bbox":[669,444,170,82]}
+{"kind":"textbox","id":"sh/43e5gvqx","slide":16,"text":"Delivery complete","textPreview":"Delivery complete","textChars":17,"textLines":1,"bbox":[679,465,150,42]}
+{"kind":"shape","id":"sh/c72dgvqd","slide":16,"bbox":[874,444,170,82]}
+{"kind":"textbox","id":"sh/d8bu907y","slide":16,"text":"Reconciliation required","textPreview":"Reconciliation required","textChars":23,"textLines":1,"bbox":[884,465,150,42]}
+{"kind":"shape","id":"sh/q5kvel8n","slide":16,"bbox":[1079,444,170,82]}
+{"kind":"textbox","id":"sh/b6tc7qp8","slide":16,"text":"Completed","textPreview":"Completed","textChars":9,"textLines":1,"bbox":[1089,465,150,42]}
+{"kind":"shape","id":"sh/0bmdkfqp","slide":16,"bbox":[54,575,350,34]}
+{"kind":"textbox","id":"sh/lcvud07a","slide":16,"text":"CANCELLED — specific reason required","textPreview":"CANCELLED — specific reason required","textChars":36,"textLines":1,"bbox":[64,582,330,20]}
+{"kind":"shape","id":"sh/y94vi58j","slide":16,"bbox":[460,575,350,34]}
+{"kind":"textbox","id":"sh/zadcbap4","slide":16,"text":"REJECTED — specific reason required","textPreview":"REJECTED — specific reason required","textChars":35,"textLines":1,"bbox":[470,582,330,20]}
+{"kind":"shape","id":"sh/8fmdofql","slide":16,"bbox":[866,575,344,34]}
+{"kind":"textbox","id":"sh/9gvehk76","slide":16,"text":"OVERRIDE — permission + reason + audit","textPreview":"OVERRIDE — permission + reason + audit","textChars":38,"textLines":1,"bbox":[876,582,324,20]}
+{"kind":"notes","id":"nt/yz7hta","slide":16,"text":"Ask learners to name the next action from InTransit and from DeliveryComplete. Reinforce that status is never inferred only from timestamps.\n\n[Sources]\n- README.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/r3c3kl","slide":17,"title":"TRIP EXECUTION","textShapes":17}
+{"kind":"textbox","id":"sh/w7ip8ved","slide":17,"text":"TRIP EXECUTION","textPreview":"TRIP EXECUTION","textChars":14,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/v698zqds","slide":17,"text":"Read the full trip before taking action","textPreview":"Read the full trip before taking action","textChars":39,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/u5076lw7","slide":17,"text":"The workspace combines immutable context, documents, finance readiness, assignment controls, lifecycle actions and timeline evidence.","textPreview":"The workspace combines immutable context, documents, finance readiness, assignment controls, lifecycle actions and timeline evidence.","textChars":133,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/94r6xgvm","slide":17,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/8jyp4ve1","slide":17,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/7ipovqdg","slide":17,"text":"17","textPreview":"17","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/mhg72lwb","slide":17,"bbox":[501,171,713,452]}
+{"kind":"shape","id":"sh/sf2pgfel","slide":17,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/2hgnml8b","slide":17,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/3i94vqpw","slide":17,"text":"Confirm identity and status","textPreview":"Confirm identity and status","textChars":27,"textLines":1,"bbox":[104,180,355,27]}
+{"kind":"textbox","id":"sh/4ji5ovqh","slide":17,"text":"Check trip reference, customer, route, planned window and current state.","textPreview":"Check trip reference, customer, route, planned window and current state.","textChars":72,"textLines":1,"bbox":[104,209,355,47]}
+{"kind":"shape","id":"sh/pkrmx072","slide":17,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/utgnil8f","slide":17,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/fup4r6pk","slide":17,"text":"Review assignment and rate snapshot","textPreview":"Review assignment and rate snapshot","textChars":35,"textLines":1,"bbox":[104,280,355,27]}
+{"kind":"textbox","id":"sh/gfy5kbq5","slide":17,"text":"Verify driver/equipment and the contract/rate context frozen onto this trip.","textPreview":"Verify driver/equipment and the contract/rate context frozen onto this trip.","textChars":76,"textLines":1,"bbox":[104,309,355,47]}
+{"kind":"shape","id":"sh/hg7mtg7q","slide":17,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/ep0nu58j","slide":17,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/zqto3ap4","slide":17,"text":"Complete evidence panels","textPreview":"Complete evidence panels","textChars":24,"textLines":1,"bbox":[104,380,355,27]}
+{"kind":"textbox","id":"sh/bi1szi14","slide":17,"text":"Documents, weights and reconciliation readiness must match the route requirements.","textPreview":"Documents, weights and reconciliation readiness must match the route requirements.","textChars":82,"textLines":1,"bbox":[104,409,355,47]}
+{"kind":"shape","id":"sh/ahsb6dkj","slide":17,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/xkja18ja","slide":17,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/wjat832p","slide":17,"text":"Use the named action","textPreview":"Use the named action","textChars":20,"textLines":1,"bbox":[104,480,355,27]}
+{"kind":"textbox","id":"sh/jmls3i1g","slide":17,"text":"Then confirm the new state and actor-stamped timeline entry.","textPreview":"Then confirm the new state and actor-stamped timeline entry.","textChars":60,"textLines":1,"bbox":[104,509,355,47]}
+{"kind":"image","id":"im/0rql8721","slide":17,"name":"","geometry":"rect","alt":"LoadIx active trip detail workspace","bbox":[505,175,705,444]}
+{"kind":"notes","id":"nt/r3c3kl","slide":17,"text":"Scroll through the live trip dialog during delivery. Show that operational notes add context but do not replace structured milestones or captured weights.\n\n[Sources]\n- Local LoadIx trip detail screenshot captured 2026-08-24\n- README.md"}
+{"kind":"slide","id":"sl/byl4qw","slide":18,"title":"WEIGHTS AND RECONCILIATION","textShapes":25}
+{"kind":"textbox","id":"sh/5szqlsvi","slide":18,"text":"WEIGHTS AND RECONCILIATION","textPreview":"WEIGHTS AND RECONCILIATION","textChars":26,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/i58radw7","slide":18,"text":"Capture weights exactly; reconcile the outcome visibly","textPreview":"Capture weights exactly; reconcile the outcome visibly","textChars":54,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/jqh8jidc","slide":18,"text":"Each trip snapshots whether collection weighing, delivery weighing, both or neither are required.","textPreview":"Each trip snapshots whether collection weighing, delivery weighing, both or neither are required.","textChars":97,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/w369o3e1","slide":18,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/h4zqh8vm","slide":18,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/u1o7mtwv","slide":18,"text":"18","textPreview":"18","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/v2x8fydg","slide":18,"bbox":[54,205,255,136]}
+{"kind":"textbox","id":"sh/8z6pk3ep","slide":18,"text":"Both sites","textPreview":"Both sites","textChars":10,"textLines":1,"bbox":[69,224,225,30]}
+{"kind":"textbox","id":"sh/90fqd8va","slide":18,"text":"Compare source and destination net weights against tolerance.","textPreview":"Compare source and destination net weights against tolerance.","textChars":61,"textLines":1,"bbox":[69,270,225,54]}
+{"kind":"shape","id":"sh/9w36h0zi","slide":18,"bbox":[344,205,255,136]}
+{"kind":"textbox","id":"sh/8vup8vid","slide":18,"text":"One site","textPreview":"One site","textChars":8,"textLines":1,"bbox":[359,224,225,30]}
+{"kind":"textbox","id":"sh/7u1ofahs","slide":18,"text":"The configured measured net becomes the reconciled quantity automatically.","textPreview":"The configured measured net becomes the reconciled quantity automatically.","textChars":74,"textLines":1,"bbox":[359,270,225,54]}
+{"kind":"shape","id":"sh/mts76507","slide":18,"bbox":[634,205,255,136]}
+{"kind":"textbox","id":"sh/lsj6d0zm","slide":18,"text":"Neither site","textPreview":"Neither site","textChars":12,"textLines":1,"bbox":[649,224,225,30]}
+{"kind":"textbox","id":"sh/k7ap4vi1","slide":18,"text":"Reconciliation is not applicable for fixed billing.","textPreview":"Reconciliation is not applicable for fixed billing.","textChars":51,"textLines":1,"bbox":[649,270,225,54]}
+{"kind":"shape","id":"sh/z61obqhg","slide":18,"bbox":[924,205,255,136]}
+{"kind":"textbox","id":"sh/y5s72l0v","slide":18,"text":"Manual per-tonne","textPreview":"Manual per-tonne","textChars":16,"textLines":1,"bbox":[939,224,225,30]}
+{"kind":"textbox","id":"sh/d4j69gzq","slide":18,"text":"Requires contract opt-in, override permission, reason and audit evidence.","textPreview":"Requires contract opt-in, override permission, reason and audit evidence.","textChars":73,"textLines":1,"bbox":[939,270,225,54]}
+{"kind":"shape","id":"sh/c3qp0bi5","slide":18,"bbox":[54,386,34,34]}
+{"kind":"textbox","id":"sh/47upgvq1","slide":18,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,389,34,27]}
+{"kind":"textbox","id":"sh/p83qpg76","slide":18,"text":"Record gross and tare","textPreview":"Record gross and tare","textChars":21,"textLines":1,"bbox":[104,385,490,27]}
+{"kind":"textbox","id":"sh/2lc7ul8v","slide":18,"text":"Use the correct checkpoint, unit, timestamp and weighbridge/ticket reference.","textPreview":"Use the correct checkpoint, unit, timestamp and weighbridge/ticket reference.","textChars":77,"textLines":1,"bbox":[104,414,490,47]}
+{"kind":"shape","id":"sh/3mlonq9g","slide":18,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/gjupsbqp","slide":18,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/hk36lgra","slide":18,"text":"Verify net","textPreview":"Verify net","textChars":10,"textLines":1,"bbox":[104,480,490,27]}
+{"kind":"textbox","id":"sh/uhc7q18j","slide":18,"text":"Net = gross − tare. Stop if the unit, sign or plausible quantity is wrong.","textPreview":"Net = gross − tare. Stop if the unit, sign or plausible quantity is wrong.","textChars":74,"textLines":1,"bbox":[104,509,490,47]}
+{"kind":"shape","id":"sh/filoj694","slide":18,"bbox":[670,386,34,34]}
+{"kind":"textbox","id":"sh/0fepofq9","slide":18,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[670,389,34,27]}
+{"kind":"textbox","id":"sh/lg7qx07e","slide":18,"text":"Compare and review","textPreview":"Compare and review","textChars":18,"textLines":1,"bbox":[720,385,490,27]}
+{"kind":"textbox","id":"sh/va9sne9w","slide":18,"text":"Within tolerance can complete normally; exceptions require evidence and a specific decision reason.","textPreview":"Within tolerance can complete normally; exceptions require evidence and a specific decision reason.","textChars":99,"textLines":1,"bbox":[720,414,490,47]}
+{"kind":"shape","id":"sh/a90ru9sb","slide":18,"bbox":[670,481,34,34]}
+{"kind":"textbox","id":"sh/xcrap4rm","slide":18,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[670,484,34,27]}
+{"kind":"textbox","id":"sh/wbi9wzah","slide":18,"text":"Preserve captured facts","textPreview":"Preserve captured facts","textChars":23,"textLines":1,"bbox":[720,480,490,27]}
+{"kind":"textbox","id":"sh/jy9sre9s","slide":18,"text":"Approval records the decision—it does not rewrite the source or destination weights.","textPreview":"Approval records the decision—it does not rewrite the source or destination weights.","textChars":84,"textLines":1,"bbox":[720,509,490,47]}
+{"kind":"notes","id":"nt/byl4qw","slide":18,"text":"Demonstrate one within-tolerance trip and one seeded 1.250-tonne variance. Explain the trip's QuantitySource in reporting.\n\n[Sources]\n- docs/workflow-improvements.md\n- docs/demo-guide.md\n- docs/domain-glossary.md"}
+{"kind":"slide","id":"sl/p6ot71","slide":19,"title":"OPERATIONAL DOCUMENTS","textShapes":31}
+{"kind":"textbox","id":"sh/lovyt4b2","slide":19,"text":"OPERATIONAL DOCUMENTS","textPreview":"OPERATIONAL DOCUMENTS","textChars":21,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/yl4zypsr","slide":19,"text":"Attach the right evidence before completion","textPreview":"Attach the right evidence before completion","textChars":43,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/jmdgrutc","slide":19,"text":"Documents are authorised by tenant and trip, validated on upload, and become immutable when the trip completes.","textPreview":"Documents are authorised by tenant and trip, validated on upload, and become immutable when the trip completes.","textChars":111,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/wj2hwzal","slide":19,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/xkbypkb6","slide":19,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/ahkzupsf","slide":19,"text":"19","textPreview":"19","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"textbox","id":"sh/bitgnut0","slide":19,"text":"Upload procedure","textPreview":"Upload procedure","textChars":16,"textLines":1,"bbox":[54,180,510,32]}
+{"kind":"textbox","id":"sh/gf6h8jap","slide":19,"text":"Verification","textPreview":"Verification","textChars":12,"textLines":1,"bbox":[690,180,510,32]}
+{"kind":"shape","id":"sh/hgfi1oba","slide":19,"bbox":[640,180,0,400]}
+{"kind":"shape","id":"sh/dw3ipc7u","slide":19,"bbox":[54,236,34,34]}
+{"kind":"textbox","id":"sh/cbuhwrq9","slide":19,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,239,34,27]}
+{"kind":"textbox","id":"sh/bal0nmp4","slide":19,"text":"Open Operational documents","textPreview":"Open Operational documents","textChars":26,"textLines":1,"bbox":[104,235,470,27]}
+{"kind":"textbox","id":"sh/q9czuh8j","slide":19,"text":"Work from the correct trip so ownership is unambiguous.","textPreview":"Work from the correct trip so ownership is unambiguous.","textChars":55,"textLines":1,"bbox":[104,264,470,47]}
+{"kind":"shape","id":"sh/p83ilc7y","slide":19,"bbox":[54,320,34,34]}
+{"kind":"textbox","id":"sh/o7uhs7qd","slide":19,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,323,34,27]}
+{"kind":"textbox","id":"sh/36l0j2ps","slide":19,"text":"Choose the document type","textPreview":"Choose the document type","textChars":24,"textLines":1,"bbox":[104,319,470,27]}
+{"kind":"textbox","id":"sh/25szqx87","slide":19,"text":"Collection ticket, delivery ticket, proof of delivery, invoice support or Other.","textPreview":"Collection ticket, delivery ticket, proof of delivery, invoice support or Other.","textChars":80,"textLines":1,"bbox":[104,348,470,47]}
+{"kind":"shape","id":"sh/94nixg72","slide":19,"bbox":[54,404,34,34]}
+{"kind":"textbox","id":"sh/83e14bqh","slide":19,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,407,34,27]}
+{"kind":"textbox","id":"sh/87ml0fet","slide":19,"text":"Select or capture the file","textPreview":"Select or capture the file","textChars":26,"textLines":1,"bbox":[104,403,470,27]}
+{"kind":"textbox","id":"sh/t8v2tkfe","slide":19,"text":"PDF, JPEG, PNG or WebP; maximum 15 MB in the current configuration.","textPreview":"PDF, JPEG, PNG or WebP; maximum 15 MB in the current configuration.","textChars":67,"textLines":1,"bbox":[104,432,470,47]}
+{"kind":"shape","id":"sh/654jy5wn","slide":19,"bbox":[54,488,34,34]}
+{"kind":"textbox","id":"sh/76dkrax8","slide":19,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,491,34,27]}
+{"kind":"textbox","id":"sh/k3m1wvex","slide":19,"text":"Add a useful note and upload","textPreview":"Add a useful note and upload","textChars":28,"textLines":1,"bbox":[104,487,470,27]}
+{"kind":"textbox","id":"sh/l4v2p0f2","slide":19,"text":"Keep notes operational; never include passwords, tokens or unnecessary personal data.","textPreview":"Keep notes operational; never include passwords, tokens or unnecessary personal data.","textChars":85,"textLines":1,"bbox":[104,516,470,47]}
+{"kind":"shape","id":"sh/yh4ju5wr","slide":19,"bbox":[690,236,34,34]}
+{"kind":"textbox","id":"sh/jidknaxc","slide":19,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[690,239,34,27]}
+{"kind":"textbox","id":"sh/wf21svel","slide":19,"text":"Watch the upload state","textPreview":"Watch the upload state","textChars":22,"textLines":1,"bbox":[740,235,470,27]}
+{"kind":"textbox","id":"sh/xgb2l0f6","slide":19,"text":"Use retry only with the same intended file and stable key.","textPreview":"Use retry only with the same intended file and stable key.","textChars":58,"textLines":1,"bbox":[740,264,470,47]}
+{"kind":"shape","id":"sh/zatkbqh8","slide":19,"bbox":[690,320,34,34]}
+{"kind":"textbox","id":"sh/e9032l0n","slide":19,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[690,323,34,27]}
+{"kind":"textbox","id":"sh/1cb2d0zy","slide":19,"text":"Open the preview","textPreview":"Open the preview","textChars":16,"textLines":1,"bbox":[740,319,470,27]}
+{"kind":"textbox","id":"sh/0b2l4vid","slide":19,"text":"Confirm orientation, legibility, document type and trip reference.","textPreview":"Confirm orientation, legibility, document type and trip reference.","textChars":66,"textLines":1,"bbox":[740,348,470,47]}
+{"kind":"shape","id":"sh/net4fqh4","slide":19,"bbox":[690,404,34,34]}
+{"kind":"textbox","id":"sh/mdk36l0j","slide":19,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[690,407,34,27]}
+{"kind":"textbox","id":"sh/9gbmh0za","slide":19,"text":"Correct before completion","textPreview":"Correct before completion","textChars":25,"textLines":1,"bbox":[740,403,470,27]}
+{"kind":"textbox","id":"sh/of2l8vip","slide":19,"text":"Delete/replace only while policy permits and the trip is not complete.","textPreview":"Delete/replace only while policy permits and the trip is not complete.","textChars":70,"textLines":1,"bbox":[740,432,470,47]}
+{"kind":"shape","id":"sh/b2d4jah0","slide":19,"bbox":[690,488,34,34]}
+{"kind":"textbox","id":"sh/a1k3a50v","slide":19,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[690,491,34,27]}
+{"kind":"textbox","id":"sh/uxcfmds3","slide":19,"text":"Confirm required evidence","textPreview":"Confirm required evidence","textChars":25,"textLines":1,"bbox":[740,487,470,27]}
+{"kind":"textbox","id":"sh/vylwvito","slide":19,"text":"POD and weight tickets must satisfy route/customer rules before completion.","textPreview":"POD and weight tickets must satisfy route/customer rules before completion.","textChars":75,"textLines":1,"bbox":[740,516,470,47]}
+{"kind":"notes","id":"nt/p6ot71","slide":19,"text":"The upload validates extension, declared type, file signature, size and malware policy. Original images are preserved; previews are metadata-stripped derivatives.\n\n[Sources]\n- README.md\n- docs/product-scope.md"}
+{"kind":"slide","id":"sl/so2rz9","slide":20,"title":"CONTROL TOWER","textShapes":17}
+{"kind":"textbox","id":"sh/je9gf2lk","slide":20,"text":"CONTROL TOWER","textPreview":"CONTROL TOWER","textChars":13,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/kfixo7m5","slide":20,"text":"Run the shift from the Operations board","textPreview":"Run the shift from the Operations board","textChars":39,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/5gryhc3q","slide":20,"text":"Use live state and filters to find work that is delayed, exceptional or stale—then open the authoritative trip record.","textPreview":"Use live state and filters to find work that is delayed, exceptional or stale—then open the authoritative trip record.","textChars":118,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/6h0fqh4b","slide":20,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/7i9gjmlg","slide":20,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/sj2xsrm1","slide":20,"text":"20","textPreview":"20","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/tkbylw3m","slide":20,"bbox":[506,171,708,452]}
+{"kind":"shape","id":"sh/f6tgnmls","slide":20,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/7adgnu9g","slide":20,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/694zupsv","slide":20,"text":"Confirm connection state","textPreview":"Confirm connection state","textChars":24,"textLines":1,"bbox":[104,180,360,27]}
+{"kind":"textbox","id":"sh/tcfip4rm","slide":20,"text":"A reconnecting board refetches; disconnected state requires cautious manual refresh.","textPreview":"A reconnecting board refetches; disconnected state requires cautious manual refresh.","textChars":84,"textLines":1,"bbox":[104,209,360,47]}
+{"kind":"shape","id":"sh/sb6hwzq1","slide":20,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/j6dgja94","slide":20,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/y54zqpsz","slide":20,"text":"Filter the workload","textPreview":"Filter the workload","textChars":19,"textLines":1,"bbox":[104,280,360,27]}
+{"kind":"textbox","id":"sh/l8vylkra","slide":20,"text":"Search plus customer, branch, driver, vehicle, commodity, delayed and exception filters.","textPreview":"Search plus customer, branch, driver, vehicle, commodity, delayed and exception filters.","textChars":88,"textLines":1,"bbox":[104,309,360,47]}
+{"kind":"shape","id":"sh/k7mhsfap","slide":20,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/32x0ve9o","slide":20,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/21oz2983","slide":20,"text":"Read freshness honestly","textPreview":"Read freshness honestly","textChars":23,"textLines":1,"bbox":[104,380,360,27]}
+{"kind":"textbox","id":"sh/exsjudsb","slide":20,"text":"A stale location is shown as stale—not live. Never infer a milestone from map position alone.","textPreview":"A stale location is shown as stale—not live. Never infer a milestone from map position alone.","textChars":93,"textLines":1,"bbox":[104,409,360,47]}
+{"kind":"shape","id":"sh/zy1knitw","slide":20,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/0zalwnah","slide":20,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/10j2psbm","slide":20,"text":"Open the trip","textPreview":"Open the trip","textChars":13,"textLines":1,"bbox":[104,480,360,27]}
+{"kind":"textbox","id":"sh/m1s3yds7","slide":20,"text":"Resolve the issue in its workspace so the action, reason and timeline are recorded.","textPreview":"Resolve the issue in its workspace so the action, reason and timeline are recorded.","textChars":83,"textLines":1,"bbox":[104,509,360,47]}
+{"kind":"image","id":"im/nu10zqxk","slide":20,"name":"","geometry":"rect","alt":"LoadIx operations control tower","bbox":[510,175,700,444]}
+{"kind":"notes","id":"nt/so2rz9","slide":20,"text":"Demonstrate delayed-only and exceptions-only filters. Point out the board is a monitoring surface; the trip remains authoritative.\n\n[Sources]\n- Local LoadIx operations screenshot captured 2026-08-24\n- README.md\n- docs/product-scope.md"}
+{"kind":"slide","id":"sl/4o7eqx","slide":21,"title":"DRIVER WORKFLOW","textShapes":22}
+{"kind":"textbox","id":"sh/exg7exkb","slide":21,"text":"DRIVER WORKFLOW","textPreview":"DRIVER WORKFLOW","textChars":15,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/10rq9sjm","slide":21,"text":"Drivers progress assigned work with visible sync state","textPreview":"Drivers progress assigned work with visible sync state","textChars":54,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/gzypgn21","slide":21,"text":"The driver workspace is touch-first and supports intermittent connectivity without silently duplicating actions.","textPreview":"The driver workspace is touch-first and supports intermittent connectivity without silently duplicating actions.","textChars":112,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/rup83ilk","slide":21,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/6tg7adkz","slide":21,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/tw7q5s3q","slide":21,"text":"21","textPreview":"21","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/svypcn25","slide":21,"bbox":[54,215,202,270]}
+{"kind":"textbox","id":"sh/bq98fm1o","slide":21,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[69,234,45,42]}
+{"kind":"textbox","id":"sh/qp0rmhk3","slide":21,"text":"Open assigned trip","textPreview":"Open assigned trip","textChars":18,"textLines":1,"bbox":[69,300,172,58]}
+{"kind":"textbox","id":"sh/c3ilgf69","slide":21,"text":"Verify route, timing and directions.","textPreview":"Verify route, timing and directions.","textChars":36,"textLines":1,"bbox":[69,382,172,72]}
+{"kind":"shape","id":"sh/x4rmpknu","slide":21,"bbox":[284,215,202,270]}
+{"kind":"textbox","id":"sh/ahg3e5o3","slide":21,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[299,234,45,42]}
+{"kind":"textbox","id":"sh/b294na5o","slide":21,"text":"Record collection","textPreview":"Record collection","textChars":17,"textLines":1,"bbox":[299,300,172,58]}
+{"kind":"textbox","id":"sh/ofylcv6x","slide":21,"text":"Arrival, loading, source weights and ticket.","textPreview":"Arrival, loading, source weights and ticket.","textChars":44,"textLines":1,"bbox":[299,382,172,72]}
+{"kind":"shape","id":"sh/pg7ml0ni","slide":21,"bbox":[514,215,202,270]}
+{"kind":"textbox","id":"sh/2dg3a5o7","slide":21,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[529,234,45,42]}
+{"kind":"textbox","id":"sh/nep4jq5c","slide":21,"text":"Travel","textPreview":"Travel","textChars":6,"textLines":1,"bbox":[529,300,172,58]}
+{"kind":"textbox","id":"sh/0byl8v61","slide":21,"text":"Depart and submit location only after an explicit action.","textPreview":"Depart and submit location only after an explicit action.","textChars":57,"textLines":1,"bbox":[529,382,172,72]}
+{"kind":"shape","id":"sh/1c7mh0nm","slide":21,"bbox":[744,215,202,270]}
+{"kind":"textbox","id":"sh/hwfapsby","slide":21,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[759,234,45,42]}
+{"kind":"textbox","id":"sh/gv6twnud","slide":21,"text":"Record delivery","textPreview":"Record delivery","textChars":15,"textLines":1,"bbox":[759,300,172,58]}
+{"kind":"textbox","id":"sh/vuxsnit8","slide":21,"text":"Arrival, unloading, destination weights and POD.","textPreview":"Arrival, unloading, destination weights and POD.","textChars":48,"textLines":1,"bbox":[759,382,172,72]}
+{"kind":"shape","id":"sh/utobudcn","slide":21,"bbox":[974,215,202,270]}
+{"kind":"textbox","id":"sh/tsval8b2","slide":21,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[989,234,45,42]}
+{"kind":"textbox","id":"sh/8rmtsnuh","slide":21,"text":"Synchronise","textPreview":"Synchronise","textChars":11,"textLines":1,"bbox":[989,300,172,58]}
+{"kind":"textbox","id":"sh/7qdsjitw","slide":21,"text":"Review queued, failed or conflicted commands before completion.","textPreview":"Review queued, failed or conflicted commands before completion.","textChars":63,"textLines":1,"bbox":[989,382,172,72]}
+{"kind":"textbox","id":"sh/6p4bqdcb","slide":21,"text":"Offline rule","textPreview":"Offline rule","textChars":12,"textLines":1,"bbox":[54,525,170,30]}
+{"kind":"textbox","id":"sh/dozuxcb6","slide":21,"text":"A queued command is not yet confirmed by LoadIx Cloud. Reconnect, review sync state and resolve conflicts—do not repeat actions blindly.","textPreview":"A queued command is not yet confirmed by LoadIx Cloud. Reconnect, review sync state and resolve conflicts—do not repeat actions blindly.","textChars":136,"textLines":1,"bbox":[245,522,955,64]}
+{"kind":"notes","id":"nt/4o7eqx","slide":21,"text":"If practical, demonstrate in a narrow viewport with the synthetic driver account. Logout clears the driver's local queue; commands older than seven days require review.\n\n[Sources]\n- README.md\n- docs/demo-guide.md\n- docs/product-scope.md"}
+{"kind":"slide","id":"sl/k2bxvl","slide":22,"title":"NOTIFICATIONS","textShapes":17}
+{"kind":"textbox","id":"sh/x0v6d0r2","slide":22,"text":"NOTIFICATIONS","textPreview":"NOTIFICATIONS","textChars":13,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/adk7i5sb","slide":22,"text":"Treat notifications as an attention queue, not the source of truth","textPreview":"Treat notifications as an attention queue, not the source of truth","textChars":66,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/bedoba9w","slide":22,"text":"Open the related record to verify current state; delivery retries and preferences are controlled separately.","textPreview":"Open the related record to verify current state; delivery retries and preferences are controlled separately.","textChars":108,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/ob2pgval","slide":22,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/pcb690rq","slide":22,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/29knelsf","slide":22,"text":"22","textPreview":"22","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/3ato7q90","slide":22,"bbox":[536,171,678,452]}
+{"kind":"shape","id":"sh/98fqlkra","slide":22,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/po7mhori","slide":22,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/o3y58jax","slide":22,"text":"Open the bell or Notifications","textPreview":"Open the bell or Notifications","textChars":30,"textLines":1,"bbox":[104,180,390,27]}
+{"kind":"textbox","id":"sh/n2p4fe9c","slide":22,"text":"Prioritise operational and exception items relevant to your shift.","textPreview":"Prioritise operational and exception items relevant to your shift.","textChars":66,"textLines":1,"bbox":[104,209,390,47]}
+{"kind":"shape","id":"sh/21gn69sr","slide":22,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/107md4r6","slide":22,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/0zyl4za1","slide":22,"text":"Read and navigate","textPreview":"Read and navigate","textChars":17,"textLines":1,"bbox":[104,280,390,27]}
+{"kind":"textbox","id":"sh/fy54bu9g","slide":22,"text":"Open the linked customer, instruction, trip or finance record before acting.","textPreview":"Open the linked customer, instruction, trip or finance record before acting.","textChars":76,"textLines":1,"bbox":[104,309,390,47]}
+{"kind":"shape","id":"sh/exw329sv","slide":22,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/lwrmp8rq","slide":22,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/kvi5g3a5","slide":22,"text":"Mark read after review","textPreview":"Mark read after review","textChars":22,"textLines":1,"bbox":[104,380,390,27]}
+{"kind":"textbox","id":"sh/4bax8bmd","slide":22,"text":"Read status indicates attention handled, not that the business issue is resolved.","textPreview":"Read status indicates attention handled, not that the business issue is resolved.","textChars":81,"textLines":1,"bbox":[104,409,390,47]}
+{"kind":"shape","id":"sh/5cjy1g3y","slide":22,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/i9sf614n","slide":22,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/3a1gz6ls","slide":22,"text":"Manage delivery controls","textPreview":"Manage delivery controls","textChars":24,"textLines":1,"bbox":[104,480,390,27]}
+{"kind":"textbox","id":"sh/g7ax4rmh","slide":22,"text":"Users set channel preferences; authorised users review failures and retry queues.","textPreview":"Users set channel preferences; authorised users review failures and retry queues.","textChars":81,"textLines":1,"bbox":[104,509,390,47]}
+{"kind":"image","id":"im/9k32t83q","slide":22,"name":"","geometry":"rect","alt":"LoadIx notification centre","bbox":[540,175,670,444]}
+{"kind":"notes","id":"nt/k2bxvl","slide":22,"text":"Explain that in-app notification remains the default operational channel. Local email/SMS behaviour in the demo is not production delivery.\n\n[Sources]\n- Local LoadIx notifications screenshot captured 2026-08-24\n- README.md"}
+{"kind":"slide","id":"sl/8vmaa7","slide":23,"title":"FINANCE","textShapes":17}
+{"kind":"textbox","id":"sh/2l8b294n","slide":23,"text":"FINANCE","textPreview":"FINANCE","textChars":7,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/p8judo3e","slide":23,"text":"Prepare approved, documented trips for invoicing","textPreview":"Prepare approved, documented trips for invoicing","textChars":48,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/47at4jmt","slide":23,"text":"LoadIx creates an auditable invoice-preparation batch; it does not issue a SARS tax invoice or post to an accounting ledger.","textPreview":"LoadIx creates an auditable invoice-preparation batch; it does not issue a SARS tax invoice or post to an accounting ledger.","textChars":124,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/ra1cfyl4","slide":23,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/q9sb6t4z","slide":23,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/dcjuho3a","slide":23,"text":"23","textPreview":"23","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/cbat83mp","slide":23,"bbox":[516,171,698,452]}
+{"kind":"shape","id":"sh/edcbat4v","slide":23,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/8ne5c7il","slide":23,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/tonm5cz6","slide":23,"text":"Review tax configuration","textPreview":"Review tax configuration","textChars":24,"textLines":1,"bbox":[104,180,370,27]}
+{"kind":"textbox","id":"sh/6lwnax0f","slide":23,"text":"Finance calculations require a reviewed tenant tax setup.","textPreview":"Finance calculations require a reviewed tenant tax setup.","textChars":57,"textLines":1,"bbox":[104,209,370,47]}
+{"kind":"shape","id":"sh/7m5432h0","slide":23,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/gry5g7ih","slide":23,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/hs7m9cz2","slide":23,"text":"Prepare the trip","textPreview":"Prepare the trip","textChars":16,"textLines":1,"bbox":[104,280,370,27]}
+{"kind":"textbox","id":"sh/upwneh0r","slide":23,"text":"Completed + reconciled + required documents; recalculate from the immutable rate snapshot.","textPreview":"Completed + reconciled + required documents; recalculate from the immutable rate snapshot.","textChars":90,"textLines":1,"bbox":[104,309,370,47]}
+{"kind":"shape","id":"sh/vqp472hc","slide":23,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/4fy5krit","slide":23,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/5g7mdwze","slide":23,"text":"Add and approve costs","textPreview":"Add and approve costs","textChars":21,"textLines":1,"bbox":[104,380,370,27]}
+{"kind":"textbox","id":"sh/dcnmxwri","slide":23,"text":"Use the correct cost category; post-approval corrections become explicit adjustments.","textPreview":"Use the correct cost category; post-approval corrections become explicit adjustments.","textChars":85,"textLines":1,"bbox":[104,409,370,47]}
+{"kind":"shape","id":"sh/cbu5orax","slide":23,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/ral4vm9c","slide":23,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/q9c3mhsr","slide":23,"text":"Build the batch","textPreview":"Build the batch","textChars":15,"textLines":1,"bbox":[104,480,370,27]}
+{"kind":"textbox","id":"sh/10nm1wre","slide":23,"text":"Select approved invoice-ready trips for one customer/contract/currency, review, approve and export.","textPreview":"Select approved invoice-ready trips for one customer/contract/currency, review, approve and export.","textChars":99,"textLines":1,"bbox":[104,509,370,47]}
+{"kind":"image","id":"im/udcvq54r","slide":23,"name":"","geometry":"rect","alt":"LoadIx invoice-ready queue and batch builder","bbox":[520,175,690,444]}
+{"kind":"notes","id":"nt/8vmaa7","slide":23,"text":"Use the canonical seed's six approved candidates. Show revenue, billable tonnes, tax treatment and costs before batch approval.\n\n[Sources]\n- Local LoadIx invoice-ready queue screenshot captured 2026-08-24\n- README.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/u42ak4","slide":24,"title":"REPORTING","textShapes":17}
+{"kind":"textbox","id":"sh/nu5on2p8","slide":24,"text":"REPORTING","textPreview":"REPORTING","textChars":9,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/ove5g76t","slide":24,"text":"Use reports to explain performance and exceptions","textPreview":"Use reports to explain performance and exceptions","textChars":49,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/pwn6pc7e","slide":24,"text":"Every report is tenant-scoped, date-filtered in the tenant time zone and returned with a freshness timestamp.","textPreview":"Every report is tenant-scoped, date-filtered in the tenant time zone and returned with a freshness timestamp.","textChars":109,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/axwnihoz","slide":24,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/by5or2pk","slide":24,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/cze5k765","slide":24,"text":"24","textPreview":"24","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/xkn6tc7q","slide":24,"bbox":[516,171,698,452]}
+{"kind":"shape","id":"sh/zmpovmpg","slide":24,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/vehcfil8","slide":24,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/ut8bmdkn","slide":24,"text":"Set the reporting lens","textPreview":"Set the reporting lens","textChars":22,"textLines":1,"bbox":[104,180,370,27]}
+{"kind":"textbox","id":"sh/hgjuhs3e","slide":24,"text":"Choose report, date range and branch/customer filters before interpreting totals.","textPreview":"Choose report, date range and branch/customer filters before interpreting totals.","textChars":81,"textLines":1,"bbox":[104,209,370,47]}
+{"kind":"shape","id":"sh/wfqton2t","slide":24,"bbox":[54,281,34,34]}
+{"kind":"textbox","id":"sh/7qhsbylc","slide":24,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[54,284,34,27]}
+{"kind":"textbox","id":"sh/mp8bidkr","slide":24,"text":"Refresh and read freshness","textPreview":"Refresh and read freshness","textChars":26,"textLines":1,"bbox":[104,280,370,27]}
+{"kind":"textbox","id":"sh/9szad83i","slide":24,"text":"Confirm the requested period and generation time.","textPreview":"Confirm the requested period and generation time.","textChars":49,"textLines":1,"bbox":[104,309,370,47]}
+{"kind":"shape","id":"sh/8rqtk32x","slide":24,"bbox":[54,381,34,34]}
+{"kind":"textbox","id":"sh/rm1cn2lg","slide":24,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,384,34,27]}
+{"kind":"textbox","id":"sh/6lsbuxkv","slide":24,"text":"Drill into the right view","textPreview":"Drill into the right view","textChars":25,"textLines":1,"bbox":[104,380,370,27]}
+{"kind":"textbox","id":"sh/2tgn258f","slide":24,"text":"Trip register, variance, contract performance, profitability and invoice status answer different questions.","textPreview":"Trip register, variance, contract performance, profitability and invoice status answer different questions.","textChars":107,"textLines":1,"bbox":[104,409,370,47]}
+{"kind":"shape","id":"sh/nupobq90","slide":24,"bbox":[54,481,34,34]}
+{"kind":"textbox","id":"sh/ofy54vql","slide":24,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[54,484,34,27]}
+{"kind":"textbox","id":"sh/9g76d0r6","slide":24,"text":"Export deliberately","textPreview":"Export deliberately","textChars":19,"textLines":1,"bbox":[104,480,370,27]}
+{"kind":"textbox","id":"sh/ahgn658r","slide":24,"text":"Current pages can export directly; larger extracts use queued export jobs.","textPreview":"Current pages can export directly; larger extracts use queued export jobs.","textChars":74,"textLines":1,"bbox":[104,509,370,47]}
+{"kind":"image","id":"im/3mlk7md0","slide":24,"name":"","geometry":"rect","alt":"LoadIx operations reporting workspace","bbox":[520,175,690,444]}
+{"kind":"notes","id":"nt/u42ak4","slide":24,"text":"Demonstrate at least variance and profitability. Explain that South African date selections are resolved to UTC boundaries by the server.\n\n[Sources]\n- Local LoadIx reports screenshot captured 2026-08-24\n- README.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/3d9ksg","slide":25,"title":"DAILY OPERATING RHYTHM","textShapes":32}
+{"kind":"textbox","id":"sh/pkj2pwfe","slide":25,"text":"DAILY OPERATING RHYTHM","textPreview":"DAILY OPERATING RHYTHM","textChars":22,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/2hs3uhg3","slide":25,"text":"A disciplined shift routine keeps the queue clean","textPreview":"A disciplined shift routine keeps the queue clean","textChars":49,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/ni1knmx8","slide":25,"text":"Use repeatable checks at start, during the shift and before handover.","textPreview":"Use repeatable checks at start, during the shift and before handover.","textChars":69,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/cnul0ry5","slide":25,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/xo3mtwfq","slide":25,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/als3y1gz","slide":25,"text":"25","textPreview":"25","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/bmlkr6xk","slide":25,"bbox":[54,195,350,405]}
+{"kind":"shape","id":"sh/krul4by1","slide":25,"bbox":[54,195,350,54]}
+{"kind":"textbox","id":"sh/ls3mxgfm","slide":25,"text":"START OF SHIFT","textPreview":"START OF SHIFT","textChars":14,"textLines":1,"bbox":[69,212,320,25]}
+{"kind":"shape","id":"sh/9gzex4r6","slide":25,"bbox":[72,276,34,34]}
+{"kind":"textbox","id":"sh/of6d4za1","slide":25,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[72,279,34,27]}
+{"kind":"textbox","id":"sh/nexwve9g","slide":25,"text":"Confirm tenant, branch and API connection","textPreview":"Confirm tenant, branch and API connection","textChars":41,"textLines":1,"bbox":[122,275,264,27]}
+{"kind":"shape","id":"sh/mdov29sv","slide":25,"bbox":[122,304,264,47]}
+{"kind":"shape","id":"sh/x4ze1ori","slide":25,"bbox":[72,350,34,34]}
+{"kind":"textbox","id":"sh/wjqd8jax","slide":25,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[72,353,34,27]}
+{"kind":"textbox","id":"sh/bihwze9c","slide":25,"text":"Review notifications and dashboard counts","textPreview":"Review notifications and dashboard counts","textChars":41,"textLines":1,"bbox":[122,349,264,27]}
+{"kind":"shape","id":"sh/ah8v69sr","slide":25,"bbox":[122,378,264,47]}
+{"kind":"shape","id":"sh/d8vepkre","slide":25,"bbox":[72,424,34,34]}
+{"kind":"textbox","id":"sh/cnmdwfat","slide":25,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[72,427,34,27]}
+{"kind":"textbox","id":"sh/4rqdczip","slide":25,"text":"Filter Operations for delayed and exception trips","textPreview":"Filter Operations for delayed and exception trips","textChars":49,"textLines":1,"bbox":[122,423,264,27]}
+{"kind":"shape","id":"sh/5szel4zu","slide":25,"bbox":[122,452,264,47]}
+{"kind":"shape","id":"sh/ip8vap0j","slide":25,"bbox":[72,498,34,34]}
+{"kind":"textbox","id":"sh/jqhwjuh4","slide":25,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[72,501,34,27]}
+{"kind":"textbox","id":"sh/svaxgzil","slide":25,"text":"Check today's planned/unassigned trips","textPreview":"Check today's planned/unassigned trips","textChars":38,"textLines":1,"bbox":[122,497,264,27]}
+{"kind":"shape","id":"sh/dwjep4z6","slide":25,"bbox":[122,526,264,47]}
+{"kind":"shape","id":"sh/qt8vep0f","slide":25,"bbox":[444,195,350,405]}
+{"kind":"shape","id":"sh/ru1wnuh0","slide":25,"bbox":[444,195,350,54]}
+{"kind":"textbox","id":"sh/0zaxkjih","slide":25,"text":"DURING SHIFT","textPreview":"DURING SHIFT","textChars":12,"textLines":1,"bbox":[459,212,320,25]}
+{"kind":"shape","id":"sh/1kjetoz2","slide":25,"bbox":[462,276,34,34]}
+{"kind":"textbox","id":"sh/bqp8z25g","slide":25,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[462,279,34,27]}
+{"kind":"textbox","id":"sh/apw76xob","slide":25,"text":"Dispatch only eligible resources","textPreview":"Dispatch only eligible resources","textChars":32,"textLines":1,"bbox":[512,275,264,27]}
+{"kind":"shape","id":"sh/xs7q1cnm","slide":25,"bbox":[512,304,264,47]}
+{"kind":"shape","id":"sh/wryp8761","slide":25,"bbox":[462,350,34,34]}
+{"kind":"textbox","id":"sh/n258v25k","slide":25,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[462,353,34,27]}
+{"kind":"textbox","id":"sh/m1w72xoz","slide":25,"text":"Monitor stage changes and stale locations","textPreview":"Monitor stage changes and stale locations","textChars":41,"textLines":1,"bbox":[512,349,264,27]}
+{"kind":"shape","id":"sh/94nqxsnq","slide":25,"bbox":[512,378,264,47]}
+{"kind":"shape","id":"sh/o3ep4765","slide":25,"bbox":[462,424,34,34]}
+{"kind":"textbox","id":"sh/7y987m5o","slide":25,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[462,427,34,27]}
+{"kind":"textbox","id":"sh/6xgreho3","slide":25,"text":"Resolve weight/document exceptions in the trip","textPreview":"Resolve weight/document exceptions in the trip","textChars":46,"textLines":1,"bbox":[512,423,264,27]}
+{"kind":"shape","id":"sh/u5gb2lkn","slide":25,"bbox":[512,452,264,47]}
+{"kind":"shape","id":"sh/f6pcvql8","slide":25,"bbox":[462,498,34,34]}
+{"kind":"textbox","id":"sh/g7yt4v2d","slide":25,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[462,501,34,27]}
+{"kind":"textbox","id":"sh/h87ux03y","slide":25,"text":"Record specific reasons and operational notes","textPreview":"Record specific reasons and operational notes","textChars":45,"textLines":1,"bbox":[512,497,264,27]}
+{"kind":"shape","id":"sh/61wby1kb","slide":25,"bbox":[512,526,264,47]}
+{"kind":"shape","id":"sh/725cr6lw","slide":25,"bbox":[834,195,350,405]}
+{"kind":"shape","id":"sh/s3et0b2h","slide":25,"bbox":[834,195,350,54]}
+{"kind":"textbox","id":"sh/t4nutg32","slide":25,"text":"END / HANDOVER","textPreview":"END / HANDOVER","textChars":14,"textLines":1,"bbox":[849,212,320,25]}
+{"kind":"shape","id":"sh/qx0ba5kv","slide":25,"bbox":[852,276,34,34]}
+{"kind":"textbox","id":"sh/by9c3a1g","slide":25,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[852,279,34,27]}
+{"kind":"textbox","id":"sh/lsbet4ni","slide":25,"text":"Review reconciliation-required work","textPreview":"Review reconciliation-required work","textChars":35,"textLines":1,"bbox":[902,275,264,27]}
+{"kind":"shape","id":"sh/0r2x0zmx","slide":25,"bbox":[902,304,264,47]}
+{"kind":"shape","id":"sh/z6tw7u5c","slide":25,"bbox":[852,350,34,34]}
+{"kind":"textbox","id":"sh/y5kfyp4r","slide":25,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[852,353,34,27]}
+{"kind":"textbox","id":"sh/d4be5kn6","slide":25,"text":"Confirm completed trips have required evidence","textPreview":"Confirm completed trips have required evidence","textChars":46,"textLines":1,"bbox":[902,349,264,27]}
+{"kind":"shape","id":"sh/c3ixwzml","slide":25,"bbox":[902,378,264,47]}
+{"kind":"shape","id":"sh/b29w3u5g","slide":25,"bbox":[852,424,34,34]}
+{"kind":"textbox","id":"sh/q10vup4v","slide":25,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[852,427,34,27]}
+{"kind":"textbox","id":"sh/x0ve1o3q","slide":25,"text":"Hand invoice-ready work to finance","textPreview":"Hand invoice-ready work to finance","textChars":34,"textLines":1,"bbox":[902,423,264,27]}
+{"kind":"shape","id":"sh/wzmx8jm5","slide":25,"bbox":[902,452,264,47]}
+{"kind":"shape","id":"sh/g3uh4nu1","slide":25,"bbox":[852,498,34,34]}
+{"kind":"textbox","id":"sh/h43ydsbm","slide":25,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[852,501,34,27]}
+{"kind":"textbox","id":"sh/u1cz2xcb","slide":25,"text":"Record unresolved owner, reason and next action","textPreview":"Record unresolved owner, reason and next action","textChars":47,"textLines":1,"bbox":[902,497,264,27]}
+{"kind":"shape","id":"sh/v2lgb2tw","slide":25,"bbox":[902,526,264,47]}
+{"kind":"notes","id":"nt/3d9ksg","slide":25,"text":"Adapt the cadence to the operator's shift pattern. The handover standard is an owner plus next action, not a vague status message.\n\n[Sources]\n- docs/product-scope.md\n- docs/demo-guide.md"}
+{"kind":"slide","id":"sl/7txj54","slide":26,"title":"EXCEPTIONS AND TROUBLESHOOTING","textShapes":21}
+{"kind":"textbox","id":"sh/e5gfupg7","slide":26,"text":"EXCEPTIONS AND TROUBLESHOOTING","textPreview":"EXCEPTIONS AND TROUBLESHOOTING","textChars":30,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/18re54fy","slide":26,"text":"Respond to the control that stopped the action","textPreview":"Respond to the control that stopped the action","textChars":46,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/07ixwzyd","slide":26,"text":"Preserve data and context first; then follow the recovery path that matches the visible symptom.","textPreview":"Preserve data and context first; then follow the recovery path that matches the visible symptom.","textChars":96,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/nu9w7exo","slide":26,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/m90fy9gj","slide":26,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/9wre94fu","slide":26,"text":"26","textPreview":"26","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"textbox","id":"sh/8vix0zy9","slide":26,"text":"SYMPTOM","textPreview":"SYMPTOM","textChars":7,"textLines":1,"bbox":[54,180,285,28]}
+{"kind":"textbox","id":"sh/vy9wbex0","slide":26,"text":"SAFE RESPONSE","textPreview":"SAFE RESPONSE","textChars":13,"textLines":1,"bbox":[350,180,850,28]}
+{"kind":"shape","id":"sh/ax0f29gf","slide":26,"bbox":[54,216,1146,54]}
+{"kind":"textbox","id":"sh/svap0red","slide":26,"text":"API disconnected","textPreview":"API disconnected","textChars":16,"textLines":1,"bbox":[68,231,270,28]}
+{"kind":"textbox","id":"sh/twj69wvy","slide":26,"text":"Pause new mutations; check connection state, refresh once, escalate with time and correlation reference.","textPreview":"Pause new mutations; check connection state, refresh once, escalate with time and correlation reference.","textChars":104,"textLines":1,"bbox":[350,227,830,34]}
+{"kind":"shape","id":"sh/6ts7yhw7","slide":26,"bbox":[54,274,1146,54]}
+{"kind":"textbox","id":"sh/ru1o7mds","slide":26,"text":"409 conflict / stale version","textPreview":"409 conflict / stale version","textChars":28,"textLines":1,"bbox":[68,289,270,28]}
+{"kind":"textbox","id":"sh/gjup4rep","slide":26,"text":"Refresh the record, compare the newer change, then reapply only your intended update.","textPreview":"Refresh the record, compare the newer change, then reapply only your intended update.","textChars":85,"textLines":1,"bbox":[350,285,830,34]}
+{"kind":"shape","id":"sh/1k36dwvu","slide":26,"bbox":[54,332,1146,54]}
+{"kind":"textbox","id":"sh/exs721wj","slide":26,"text":"Permission denied","textPreview":"Permission denied","textChars":17,"textLines":1,"bbox":[68,347,270,28]}
+{"kind":"textbox","id":"sh/filob6d4","slide":26,"text":"Verify role, tenant and record scope. Ask an administrator—do not use another person's account.","textPreview":"Verify role, tenant and record scope. Ask an administrator—do not use another person's account.","textChars":95,"textLines":1,"bbox":[350,343,830,34]}
+{"kind":"shape","id":"sh/onup8bul","slide":26,"bbox":[54,390,1146,54]}
+{"kind":"textbox","id":"sh/po3qhgv6","slide":26,"text":"Resource unavailable","textPreview":"Resource unavailable","textChars":20,"textLines":1,"bbox":[68,405,270,28]}
+{"kind":"textbox","id":"sh/x4z61gna","slide":26,"text":"Check active/compliant status and overlapping work; choose another eligible resource or reschedule.","textPreview":"Check active/compliant status and overlapping work; choose another eligible resource or reschedule.","textChars":99,"textLines":1,"bbox":[350,401,830,34]}
+{"kind":"shape","id":"sh/c3qpsbmp","slide":26,"bbox":[54,448,1146,54]}
+{"kind":"textbox","id":"sh/bihoz654","slide":26,"text":"Weight exception","textPreview":"Weight exception","textChars":16,"textLines":1,"bbox":[68,463,270,28]}
+{"kind":"textbox","id":"sh/ah87q14j","slide":26,"text":"Verify units and ticket inputs; review tolerance and evidence; record a reasoned approval/override if authorised.","textPreview":"Verify units and ticket inputs; review tolerance and evidence; record a reasoned approval/override if authorised.","textChars":113,"textLines":1,"bbox":[350,459,830,34]}
+{"kind":"shape","id":"sh/l8j65gn6","slide":26,"bbox":[54,506,1146,54]}
+{"kind":"textbox","id":"sh/k7apwbm1","slide":26,"text":"Upload rejected","textPreview":"Upload rejected","textChars":15,"textLines":1,"bbox":[68,521,270,28]}
+{"kind":"textbox","id":"sh/z61o365g","slide":26,"text":"Check allowed type, extension, size and signature; retry the same valid file without changing the business record.","textPreview":"Check allowed type, extension, size and signature; retry the same valid file without changing the business record.","textChars":114,"textLines":1,"bbox":[350,517,830,34]}
+{"kind":"shape","id":"sh/y5s7ul4v","slide":26,"bbox":[54,564,1146,54]}
+{"kind":"textbox","id":"sh/1cf6twn2","slide":26,"text":"Offline command conflict","textPreview":"Offline command conflict","textChars":24,"textLines":1,"bbox":[68,579,270,28]}
+{"kind":"textbox","id":"sh/0b65kr6h","slide":26,"text":"Reconnect, review queued status and current trip state; do not repeat lifecycle actions blindly.","textPreview":"Reconnect, review queued status and current trip state; do not repeat lifecycle actions blindly.","textChars":96,"textLines":1,"bbox":[350,575,830,34]}
+{"kind":"notes","id":"nt/7txj54","slide":26,"text":"Support should never request passwords, tokens, credentials, document contents or raw personal-data exports. Capture tenant, workflow, time zone, impact and a safe screenshot/correlation reference.\n\n[Sources]\n- docs/support/customer-support-process.md\n- README.md\n- docs/product-scope.md"}
+{"kind":"slide","id":"sl/71ls78","slide":27,"title":"GUIDED EXERCISE","textShapes":24}
+{"kind":"textbox","id":"sh/4je10z6d","slide":27,"text":"GUIDED EXERCISE","textPreview":"GUIDED EXERCISE","textChars":15,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/3i507u58","slide":27,"text":"Practice the complete journey in the synthetic tenant","textPreview":"Practice the complete journey in the synthetic tenant","textChars":53,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/2xwjypon","slide":27,"text":"Work in pairs: one learner operates, the other verifies references, state and evidence before each handoff.","textPreview":"Work in pairs: one learner operates, the other verifies references, state and evidence before each handoff.","textChars":107,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/do72d4na","slide":27,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/cny14z6p","slide":27,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/rm5kbe54","slide":27,"text":"27","textPreview":"27","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/qlwj29oj","slide":27,"bbox":[54,181,34,34]}
+{"kind":"textbox","id":"sh/1s72hon6","slide":27,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[54,184,34,27]}
+{"kind":"textbox","id":"sh/0ry18j6l","slide":27,"text":"Create","textPreview":"Create","textChars":6,"textLines":1,"bbox":[104,180,490,27]}
+{"kind":"textbox","id":"sh/ylk3ixg3","slide":27,"text":"Create a synthetic contract for Training Infrastructure and save it as a draft.","textPreview":"Create a synthetic contract for Training Infrastructure and save it as a draft.","textChars":79,"textLines":1,"bbox":[104,209,490,47]}
+{"kind":"shape","id":"sh/zmtkb2ho","slide":27,"bbox":[670,181,34,34]}
+{"kind":"textbox","id":"sh/072lk7y9","slide":27,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[670,184,34,27]}
+{"kind":"textbox","id":"sh/l8b2dczu","slide":27,"text":"Activate","textPreview":"Activate","textChars":8,"textLines":1,"bbox":[720,180,490,27]}
+{"kind":"textbox","id":"sh/m9k3mxgf","slide":27,"text":"Review route, Aggregate commodity, tolerance and reconciled-tonne rate; activate.","textPreview":"Review route, Aggregate commodity, tolerance and reconciled-tonne rate; activate.","textChars":81,"textLines":1,"bbox":[720,209,490,47]}
+{"kind":"shape","id":"sh/natkf2h0","slide":27,"bbox":[54,326,34,34]}
+{"kind":"textbox","id":"sh/8bmlo7y5","slide":27,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[54,329,34,27]}
+{"kind":"textbox","id":"sh/9cv2hczq","slide":27,"text":"Plan","textPreview":"Plan","textChars":4,"textLines":1,"bbox":[104,325,490,27]}
+{"kind":"textbox","id":"sh/2d0jad0v","slide":27,"text":"Create a 136-tonne instruction with four trips, windows and a fictional PO; plan and generate.","textPreview":"Create a 136-tonne instruction with four trips, windows and a fictional PO; plan and generate.","textChars":94,"textLines":1,"bbox":[104,354,490,47]}
+{"kind":"shape","id":"sh/3e9k3ihg","slide":27,"bbox":[670,326,34,34]}
+{"kind":"textbox","id":"sh/ri50bex8","slide":27,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[670,329,34,27]}
+{"kind":"textbox","id":"sh/6xwz29gn","slide":27,"text":"Dispatch","textPreview":"Dispatch","textChars":8,"textLines":1,"bbox":[720,325,490,27]}
+{"kind":"textbox","id":"sh/tk7idofe","slide":27,"text":"Open a planned trip, assign eligible resources and dispatch it.","textPreview":"Open a planned trip, assign eligible resources and dispatch it.","textChars":63,"textLines":1,"bbox":[720,354,490,47]}
+{"kind":"shape","id":"sh/sjeh4jyt","slide":27,"bbox":[54,471,34,34]}
+{"kind":"textbox","id":"sh/ju5g7uxc","slide":27,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[54,474,34,27]}
+{"kind":"textbox","id":"sh/itwze9gr","slide":27,"text":"Execute","textPreview":"Execute","textChars":7,"textLines":1,"bbox":[104,470,490,27]}
+{"kind":"textbox","id":"sh/5wni94fi","slide":27,"text":"Advance collection, weights, transit and delivery using the next legal actions.","textPreview":"Advance collection, weights, transit and delivery using the next legal actions.","textChars":79,"textLines":1,"bbox":[104,499,490,47]}
+{"kind":"shape","id":"sh/4vehgzyx","slide":27,"bbox":[670,471,34,34]}
+{"kind":"textbox","id":"sh/3qp0jyxg","slide":27,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[670,474,34,27]}
+{"kind":"textbox","id":"sh/2pgzatwv","slide":27,"text":"Complete","textPreview":"Complete","textChars":8,"textLines":1,"bbox":[720,470,490,27]}
+{"kind":"textbox","id":"sh/0vax4ved","slide":27,"text":"Attach required evidence, reconcile, complete, prepare finance and find it in a report.","textPreview":"Attach required evidence, reconcile, complete, prepare finance and find it in a report.","textChars":87,"textLines":1,"bbox":[720,499,490,47]}
+{"kind":"shape","id":"sh/lwjed0vy","slide":27,"bbox":[54,600,1146,34]}
+{"kind":"textbox","id":"sh/yt8f2lwn","slide":27,"text":"SUCCESS = correct references • legal states • complete evidence • visible audit trail","textPreview":"SUCCESS = correct references • legal states • complete evidence • visible audit trail","textChars":85,"textLines":1,"bbox":[64,607,1126,20]}
+{"kind":"notes","id":"nt/71ls78","slide":27,"text":"Reset the demo after the cohort if required. Learners should narrate why each action is legal before clicking it.\n\n[Sources]\n- docs/demo-guide.md\n- docs/workflow-improvements.md"}
+{"kind":"slide","id":"sl/8g83yx","slide":28,"title":"KNOWLEDGE CHECK","textShapes":16}
+{"kind":"textbox","id":"sh/xk3e183y","slide":28,"text":"KNOWLEDGE CHECK","textPreview":"KNOWLEDGE CHECK","textChars":15,"textLines":1,"bbox":[54,34,420,22]}
+{"kind":"textbox","id":"sh/ahcfqdkn","slide":28,"text":"Ready for supervised live use","textPreview":"Ready for supervised live use","textChars":29,"textLines":1,"bbox":[54,67,1172,58]}
+{"kind":"textbox","id":"sh/vilwzil8","slide":28,"text":"Before using customer data, each learner should answer these questions and complete the guided exercise without unsafe shortcuts.","textPreview":"Before using customer data, each learner should answer these questions and complete the guided exercise without unsafe shortcuts.","textChars":129,"textLines":1,"bbox":[54,128,1172,34]}
+{"kind":"shape","id":"sh/4nexwn2p","slide":28,"bbox":[54,675,1172,0]}
+{"kind":"textbox","id":"sh/5ony5s3a","slide":28,"text":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textPreview":"LOADIX INITIAL USER TRAINING  •  SYNTHETIC DEMONSTRATION DATA","textChars":61,"textLines":1,"bbox":[54,686,900,18]}
+{"kind":"textbox","id":"sh/ilcfudkj","slide":28,"text":"28","textPreview":"28","textChars":2,"textLines":1,"bbox":[1160,684,66,20]}
+{"kind":"shape","id":"sh/jmlw3il4","slide":28,"bbox":[54,185,535,94]}
+{"kind":"textbox","id":"sh/sbex072l","slide":28,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[70,203,42,42]}
+{"kind":"textbox","id":"sh/tcny9s36","slide":28,"text":"What makes a contract available for load planning?","textPreview":"What makes a contract available for load planning?","textChars":50,"textLines":1,"bbox":[130,203,440,56]}
+{"kind":"shape","id":"sh/hg7uhw32","slide":28,"bbox":[54,307,535,94]}
+{"kind":"textbox","id":"sh/gfyt8bmh","slide":28,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[70,325,42,42]}
+{"kind":"textbox","id":"sh/fepcf6lw","slide":28,"text":"Where do you assign a driver, truck and trailers?","textPreview":"Where do you assign a driver, truck and trailers?","textChars":49,"textLines":1,"bbox":[130,325,440,56]}
+{"kind":"shape","id":"sh/udgb614r","slide":28,"bbox":[54,429,535,94]}
+{"kind":"textbox","id":"sh/pkrulg3e","slide":28,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[70,447,42,42]}
+{"kind":"textbox","id":"sh/ojitcb2t","slide":28,"text":"What should you do after a 409 conflict?","textPreview":"What should you do after a 409 conflict?","textChars":40,"textLines":1,"bbox":[130,447,440,56]}
+{"kind":"shape","id":"sh/3ipcj6l8","slide":28,"bbox":[650,246,560,94]}
+{"kind":"textbox","id":"sh/2hgba14n","slide":28,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[666,264,42,42]}
+{"kind":"textbox","id":"sh/5ona9c3u","slide":28,"text":"Does approving a reconciliation exception change captured weights?","textPreview":"Does approving a reconciliation exception change captured weights?","textChars":66,"textLines":1,"bbox":[726,264,465,56]}
+{"kind":"shape","id":"sh/knet0rm9","slide":28,"bbox":[650,396,560,94]}
+{"kind":"textbox","id":"sh/writgru5","slide":28,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[666,414,42,42]}
+{"kind":"textbox","id":"sh/xsrupwbq","slide":28,"text":"What does invoice preparation not do?","textPreview":"What does invoice preparation not do?","textChars":37,"textLines":1,"bbox":[726,414,465,56]}
+{"kind":"shape","id":"sh/a50behcf","slide":28,"bbox":[54,590,1146,34]}
+{"kind":"textbox","id":"sh/bq9cnmtk","slide":28,"text":"NEXT STEP  •  complete role-specific coaching and obtain local supervisor sign-off","textPreview":"NEXT STEP  •  complete role-specific coaching and obtain local supervisor sign-off","textChars":82,"textLines":1,"bbox":[64,597,1126,20]}
+{"kind":"notes","id":"nt/8g83yx","slide":28,"text":"Answer key: 1) Save and activate after all validation. 2) In the Trip workspace. 3) Refresh, compare and reapply the intended change. 4) No; approval records the decision. 5) It does not issue a SARS tax invoice or post to an accounting ledger.\n\nClose by assigning the practice lab and the operator's local SOP/policy module.\n\n[Sources]\n- docs/workflow-improvements.md\n- README.md\n- docs/product-scope.md"}

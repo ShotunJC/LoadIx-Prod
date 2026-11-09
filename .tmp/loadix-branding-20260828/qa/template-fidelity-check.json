@@ -1,0 +1,13 @@
+{
+  "status": "pass",
+  "checkedAt": "2026-08-28T07:25:50.520Z",
+  "workspace": "C:\\Users\\shotg\\Documents\\LoadIx-Prod\\.tmp\\loadix-branding-20260828",
+  "finalPptx": "C:\\Users\\shotg\\Documents\\LoadIx-Prod\\LoadIx-System-Demo-Overview-Branded.pptx",
+  "starterPptx": "C:\\Users\\shotg\\Documents\\LoadIx-Prod\\.tmp\\loadix-branding-20260828\\template-starter.pptx",
+  "mapPath": "C:\\Users\\shotg\\Documents\\LoadIx-Prod\\.tmp\\loadix-branding-20260828\\template-frame-map.json",
+  "starterLayoutDir": "C:\\Users\\shotg\\Documents\\LoadIx-Prod\\.tmp\\loadix-branding-20260828\\template-starter-layout",
+  "finalLayoutDir": "C:\\Users\\shotg\\Documents\\LoadIx-Prod\\.tmp\\loadix-branding-20260828\\final-rendered",
+  "editDir": "C:\\Users\\shotg\\Documents\\LoadIx-Prod\\.tmp\\loadix-branding-20260828",
+  "issueCount": 0,
+  "issues": []
+}
