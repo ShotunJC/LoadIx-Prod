@@ -30,6 +30,12 @@ public static class LoadIxPermissions
     public const string EdgeDeviceView = "EdgeDevice.View";
     public const string EdgeDeviceManage = "EdgeDevice.Manage";
     public const string EdgeDeviceReceive = "EdgeDevice.Receive";
+    public const string FleetWarningView = "Fleet.Warning.View";
+    public const string FleetWarningManage = "Fleet.Warning.Manage";
+    public const string FleetDeductionView = "Fleet.Deduction.View";
+    public const string FleetDeductionManage = "Fleet.Deduction.Manage";
+    public const string FinancePayrollView = "Finance.Payroll.View";
+    public const string FinancePayrollManage = "Finance.Payroll.Manage";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(
         [
@@ -41,6 +47,10 @@ public static class LoadIxPermissions
             CustomerManage,
             FleetView,
             FleetManage,
+            FleetWarningView,
+            FleetWarningManage,
+            FleetDeductionView,
+            FleetDeductionManage,
             ContractView,
             ContractManage,
             TripView,
@@ -55,6 +65,8 @@ public static class LoadIxPermissions
             DocumentDriver,
             FinanceView,
             FinanceManage,
+            FinancePayrollView,
+            FinancePayrollManage,
             ReportView,
             AuditView,
             TenantDataExport,

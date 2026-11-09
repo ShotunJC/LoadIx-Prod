@@ -9,6 +9,14 @@ quantity is a distinct rate source protected by `Trip.Override`, idempotency,
 reason capture, and audit history. Existing referenced route/rate identities are
 protected from destructive edits.
 
+## ADR-048: Sage Pastel Accounting & Payroll Integration, Driver Disciplinary Notices, and Wage Deductions
+
+**Status:** Accepted. Implements Sage Pastel Partner/Evolution customer invoice
+batch CSV exports, progressive driver disciplinary warnings compliant with the
+LRA Code of Good Practice, BCEA Section 34 compliant driver recovery deductions,
+and Sage Pastel Payroll batching with transaction codes and direct import CSV
+generation. Full details in `docs/decisions/ADR-048-sage-pastel-accounting-payroll-driver-disciplinary.md`.
+
 ## Status and Context
 
 This document began as the architecture baseline for an empty repository.

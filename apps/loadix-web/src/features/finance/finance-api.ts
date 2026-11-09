@@ -333,6 +333,10 @@ export function invoiceBatchCsvUrl(id: string) {
   return `/api/v1/finance/invoice-batches/${id}/export.csv`
 }
 
+export function invoiceBatchPastelCsvUrl(id: string) {
+  return `/api/v1/finance/invoice-batches/${id}/export-pastel.csv`
+}
+
 export function invoiceBatchPdfUrl(id: string) {
   return `/api/v1/finance/invoice-batches/${id}/summary.pdf`
 }
@@ -348,11 +352,16 @@ export function invoiceBatchPdfUrl(id: string) {
 export async function downloadInvoiceBatchExport(
   request: Requester,
   id: string,
-  format: 'csv' | 'pdf',
+  format: 'csv' | 'pdf' | 'pastel',
 ): Promise<Blob> {
-  const response = await request(
-    format === 'csv' ? invoiceBatchCsvUrl(id) : invoiceBatchPdfUrl(id),
-  )
+  let url = invoiceBatchCsvUrl(id)
+  if (format === 'pdf') {
+    url = invoiceBatchPdfUrl(id)
+  } else if (format === 'pastel') {
+    url = invoiceBatchPastelCsvUrl(id)
+  }
+
+  const response = await request(url)
   if (!response.ok) {
     const problem = (await response.json().catch(() => null)) as {
       detail?: string
@@ -360,6 +369,187 @@ export async function downloadInvoiceBatchExport(
     } | null
     throw new Error(
       problem?.detail ?? problem?.title ?? 'The invoice export failed.',
+    )
+  }
+  return response.blob()
+}
+
+// ---------------------------------------------------------------------------
+// Payroll & Sage Pastel Payroll Integration
+// ---------------------------------------------------------------------------
+
+const payrollBatchPreviewLineSchema = z.object({
+  driverId: id,
+  driverEmployeeNumber: z.string().nullable(),
+  driverName: z.string(),
+  deductionId: id,
+  deductionNumber: z.string(),
+  transactionCode: z.string(),
+  description: z.string(),
+  installmentAmount: z.number(),
+  currentBalance: z.number(),
+  balanceAfterDeduction: z.number(),
+})
+
+const payrollBatchPreviewSchema = z.object({
+  periodStartDate: z.string(),
+  periodEndDate: z.string(),
+  frequency: z.string(),
+  currencyCode: z.string(),
+  eligibleDriversCount: z.number(),
+  totalDeductionsCount: z.number(),
+  totalDeductionsAmount: z.number(),
+  lines: z.array(payrollBatchPreviewLineSchema),
+})
+
+const payrollBatchLineDetailSchema = z.object({
+  id,
+  driverId: id,
+  driverEmployeeNumber: z.string().nullable(),
+  driverName: z.string(),
+  deductionId: id.nullable(),
+  transactionCode: z.string(),
+  description: z.string(),
+  amount: z.number(),
+  balanceAfterDeduction: z.number(),
+})
+
+const payrollBatchDetailSchema = z.object({
+  id,
+  tenantId: id,
+  batchNumber: z.string(),
+  periodStartDate: z.string(),
+  periodEndDate: z.string(),
+  frequency: z.string(),
+  currencyCode: z.string(),
+  status: z.string(),
+  totalDeductionsAmount: z.number(),
+  createdAtUtc: z.string(),
+  approvedAtUtc: z.string().nullable(),
+  approvedByUserId: id.nullable(),
+  exportedAtUtc: z.string().nullable(),
+  exportedByUserId: id.nullable(),
+  lines: z.array(payrollBatchLineDetailSchema),
+})
+
+const payrollBatchListItemSchema = z.object({
+  id,
+  batchNumber: z.string(),
+  periodStartDate: z.string(),
+  periodEndDate: z.string(),
+  frequency: z.string(),
+  currencyCode: z.string(),
+  status: z.string(),
+  totalDeductionsAmount: z.number(),
+  lineCount: z.number(),
+  createdAtUtc: z.string(),
+  exportedAtUtc: z.string().nullable(),
+})
+
+export type PayrollBatchPreviewLine = z.infer<typeof payrollBatchPreviewLineSchema>
+export type PayrollBatchPreview = z.infer<typeof payrollBatchPreviewSchema>
+export type PayrollBatchLineDetail = z.infer<typeof payrollBatchLineDetailSchema>
+export type PayrollBatchDetail = z.infer<typeof payrollBatchDetailSchema>
+export type PayrollBatchListItem = z.infer<typeof payrollBatchListItemSchema>
+
+export async function previewPayrollBatch(
+  request: Requester,
+  model: {
+    periodStartDate: string
+    periodEndDate: string
+    frequency: string
+  },
+) {
+  return parse(
+    await request('/api/v1/payroll/batches/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(model),
+    }),
+    payrollBatchPreviewSchema,
+  )
+}
+
+export async function createPayrollBatch(
+  request: Requester,
+  model: {
+    batchNumber: string
+    periodStartDate: string
+    periodEndDate: string
+    frequency: string
+    currencyCode: string
+  },
+) {
+  return parse(
+    await request('/api/v1/payroll/batches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(model),
+    }),
+    payrollBatchDetailSchema,
+  )
+}
+
+export async function listPayrollBatches(request: Requester) {
+  return parse(
+    await request('/api/v1/payroll/batches'),
+    z.array(payrollBatchListItemSchema),
+  )
+}
+
+export async function getPayrollBatch(request: Requester, batchId: string) {
+  return parse(
+    await request(`/api/v1/payroll/batches/${batchId}`),
+    payrollBatchDetailSchema,
+  )
+}
+
+export async function approvePayrollBatch(request: Requester, batchId: string) {
+  return parse(
+    await request(`/api/v1/payroll/batches/${batchId}/approve`, {
+      method: 'POST',
+    }),
+    payrollBatchDetailSchema,
+  )
+}
+
+export async function markPayrollBatchExported(
+  request: Requester,
+  batchId: string,
+) {
+  return parse(
+    await request(`/api/v1/payroll/batches/${batchId}/mark-exported`, {
+      method: 'POST',
+    }),
+    payrollBatchDetailSchema,
+  )
+}
+
+export function payrollBatchPastelCsvUrl(id: string) {
+  return `/api/v1/payroll/batches/${id}/export-pastel.csv`
+}
+
+export function payrollBatchGenericCsvUrl(id: string) {
+  return `/api/v1/payroll/batches/${id}/export.csv`
+}
+
+export async function downloadPayrollBatchExport(
+  request: Requester,
+  id: string,
+  format: 'pastel' | 'generic',
+): Promise<Blob> {
+  const url =
+    format === 'pastel'
+      ? payrollBatchPastelCsvUrl(id)
+      : payrollBatchGenericCsvUrl(id)
+  const response = await request(url)
+  if (!response.ok) {
+    const problem = (await response.json().catch(() => null)) as {
+      detail?: string
+      title?: string
+    } | null
+    throw new Error(
+      problem?.detail ?? problem?.title ?? 'The payroll export failed.',
     )
   }
   return response.blob()

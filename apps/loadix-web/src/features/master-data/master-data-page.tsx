@@ -8,6 +8,7 @@ import { useAuth } from '@/auth/auth-context'
 import { Button } from '@/components/ui/button'
 import { FieldHelp, FieldLabel } from '@/components/ui/field-help'
 import { DataTable, type DataColumn } from './data-table'
+import { DriverDisciplinaryDialog } from './driver-disciplinary-dialog'
 import {
   listMasterData,
   saveMasterData,
@@ -181,6 +182,18 @@ const definitions: Record<MasterDataModule, ModuleDefinition> = {
         label: 'Driver',
         render: (item) =>
           `${text(item, 'firstName')} ${text(item, 'lastName')}`,
+      },
+      {
+        key: 'employeeNumber',
+        label: 'Payroll code',
+        render: (item) =>
+          typeof item.employeeNumber === 'string' && item.employeeNumber ? (
+            <span className="font-mono text-xs font-semibold bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">
+              {item.employeeNumber}
+            </span>
+          ) : (
+            <span className="text-slate-400 text-xs">—</span>
+          ),
       },
       {
         key: 'reference',
@@ -365,6 +378,11 @@ export function MasterDataPage({ module }: { module: MasterDataModule }) {
   const [branchId, setBranchId] = useState('')
   const [customerId, setCustomerId] = useState('')
   const [editor, setEditor] = useState<MasterDataItem | 'new' | null>(null)
+  const [disciplinaryDriver, setDisciplinaryDriver] = useState<{
+    id: string
+    name: string
+    employeeNumber?: string | null
+  } | null>(null)
   const canManage = auth.user?.permissions.includes(definition.managePermission)
   const isFleetModule = ['drivers', 'vehicles', 'trailers'].includes(module)
   const filterBranches = useQuery({
@@ -591,8 +609,33 @@ export function MasterDataPage({ module }: { module: MasterDataModule }) {
         data={list.data}
         loading={list.isLoading}
         onEdit={setEditor}
+        onDisciplinary={
+          module === 'drivers'
+            ? (item) => {
+                setDisciplinaryDriver({
+                  id: item.id,
+                  name: `${text(item, 'firstName')} ${text(item, 'lastName')}`.trim() || item.reference,
+                  employeeNumber:
+                    typeof item.employeeNumber === 'string'
+                      ? item.employeeNumber
+                      : null,
+                })
+              }
+            : undefined
+        }
         onPageChange={setPage}
       />
+
+      {disciplinaryDriver ? (
+        <DriverDisciplinaryDialog
+          driverId={disciplinaryDriver.id}
+          driverName={disciplinaryDriver.name}
+          employeeNumber={disciplinaryDriver.employeeNumber}
+          onClose={() => {
+            setDisciplinaryDriver(null)
+          }}
+        />
+      ) : null}
 
       {editor ? (
         <RecordEditor
@@ -999,6 +1042,7 @@ function ModuleFields({
       <div className="grid gap-4 sm:grid-cols-2">
         {branchSelect()}
         {select('driverType', 'Driver type', ['Employee', 'Contractor'])}
+        {field('employeeNumber', 'Payroll / Employee code (e.g. Pastel EMP001)', { required: false })}
         {field('firstName', 'First name')}
         {field('lastName', 'Last name')}
         {field('identificationReference', 'Internal identity reference')}
@@ -1147,6 +1191,7 @@ function flatten(item?: MasterDataItem): FormValues {
     contactEmail: scalar(contact.email ?? item.contactEmail),
     contactPhoneNumber: scalar(contact.phoneNumber ?? item.contactPhoneNumber),
     contactCategory: scalar(contact.category, 'Operational'),
+    employeeNumber: scalar(item.employeeNumber),
     financeContactName: scalar(financeContact.name),
     financeContactEmail: scalar(financeContact.email),
     financeContactPhoneNumber: scalar(financeContact.phoneNumber),
@@ -1249,6 +1294,7 @@ function buildPayload(
     case 'drivers':
       return {
         branchId: value('branchId'),
+        employeeNumber: optional('employeeNumber'),
         firstName: value('firstName'),
         lastName: value('lastName'),
         driverType: value('driverType'),

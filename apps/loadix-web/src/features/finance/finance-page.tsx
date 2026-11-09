@@ -24,6 +24,7 @@ import {
   type InvoiceBatchPreview,
   type InvoiceReadyTrip,
 } from '@/features/finance/finance-api'
+import { PayrollBatchesPanel } from './payroll-batches-panel'
 
 const taxTreatments = [
   'StandardRated',
@@ -53,6 +54,7 @@ export function FinancePage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState<'invoicing' | 'payroll'>('invoicing')
   const queryClient = useQueryClient()
 
   const canManage = auth.user?.permissions.includes('Finance.Manage') ?? false
@@ -112,143 +114,178 @@ export function FinancePage() {
         </div>
       </header>
 
-      <TaxConfigurationPanel canManage={canManage} />
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
-        <section
-          aria-labelledby="invoice-ready-title"
-          className="rounded-xl border bg-white shadow-sm"
+      <div className="flex gap-2 border-b border-slate-200 pb-3">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('invoicing')
+          }}
+          className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            activeTab === 'invoicing'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
         >
-          <div className="border-b p-5">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2
-                  className="text-lg font-black text-slate-950"
-                  id="invoice-ready-title"
-                >
-                  Invoice-ready queue
-                </h2>
-                <p className="text-sm text-slate-600">
-                  Completed, reconciled, financially approved trips that are not
-                  already in an invoice batch.
-                </p>
-              </div>
-              <label className="text-sm font-semibold text-slate-700">
-                Search
-                <input
-                  className="mt-1 block min-h-11 rounded-md border px-3 font-normal"
-                  onChange={(event) => {
-                    setSearch(event.target.value)
-                    setPage(1)
-                  }}
-                  placeholder="Trip, customer, contract"
-                  value={search}
-                />
-              </label>
-            </div>
-          </div>
-
-          {ready.isPending ? (
-            <div className="space-y-3 p-5" aria-label="Loading invoice queue">
-              {[1, 2, 3].map((item) => (
-                <div
-                  className="h-16 animate-pulse rounded-lg bg-slate-200"
-                  key={item}
-                />
-              ))}
-            </div>
-          ) : ready.isError ? (
-            <ErrorBlock message={ready.error.message} />
-          ) : ready.data.items.length === 0 ? (
-            <EmptyBlock
-              title="No invoiceable trips yet"
-              body="Complete, reconcile, and approve trip financials to populate this queue."
-            />
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y text-sm">
-                  <thead className="bg-slate-50 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
-                    <tr>
-                      <th className="px-4 py-3">Select</th>
-                      <th className="px-4 py-3">Trip</th>
-                      <th className="px-4 py-3">Customer</th>
-                      <th className="px-4 py-3">Contract</th>
-                      <th className="px-4 py-3 text-right">Billable</th>
-                      <th className="px-4 py-3 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {ready.data.items.map((item) => (
-                      <InvoiceReadyRow
-                        item={item}
-                        key={item.financialsId}
-                        selected={selected.includes(item.financialsId)}
-                        toggle={() => {
-                          setSelected((value) =>
-                            value.includes(item.financialsId)
-                              ? value.filter((id) => id !== item.financialsId)
-                              : [...value, item.financialsId],
-                          )
-                        }}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <footer className="flex flex-wrap items-center justify-between gap-3 border-t bg-slate-50 px-4 py-3 text-sm">
-                <span>
-                  Page {ready.data.page} of {Math.max(ready.data.totalPages, 1)}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    disabled={page === 1}
-                    onClick={() => {
-                      setPage((value) => value - 1)
-                    }}
-                    type="button"
-                    variant="outline"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    disabled={page >= ready.data.totalPages}
-                    onClick={() => {
-                      setPage((value) => value + 1)
-                    }}
-                    type="button"
-                    variant="outline"
-                  >
-                    Next
-                  </Button>
-                </div>
-              </footer>
-            </>
-          )}
-        </section>
-
-        <BatchBuilder
-          canManage={canManage}
-          createBatch={() => createBatch.mutateAsync()}
-          createError={createBatch.error?.message}
-          createPending={createBatch.isPending}
-          preview={() => preview.mutateAsync()}
-          previewError={preview.error?.message}
-          previewPending={preview.isPending}
-          previews={preview.data}
-          selectedRows={selectedRows}
-        />
+          Customer Invoicing & Tax
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('payroll')
+          }}
+          className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ${
+            activeTab === 'payroll'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          Driver Payroll & Deductions (Sage Pastel)
+        </button>
       </div>
 
-      <InvoiceBatchHistory
-        batches={batches.data?.items ?? []}
-        canManage={canManage}
-        error={batches.error?.message}
-        loading={batches.isPending}
-        reload={() => {
-          void batches.refetch()
-        }}
-      />
+      {activeTab === 'invoicing' ? (
+        <>
+          <TaxConfigurationPanel canManage={canManage} />
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+            <section
+              aria-labelledby="invoice-ready-title"
+              className="rounded-xl border bg-white shadow-sm"
+            >
+              <div className="border-b p-5">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h2
+                      className="text-lg font-black text-slate-950"
+                      id="invoice-ready-title"
+                    >
+                      Invoice-ready queue
+                    </h2>
+                    <p className="text-sm text-slate-600">
+                      Completed, reconciled, financially approved trips that are not
+                      already in an invoice batch.
+                    </p>
+                  </div>
+                  <label className="text-sm font-semibold text-slate-700">
+                    Search
+                    <input
+                      className="mt-1 block min-h-11 rounded-md border px-3 font-normal"
+                      onChange={(event) => {
+                        setSearch(event.target.value)
+                        setPage(1)
+                      }}
+                      placeholder="Trip, customer, contract"
+                      value={search}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {ready.isPending ? (
+                <div className="space-y-3 p-5" aria-label="Loading invoice queue">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      className="h-16 animate-pulse rounded-lg bg-slate-200"
+                      key={item}
+                    />
+                  ))}
+                </div>
+              ) : ready.isError ? (
+                <ErrorBlock message={ready.error.message} />
+              ) : ready.data.items.length === 0 ? (
+                <EmptyBlock
+                  title="No invoiceable trips yet"
+                  body="Complete, reconcile, and approve trip financials to populate this queue."
+                />
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y text-sm">
+                      <thead className="bg-slate-50 text-left text-xs font-bold tracking-wide text-slate-500 uppercase">
+                        <tr>
+                          <th className="px-4 py-3">Select</th>
+                          <th className="px-4 py-3">Trip</th>
+                          <th className="px-4 py-3">Customer</th>
+                          <th className="px-4 py-3">Contract</th>
+                          <th className="px-4 py-3 text-right">Billable</th>
+                          <th className="px-4 py-3 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {ready.data.items.map((item) => (
+                          <InvoiceReadyRow
+                            item={item}
+                            key={item.financialsId}
+                            selected={selected.includes(item.financialsId)}
+                            toggle={() => {
+                              setSelected((value) =>
+                                value.includes(item.financialsId)
+                                  ? value.filter((id) => id !== item.financialsId)
+                                  : [...value, item.financialsId],
+                              )
+                            }}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <footer className="flex flex-wrap items-center justify-between gap-3 border-t bg-slate-50 px-4 py-3 text-sm">
+                    <span>
+                      Page {ready.data.page} of {Math.max(ready.data.totalPages, 1)}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        disabled={page === 1}
+                        onClick={() => {
+                          setPage((value) => value - 1)
+                        }}
+                        type="button"
+                        variant="outline"
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        disabled={page >= ready.data.totalPages}
+                        onClick={() => {
+                          setPage((value) => value + 1)
+                        }}
+                        type="button"
+                        variant="outline"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </footer>
+                </>
+              )}
+            </section>
+
+            <BatchBuilder
+              canManage={canManage}
+              createBatch={() => createBatch.mutateAsync()}
+              createError={createBatch.error?.message}
+              createPending={createBatch.isPending}
+              preview={() => preview.mutateAsync()}
+              previewError={preview.error?.message}
+              previewPending={preview.isPending}
+              previews={preview.data}
+              selectedRows={selectedRows}
+            />
+          </div>
+
+          <InvoiceBatchHistory
+            batches={batches.data?.items ?? []}
+            canManage={canManage}
+            error={batches.error?.message}
+            loading={batches.isPending}
+            reload={() => {
+              void batches.refetch()
+            }}
+          />
+        </>
+      ) : (
+        <PayrollBatchesPanel canManage={canManage} />
+      )}
     </section>
   )
 }
@@ -528,13 +565,16 @@ function InvoiceBatchHistory({
       format,
     }: {
       batch: InvoiceBatchListItem
-      format: 'csv' | 'pdf'
+      format: 'csv' | 'pdf' | 'pastel'
     }) => downloadInvoiceBatchExport(auth.request, batch.id, format),
     onSuccess: (blob, { batch, format }) => {
       const url = URL.createObjectURL(blob)
       const anchor = window.document.createElement('a')
       anchor.href = url
-      anchor.download = `loadix-invoice-batch-${batch.id}.${format}`
+      anchor.download =
+        format === 'pastel'
+          ? `pastel-invoice-batch-${batch.batchNumber || batch.id}.csv`
+          : `loadix-invoice-batch-${batch.id}.${format}`
       anchor.click()
       URL.revokeObjectURL(url)
     },
@@ -610,6 +650,18 @@ function InvoiceBatchHistory({
                       variant="outline"
                     >
                       <FileSpreadsheet size={14} /> CSV
+                    </Button>
+                    <Button
+                      className="inline-flex min-h-9 items-center gap-1 rounded-md border px-3 text-xs font-bold text-emerald-800"
+                      disabled={download.isPending}
+                      onClick={() => {
+                        download.mutate({ batch, format: 'pastel' })
+                      }}
+                      title="Export Sage Pastel Accounting CSV"
+                      type="button"
+                      variant="outline"
+                    >
+                      <FileSpreadsheet size={14} /> Pastel CSV
                     </Button>
                     <Button
                       className="inline-flex min-h-9 items-center gap-1 rounded-md border px-3 text-xs font-bold"

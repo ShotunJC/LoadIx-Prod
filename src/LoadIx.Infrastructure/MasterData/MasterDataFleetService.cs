@@ -31,7 +31,8 @@ public sealed partial class MasterDataService
             source = source.Where(item =>
                 item.FirstName.Contains(search)
                 || item.LastName.Contains(search)
-                || item.LicenceNumber.Contains(search));
+                || item.LicenceNumber.Contains(search)
+                || (item.EmployeeNumber != null && item.EmployeeNumber.Contains(search)));
         }
 
         var descending = query.Direction == "desc";
@@ -101,7 +102,8 @@ public sealed partial class MasterDataService
             model.LicenceNumber,
             model.LicenceExpiry,
             model.EmergencyContactName,
-            model.EmergencyContactNumber);
+            model.EmergencyContactNumber,
+            model.EmployeeNumber);
         if (result.IsFailure) return Validation<DriverItem>(result.Error!);
         dbContext.Drivers.Add(result.Value);
         return await SaveAsync(
@@ -139,7 +141,8 @@ public sealed partial class MasterDataService
             model.LicenceNumber,
             model.LicenceExpiry,
             model.EmergencyContactName,
-            model.EmergencyContactNumber);
+            model.EmergencyContactNumber,
+            model.EmployeeNumber);
         if (result.IsFailure) return Validation<DriverItem>(result.Error!);
         return await SaveAsync(
             () => MapDriver(entity, branchName),
@@ -585,7 +588,8 @@ public sealed partial class MasterDataService
             entity.EmergencyContactNumber,
             entity.IsActive,
             Version(entity.RowVersion),
-            entity.ModifiedAtUtc);
+            entity.ModifiedAtUtc,
+            entity.EmployeeNumber);
 
     private VehicleItem MapVehicle(Vehicle entity, string branchName) =>
         new(

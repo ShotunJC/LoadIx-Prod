@@ -163,6 +163,20 @@ public static class FinanceEndpoints
                 : ToResult(result);
         }).RequireAuthorization(LoadIxPermissions.FinanceView);
 
+        group.MapGet("/invoice-batches/{id:guid}/export-pastel.csv", async (
+            Guid id,
+            IFinanceService service,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await service.ExportInvoiceBatchPastelAsync(id, cancellationToken);
+            return result.IsSuccess
+                ? Results.File(
+                    result.Value!,
+                    "text/csv",
+                    $"pastel-invoice-batch-{id:N}.csv")
+                : ToResult(result);
+        }).RequireAuthorization(LoadIxPermissions.FinanceView);
+
         return api;
     }
 

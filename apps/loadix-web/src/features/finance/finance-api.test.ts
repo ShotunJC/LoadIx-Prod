@@ -2,10 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   addTripCost,
   createInvoiceBatch,
+  createPayrollBatch,
   downloadInvoiceBatchExport,
+  downloadPayrollBatchExport,
   getTaxConfiguration,
   listInvoiceReady,
   previewInvoiceBatch,
+  previewPayrollBatch,
   saveTaxConfiguration,
 } from './finance-api'
 
@@ -154,6 +157,140 @@ describe('finance API client', () => {
     expect(result).toBeInstanceOf(Blob)
     expect(result.type).toBe('text/csv')
     expect(result.size).toBeGreaterThan(0)
+  })
+
+  it('downloads pastel invoice exports through the authenticated request function', async () => {
+    const request = vi.fn(() =>
+      Promise.resolve(
+        new Response('HEADER\nDETAIL\n', {
+          status: 200,
+          headers: { 'Content-Type': 'text/csv' },
+        }),
+      ),
+    )
+
+    const result = await downloadInvoiceBatchExport(
+      request,
+      '70000000-0000-0000-0000-000000000001',
+      'pastel',
+    )
+
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/finance/invoice-batches/70000000-0000-0000-0000-000000000001/export-pastel.csv',
+    )
+    expect(result).toBeInstanceOf(Blob)
+    expect(result.type).toBe('text/csv')
+  })
+
+  it('previews and creates payroll batches with typed validation', async () => {
+    const previewRequest = vi.fn(() =>
+      json({
+        periodStartDate: '2026-08-01',
+        periodEndDate: '2026-08-31',
+        frequency: 'Monthly',
+        currencyCode: 'ZAR',
+        eligibleDriversCount: 1,
+        totalDeductionsCount: 1,
+        totalDeductionsAmount: 500,
+        lines: [
+          {
+            driverId: '80000000-0000-0000-0000-000000000001',
+            driverEmployeeNumber: 'EMP001',
+            driverName: 'Sipho Zulu',
+            deductionId: '90000000-0000-0000-0000-000000000001',
+            deductionNumber: 'DED-001',
+            transactionCode: '5010',
+            description: 'Uniform deduction',
+            installmentAmount: 500,
+            currentBalance: 1500,
+            balanceAfterDeduction: 1000,
+          },
+        ],
+      }),
+    )
+
+    const preview = await previewPayrollBatch(previewRequest, {
+      periodStartDate: '2026-08-01',
+      periodEndDate: '2026-08-31',
+      frequency: 'Monthly',
+    })
+
+    expect(preview.eligibleDriversCount).toBe(1)
+    expect(preview.lines[0]?.driverEmployeeNumber).toBe('EMP001')
+
+    const createRequest = vi.fn(() =>
+      json({
+        id: 'a0000000-0000-0000-0000-000000000001',
+        tenantId: 'b0000000-0000-0000-0000-000000000001',
+        batchNumber: 'PAY-202608-01',
+        periodStartDate: '2026-08-01',
+        periodEndDate: '2026-08-31',
+        frequency: 'Monthly',
+        currencyCode: 'ZAR',
+        status: 'Draft',
+        totalDeductionsAmount: 500,
+        createdAtUtc: '2026-08-31T10:00:00+00:00',
+        approvedAtUtc: null,
+        approvedByUserId: null,
+        exportedAtUtc: null,
+        exportedByUserId: null,
+        lines: [
+          {
+            id: 'c0000000-0000-0000-0000-000000000001',
+            driverId: '80000000-0000-0000-0000-000000000001',
+            driverEmployeeNumber: 'EMP001',
+            driverName: 'Sipho Zulu',
+            deductionId: '90000000-0000-0000-0000-000000000001',
+            transactionCode: '5010',
+            description: 'Uniform deduction',
+            amount: 500,
+            balanceAfterDeduction: 1000,
+          },
+        ],
+      }),
+    )
+
+    const batch = await createPayrollBatch(createRequest, {
+      batchNumber: 'PAY-202608-01',
+      periodStartDate: '2026-08-01',
+      periodEndDate: '2026-08-31',
+      frequency: 'Monthly',
+      currencyCode: 'ZAR',
+    })
+
+    expect(batch.batchNumber).toBe('PAY-202608-01')
+    expect(batch.lines).toHaveLength(1)
+  })
+
+  it('downloads pastel and generic payroll exports', async () => {
+    const request = vi.fn(() =>
+      Promise.resolve(
+        new Response('EMP001,5010,500.00\n', {
+          status: 200,
+          headers: { 'Content-Type': 'text/csv' },
+        }),
+      ),
+    )
+
+    const pastel = await downloadPayrollBatchExport(
+      request,
+      'a0000000-0000-0000-0000-000000000001',
+      'pastel',
+    )
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/payroll/batches/a0000000-0000-0000-0000-000000000001/export-pastel.csv',
+    )
+    expect(pastel.size).toBeGreaterThan(0)
+
+    const generic = await downloadPayrollBatchExport(
+      request,
+      'a0000000-0000-0000-0000-000000000001',
+      'generic',
+    )
+    expect(request).toHaveBeenCalledWith(
+      '/api/v1/payroll/batches/a0000000-0000-0000-0000-000000000001/export.csv',
+    )
+    expect(generic.size).toBeGreaterThan(0)
   })
 })
 
